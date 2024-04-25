@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger

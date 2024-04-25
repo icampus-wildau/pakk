@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree

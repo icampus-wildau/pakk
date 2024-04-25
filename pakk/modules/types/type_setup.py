@@ -5,7 +5,7 @@ import os
 import shlex
 import braceexpand
 
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.process import Process
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment

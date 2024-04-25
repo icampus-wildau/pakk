@@ -5,7 +5,7 @@ import logging
 import nodesemver
 import jellyfish
 
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
 from pakk.helper.lockfile import PakkLock

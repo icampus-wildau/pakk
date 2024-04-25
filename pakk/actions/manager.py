@@ -5,7 +5,7 @@ import logging
 import subprocess
 import threading
 
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
 from pakk.logger import Logger

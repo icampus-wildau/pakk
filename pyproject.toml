@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "pakk"
+version = "0.1.0"
+authors = [{ name = "Valentin Schröter", email = "vasc9380@th-wildau.de" }]
+description = "Pakk Package Manager."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  'click',
+  'click-aliases',
+  'prettytable',
+  'python-gitlab>=3.0.0',
+  'networkx',
+  'node-semver',
+  'graphviz',
+  'jsons',                # Does not work for Python3.11 any more
+  # 'jsons @ https://github.com/vschroeter/jsons.git',
+  'semver',
+  'tqdm',
+  'pyfiglet',
+  'rich',
+  'InquirerPy',
+  'python-dotenv',
+  'braceexpand',
+  'jellyfish',
+  'flock',
+  'markdown-plus',
+]
+classifiers = ["Programming Language :: Python :: 3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pakk"]
+
+[project.urls]
+Homepage = "https://github.com/icampus-wildau/pakk"
+Issues = "https://github.com/icampus-wildau/pakk/issues"
+
+[project.scripts]
+pakk = "pakk.cli:cli"

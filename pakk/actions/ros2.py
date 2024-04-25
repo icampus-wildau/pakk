@@ -11,7 +11,7 @@ from prompt_toolkit.completion import Completer, CompleteEvent, Completion
 from prompt_toolkit.document import Document
 
 import pakk.config.pakk_config as pakk_config
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal

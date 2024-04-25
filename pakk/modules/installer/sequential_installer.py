@@ -7,7 +7,7 @@ from typing import Callable
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, TextColumn, BarColumn, TimeRemainingColumn, \
     MofNCompleteColumn
 
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections as CfgSections
 from pakk.logger import Logger, ProgressTasks
 from pakk.modules.dependency_tree.tree import DependencyTree

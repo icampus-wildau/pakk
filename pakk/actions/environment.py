@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal

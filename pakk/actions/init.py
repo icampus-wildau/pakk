@@ -11,7 +11,7 @@ import configparser
 from InquirerPy import inquirer
 from InquirerPy.validator import Validator
 
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.helper.module_importer import ModuleImporter
 from pakk.logger import Logger
 # from git import Repo

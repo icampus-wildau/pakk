@@ -5,13 +5,85 @@ import os
 import re
 import logging
 
+from extended_configparser.configuration.entries import ConfigEntry
 from pakk import ROOT_DIR, DEFAULT_CFG_DIR, DEFAULT_CFG_FILENAME, ENVS
+from extended_configparser.configuration import ConfigEntryCollection, ConfigSection, Configuration
 from pakk.helper import file_util
 from pakk.logger import Logger
 
 logger = logging.getLogger(__name__)
 
 __config: "Config" = None
+
+
+class PakkConfigBase(Configuration):
+    def __init__(self, name: str):
+        path = os.path.join(MainConfigPaths.get_configs_dir(), name)
+        super().__init__(path)
+
+
+class MainConfigPaths(ConfigEntryCollection):
+    def __init__(self):
+        section = ConfigSection("Pakk.Dirs")
+        self.data_root_dir = section.ConfigOption(
+            "data_root_dir",
+            r"${HOME}/pakk/",
+            "Root directory for all pakkage related data",
+            long_instruction="The subdirectories defined in [Pakk.Subdirs] will be created in this directory, except you define them as absolute paths.",
+        )
+        self.app_data_dir = section.ConfigOption(
+            "app_data_dir",
+            r"/opt/pakk/",
+            "Directory for application data from pakkages (stored at installation), like models, symlinks, etc.",
+        )
+        self.log_dir = section.ConfigOption("log_dir", r"/var/pakk/logs/", "Directory for log files")
+        self.services_dir = section.ConfigOption(
+            "services_dir", r"/etc/pakk/services/", "Directory for pakk service unit files"
+        )
+
+        subdir_section = ConfigSection("Pakk.Subdirs")
+        self.cache_dir = subdir_section.ConfigOption(
+            "cache_dir",
+            r"${Pakk.Dirs:data_root_dir}/cache/",
+            "Main directory for cache files, e.g. for the discovering process.",
+        )
+        self.fetch_dir = subdir_section.ConfigOption(
+            "fetch_dir", r"${Pakk.Dirs:data_root_dir}/fetch/", "Main directory for fetched pakkages."
+        )
+        self.pakkages_dir = subdir_section.ConfigOption(
+            "pakkages_dir", r"${Pakk.Dirs:data_root_dir}/pakkages/", "Main directory for the acktual pakkages."
+        )
+        self.enviroment_dir = subdir_section.ConfigOption(
+            "enviroment_dir", r"${Pakk.Dirs:data_root_dir}/enviroment/", "Main directory for pakk enviroments."
+        )
+        self.all_pakkages_dir = subdir_section.ConfigOption(
+            "all_pakkages_dir",
+            r"${pakkages_dir}/all/",
+            "Subdirectory for all installed pakkages besides the subdirectories given by the pakkage types.",
+        )
+
+    @staticmethod
+    def get_configs_dir() -> str:
+        return os.environ.get(ENVS.CONFIG_DIR, DEFAULT_CFG_DIR)
+
+    @property
+    def configs_dir(self) -> str:
+        return self.get_config_dir()
+
+
+class MainConfig(PakkConfigBase):
+    def __init__(self):
+        super().__init__("main.cfg")
+        self.paths = MainConfigPaths()
+
+        self.pakkage_config = ConfigEntry(
+            "Pakk.Configs",
+            "pakkage_config",
+            default="pakk.cfg",
+            message="Name of the file containing the pakkage configuration information in your pakkage repository",
+            required=True,
+            inquire=False,
+        )
 
 
 class Sections:
@@ -37,7 +109,9 @@ class MissingConfigSectionOptionException(Exception):
         if section is not None and option is None:
             self.message += f"Missing required section [{style}]{section}"
         elif section is not None and option is not None:
-            self.message += f"Missing required option '[{style}]{option}[/{style}]' in section [{style}][{section}][/{style}]"
+            self.message += (
+                f"Missing required option '[{style}]{option}[/{style}]' in section [{style}][{section}][/{style}]"
+            )
         else:
             self.message += "Missing required section and option"
 
@@ -51,87 +125,15 @@ class MissingConfigSectionOptionException(Exception):
         super().__init__(clean_msg)
 
 
-class EnvInterpolation(configparser.ExtendedInterpolation):
-    ENV_PATTERN = re.compile(r"\$\[([^\}]+)\]")
-    _KEYCRE = re.compile(r"\$\{([^}]+)\}")
-
-    def __init__(self, allow_uninterpolated_values=False):
-        self.allow_uninterpolated_values = allow_uninterpolated_values
-
-    def _interpolate_some(self, parser, option, accum, rest, section, map,
-                          depth):
-        rawval = parser.get(section, option, raw=True, fallback=rest)
-        if depth > configparser.MAX_INTERPOLATION_DEPTH:
-            raise configparser.InterpolationDepthError(option, section, rawval)
-        while rest:
-            p = rest.find("$")
-            if p < 0:
-                accum.append(rest)
-                return
-            if p > 0:
-                accum.append(rest[:p])
-                rest = rest[p:]
-            # p is no longer used
-            c = rest[1:2]
-            if c == "$":
-                accum.append("$")
-                rest = rest[2:]
-            elif c == "{":
-                m = self._KEYCRE.match(rest)
-                if m is None:
-                    raise configparser.InterpolationSyntaxError(option, section,
-                                                                "bad interpolation variable reference %r" % rest)
-                path = m.group(1).split(':')
-                rest = rest[m.end():]
-                sect = section
-                opt = option
-                try:
-                    if len(path) == 1:
-                        # Substitute env vars
-                        if path[0] in os.environ:
-                            v = os.environ[path[0]]
-                        else:
-                            opt = parser.optionxform(path[0])
-                            v = map[opt]
-                    elif len(path) == 2:
-                        sect = path[0]
-                        opt = parser.optionxform(path[1])
-                        if self.allow_uninterpolated_values:
-                            if not parser.has_option(sect, opt):
-                                accum.append("$" + c + ":".join(path))
-                                continue
-                        v = parser.get(sect, opt, raw=True)
-                    else:
-                        raise configparser.InterpolationSyntaxError(
-                            option, section,
-                            "More than one ':' found: %r" % (rest,))
-                except (KeyError, configparser.NoSectionError, configparser.NoOptionError):
-                    raise configparser.InterpolationMissingOptionError(
-                        option, section, rawval, ":".join(path)) from None
-                if "$" in v:
-                    self._interpolate_some(parser, opt, accum, v, sect,
-                                           dict(parser.items(sect, raw=True)),
-                                           depth + 1)
-                else:
-                    accum.append(v)
-            else:
-
-                if self.allow_uninterpolated_values:
-                    accum.append("$" + c)
-                    rest = rest[2:]
-                else:
-                    raise configparser.InterpolationSyntaxError(
-                        option, section,
-                        "'$' must be followed by '$' or '{', "
-                        "found: %r" % (rest,))
-
 # Class that inherits from dict and encapsulates the dict of a configparser
 class Config(configparser.ConfigParser):
     def __init__(self):
         # super().__init__(interpolation=EnvInterpolation())
         super().__init__(defaults=os.environ, interpolation=configparser.ExtendedInterpolation())
 
-    def require(self, section: str | dict[str, list[str]], options: str | list[str] = None, source: str | type | None = None):
+    def require(
+        self, section: str | dict[str, list[str]], options: str | list[str] = None, source: str | type | None = None
+    ):
         if isinstance(section, dict):
             for section, sec_options in section.items():
                 self.require(section, sec_options, source)
@@ -163,11 +165,18 @@ class Config(configparser.ConfigParser):
     def pakk_configuration_files(self) -> list[str]:
         return self.get_list(Sections.PAKKAGE, "pakkage_files")
 
-    def get_abs_path(self, option: str, section: str = Sections.SUBDIRS, create_dir=False, none_if_val_is: str | None = None, fallback=None) -> str | None:
+    def get_abs_path(
+        self,
+        option: str,
+        section: str = Sections.SUBDIRS,
+        create_dir=False,
+        none_if_val_is: str | None = None,
+        fallback=None,
+    ) -> str | None:
         root = self.get(Sections.MAIN, "data_root_dir", fallback=fallback)
         if root is None:
             return None
-        
+
         if not os.path.isabs(root):
             root = os.path.join(ROOT_DIR, root)
 
@@ -219,10 +228,12 @@ def get_base_cfg_path() -> str:
     path = os.path.abspath(path)
     return path
 
+
 def get_cfg_paths() -> list[str]:
     """Return a list of all files ending with 'pakk.cfg' in the config directory"""
     config_dir = os.environ.get(ENVS.CONFIG_DIR, DEFAULT_CFG_DIR)
     return [os.path.join(config_dir, f) for f in os.listdir(config_dir) if f.endswith("pakk.cfg")]
+
 
 # Load the config file from the given path if it exists with a configparser
 def reload() -> Config:
@@ -244,7 +255,7 @@ def reload() -> Config:
             if __config.has_section(Sections.MAIN):
                 for subdir_key in __config[Sections.MAIN].keys():
                     # Check, if the directory exists
-                    dir_path: str = __config.get_abs_path(subdir_key, section=Sections.MAIN, none_if_val_is="None") # type: ignore
+                    dir_path: str = __config.get_abs_path(subdir_key, section=Sections.MAIN, none_if_val_is="None")  # type: ignore
                     if not os.path.exists(dir_path):
                         try:
                             logger.debug(f"Creating directory from [MAIN] at {dir_path}")
@@ -255,7 +266,7 @@ def reload() -> Config:
             if __config.has_section(Sections.SUBDIRS):
                 for subdir_key in __config[Sections.SUBDIRS].keys():
                     # Check, if the directory exists
-                    dir_path: str = __config.get_abs_path(subdir_key, none_if_val_is="None") # type: ignore
+                    dir_path: str = __config.get_abs_path(subdir_key, none_if_val_is="None")  # type: ignore
                     if not os.path.exists(dir_path):
                         logger.debug(f"Creating directory from [SUBDIRS] at {dir_path}")
                         os.makedirs(dir_path)

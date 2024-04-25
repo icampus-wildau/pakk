@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pakk.config.base_config import BaseConfig
+from pakk.args.base_args import BaseArgs
 
 
 class UpdateStrategy:
@@ -8,7 +8,7 @@ class UpdateStrategy:
     ONLY_IF_NEEDED = "only_if_needed"
 
 
-class InstallConfig(BaseConfig):
+class InstallArgs(BaseArgs):
     def __init__(self, **kwargs: str | bool):
         super().__init__(**kwargs)
 

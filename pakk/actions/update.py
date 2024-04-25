@@ -4,7 +4,7 @@ import logging
 import os
 
 import re
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.helper.lockfile import PakkLock
 from rich.table import Table
 from pakk.logger import Logger

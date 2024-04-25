@@ -6,7 +6,7 @@ import tempfile
 
 from pakk import ROOT_DIR
 from pakk.config import pakk_config
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.pakk_config import Sections
 from pakk.logger import Logger
 from pakk.modules.manager.systemd.unit_generator import PakkParentService, PakkServiceFileBase, ServiceFile, PakkAutoUpdateService

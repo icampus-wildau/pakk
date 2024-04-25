@@ -3,7 +3,7 @@ import builtins
 import logging
 
 import re
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.pakk_config import Sections
 from pakk.helper.file_util import remove_dir
 from pakk.helper.lockfile import PakkLock

@@ -9,7 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, TextColumn
     MofNCompleteColumn
 
 import pakk.config.pakk_config as cfg
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.helper.file_util import remove_dir
 from pakk.helper.gitlab_util import get_gitlab_http_with_token
 from pakk.logger import console, Logger

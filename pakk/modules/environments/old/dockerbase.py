@@ -4,7 +4,7 @@ import logging
 import os
 
 from pakk.config import pakk_config
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.pakk_config import Sections as ConfigSections
 from pakk.modules.module import Module
 

@@ -8,7 +8,7 @@ import subprocess
 
 from rich.table import Table
 
-from pakk.config.base_config import BaseConfig
+from pakk.pakk.args.base_config import BaseConfig
 import pakk.config.pakk_config as config
 from pakk.config.process import Process
 from pakk.logger import Logger

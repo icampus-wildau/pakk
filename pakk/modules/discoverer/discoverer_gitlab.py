@@ -18,7 +18,7 @@ from gitlab.v4.objects import GroupProject
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
 
 import pakk.config.pakk_config as cfg
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections
 from pakk.helper import gitlab_util
 from pakk.helper.gitlab_util import get_gitlab_instance as get_gl, get_gitlab_http_with_token

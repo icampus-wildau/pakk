@@ -5,7 +5,7 @@ from typing import Callable
 
 import networkx as nx
 
-from pakk.config.install_config import InstallConfig
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections as CfgSections
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
