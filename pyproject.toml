@@ -11,25 +11,26 @@ description = "Pakk Package Manager."
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  'click',
+  'braceexpand',
   'click-aliases',
-  'prettytable',
-  'python-gitlab>=3.0.0',
+  'click',
+  'extended-configparser',
+  'flock',
+  'graphviz',
+  'InquirerPy',
+  'jellyfish',
+  'jsons',                # Does not work for Python3.11 any more
+  'markdown-plus',
   'networkx',
   'node-semver',
-  'graphviz',
-  'jsons',                # Does not work for Python3.11 any more
-  # 'jsons @ https://github.com/vschroeter/jsons.git',
+  'prettytable',
+  'pyfiglet',
+  'python-dotenv',
+  'python-gitlab>=3.0.0',
+  'rich',
   'semver',
   'tqdm',
-  'pyfiglet',
-  'rich',
-  'InquirerPy',
-  'python-dotenv',
-  'braceexpand',
-  'jellyfish',
-  'flock',
-  'markdown-plus',
+  # 'jsons @ https://github.com/vschroeter/jsons.git',
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 

@@ -2,27 +2,26 @@ from __future__ import annotations
 
 import configparser
 import os
-import re
 import logging
 
 from extended_configparser.configuration.entries import ConfigEntry
 from pakk import ROOT_DIR, DEFAULT_CFG_DIR, DEFAULT_CFG_FILENAME, ENVS
-from extended_configparser.configuration import ConfigEntryCollection, ConfigSection, Configuration
+from extended_configparser.configuration import ConfigEntryCollection, ConfigSection
 from pakk.helper import file_util
 from pakk.logger import Logger
+from pakk.pakk.config.base import PakkConfigBase
 
 logger = logging.getLogger(__name__)
 
 __config: "Config" = None
 
 
-class PakkConfigBase(Configuration):
-    def __init__(self, name: str):
-        path = os.path.join(MainConfigPaths.get_configs_dir(), name)
-        super().__init__(path)
-
 
 class MainConfigPaths(ConfigEntryCollection):
+    """
+    Helper class to bundle the paths for the main configuration for pakk.
+    """
+    
     def __init__(self):
         section = ConfigSection("Pakk.Dirs")
         self.data_root_dir = section.ConfigOption(
@@ -47,43 +46,57 @@ class MainConfigPaths(ConfigEntryCollection):
             r"${Pakk.Dirs:data_root_dir}/cache/",
             "Main directory for cache files, e.g. for the discovering process.",
         )
+        """Main directory for cache files."""
+        
         self.fetch_dir = subdir_section.ConfigOption(
             "fetch_dir", r"${Pakk.Dirs:data_root_dir}/fetch/", "Main directory for fetched pakkages."
         )
+        """Main directory for fetched pakkages."""
+        
         self.pakkages_dir = subdir_section.ConfigOption(
             "pakkages_dir", r"${Pakk.Dirs:data_root_dir}/pakkages/", "Main directory for the acktual pakkages."
         )
+        """Main directory for the acktual pakkages."""
+        
         self.enviroment_dir = subdir_section.ConfigOption(
             "enviroment_dir", r"${Pakk.Dirs:data_root_dir}/enviroment/", "Main directory for pakk enviroments."
         )
+        """Main directory for pakk enviroments."""
+        
         self.all_pakkages_dir = subdir_section.ConfigOption(
             "all_pakkages_dir",
             r"${pakkages_dir}/all/",
             "Subdirectory for all installed pakkages besides the subdirectories given by the pakkage types.",
         )
-
-    @staticmethod
-    def get_configs_dir() -> str:
-        return os.environ.get(ENVS.CONFIG_DIR, DEFAULT_CFG_DIR)
-
-    @property
-    def configs_dir(self) -> str:
-        return self.get_config_dir()
+        """Subdirectory for all installed pakkages besides the subdirectories given by the pakkage types."""
 
 
 class MainConfig(PakkConfigBase):
     def __init__(self):
         super().__init__("main.cfg")
+        
         self.paths = MainConfigPaths()
-
+        """All paths of the main configuration."""
+        
+        # TODO: Don't need this anymore
+        # self.pakkage_config = ConfigEntry(
+        #     "Pakk.Configs",
+        #     "pakkage_config",
+        #     default="pakk.cfg",
+        #     message="Name of the file containing the pakkage configuration information in your pakkage repository",
+        #     required=True,
+        #     inquire=False,
+        # )
+        
         self.pakkage_config = ConfigEntry(
-            "Pakk.Configs",
-            "pakkage_config",
-            default="pakk.cfg",
-            message="Name of the file containing the pakkage configuration information in your pakkage repository",
+            "Pakk.Autoupdate",
+            "enabled",
+            default=True,
+            message="Enable autoupdate of pakk itself",
             required=True,
-            inquire=False,
+            inquire=True,
         )
+        
 
 
 class Sections:
