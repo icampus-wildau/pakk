@@ -4,10 +4,10 @@ import logging
 
 import re
 from pakk.helper.lockfile import PakkLock
+from pakk.modules.connector.base import Connector, DiscoveredPakkages
 from rich.table import Table
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+from pakk.modules.connector.local import LocalConnector
 
 logger = logging.getLogger(__name__)
 
@@ -22,23 +22,28 @@ def list(**kwargs: str):
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the list could be wrong.")
 
-    local_discoverer = [DiscovererLocal()]
+
+    
+
+    local_connector = [LocalConnector()]
+    discoverer_list: list[Connector] = []
+
     if flag_all or flag_available:
+        connectors = Pakk.get_connectors()
         from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
         # TODO Used discoverers should be configurable
         available_discoverers = [DiscovererGitlabCached()]
         
-        discoverer_list = available_discoverers + local_discoverer
+        discoverer_list = available_discoverers + local_connector
     else:
-        discoverer_list = local_discoverer
+        discoverer_list = local_connector
 
     if flag_types:
         print("Initializing types...")
         from pakk.modules.types.base import TypeBase
         TypeBase.initialize()
 
-    discoverer = DiscoveredPakkagesMerger(discoverer_list)
-    pakkages_discovered = discoverer.merge()
+    pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
 
     x = kwargs.get("extended", False)
 
@@ -63,7 +68,7 @@ def list(**kwargs: str):
         if visible:
             table.add_column(key, justify="left")
 
-    pakkages = builtins.list(pakkages_discovered.values())
+    pakkages = builtins.list(pakkages_discovered.discovered_packages.values())
     pakkages.sort(key=lambda p: p.id)
 
     if regex is not None:

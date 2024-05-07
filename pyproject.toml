@@ -24,6 +24,7 @@ dependencies = [
   'networkx',
   'node-semver',
   'prettytable',
+  'psutil',
   'pyfiglet',
   'python-dotenv',
   'python-gitlab>=3.0.0',

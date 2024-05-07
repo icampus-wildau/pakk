@@ -4,7 +4,7 @@ import os
 import getpass
 import tempfile
 from pakk import PAKK_CMD_PATH
-import pakk.config.pakk_config as cfg
+from pakk.config.main_cfg import MainConfig
 from pakk.modules.manager.systemd.unit_file_definition import UnitFileDefinition
 
 from typing import TYPE_CHECKING
@@ -27,7 +27,7 @@ class UnitFileSection:
 
 class ServiceFile:
     """Generate unit file for systemd"""
-    PATH = cfg.get().get_abs_path("service_dir", cfg.Sections.MAIN, fallback="/etc/pakk/services")
+    PATH = MainConfig.get_config().paths.services_dir.value
 
     def __init__(self, name: str):
         self.name: str = name

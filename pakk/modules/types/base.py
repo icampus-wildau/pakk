@@ -5,8 +5,7 @@ import re
 import logging
 from typing import TYPE_CHECKING, TypeVar, Type
 
-from pakk.config import pakk_config
-from pakk.config.pakk_config import Sections
+from pakk.config.main_cfg import MainConfig
 from pakk.config.process import Process
 
 from pakk.modules.environments.base import GenericEnvironment
@@ -186,7 +185,7 @@ class TypeBase(Module):
         if cls.PAKKAGE_TYPE is None:
             raise ValueError(f"PAKKAGE_TYPE must be set for {cls.__name__}.")
 
-        pakkages_dir = pakk_config.get().get_abs_path("pakkages_dir", Sections.SUBDIRS)
+        pakkages_dir = MainConfig.get_config().paths.pakkages_dir.value
         if pakkages_dir is None:
             raise ValueError("pakkages_dir is not set in the pakk config.")
         
@@ -198,7 +197,7 @@ class TypeBase(Module):
     @classmethod
     def unlink_pakkage_in_pakkages_dir(cls, pakkage_version: PakkageConfig) -> None:
         """Unlink the pakkage in the module  directory for uninstalling."""
-        pakkages_dir = pakk_config.get().get_abs_path("pakkages_dir", Sections.SUBDIRS)
+        pakkages_dir = MainConfig.get_config().paths.pakkages_dir.value
         if cls.PAKKAGE_TYPE is None:
             raise ValueError(f"PAKKAGE_TYPE must be set for {cls.__name__}.")
         if pakkages_dir is None:

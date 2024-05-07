@@ -10,15 +10,15 @@ import subprocess
 from typing import Any, TYPE_CHECKING
 import logging
 
+from extended_configparser.parser import ExtendedConfigParser
 import jsons
+from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.modules.manager.systemd.unit_generator import PakkChildService
 from semver.version import Version
 
 import dotenv
 
-from pakk.config import pakk_config
-from pakk.config.pakk_config import Config
 from pakk.modules.types.base import TypeBase, TypeConfigSection
 
 logger = logging.getLogger(__name__)
@@ -546,7 +546,7 @@ class PakkageConfig:
         pc.description = cfg.get("info", "description", fallback=None)
         pc.author = cfg.get("info", "author", fallback=None)
         pc.license = cfg.get("info", "license", fallback=None)
-        pc.keywords = Config.split_to_list(cfg.get("info", "keywords", fallback=None))
+        pc.keywords = ExtendedConfigParser.split_to_list(cfg.get("info", "keywords", fallback=None))
 
         if cfg.has_section("dependencies"):
             pc.dependencies = dict()
@@ -572,7 +572,7 @@ class PakkageConfig:
 
     @staticmethod
     def from_directory(abs_path: str) -> PakkageConfig | None:
-        pakk_files = pakk_config.get().pakk_configuration_files
+        pakk_files = MainConfig.get_config().pakk_cfg_files
 
         # Check if the directory contains a pakkage file
         for _, _, files in os.walk(abs_path):
