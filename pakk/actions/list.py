@@ -9,6 +9,8 @@ from rich.table import Table
 from pakk.logger import Logger
 from pakk.modules.connector.local import LocalConnector
 
+import builtins
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,9 @@ def list(**kwargs: str):
     flag_all = kwargs.get("all", False)
     flag_available = kwargs.get("available", False)
     flag_types = kwargs.get("types", False) or kwargs.get("extended", False)
-    Logger.setup_logger(logging.INFO)
+    verbose = kwargs.get("verbose", False)
+    has_locations = len(kwargs.get("location", [])) > 0
+    Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
 
     lock = PakkLock("list", create_lock=False)
     if not lock.access:
@@ -25,8 +29,8 @@ def list(**kwargs: str):
 
     
 
-    local_connector = [LocalConnector()]
-    discoverer_list: list[Connector] = []
+    local_connector: builtins.list[Connector] = [LocalConnector(**kwargs)]
+    discoverer_list: builtins.list[Connector] = []
 
     if flag_all or flag_available:
         connectors = Pakk.get_connectors()
@@ -51,7 +55,7 @@ def list(**kwargs: str):
         "ID": True,
         "Name": x or kwargs.get("name", False),
         "Installed": True,
-        "Available Versions": kwargs.get("available", False) or kwargs.get("all"),
+        "Available Versions": has_locations or kwargs.get("available", False) or kwargs.get("all"),
         "Pakkage Type": x or kwargs.get("types", False),
         "Description": True, # x or kwargs.get("description", False),
         "Keywords": x or kwargs.get("keywords", False),
@@ -81,7 +85,7 @@ def list(**kwargs: str):
         iv = p.versions.installed
         av = p.versions.available
         if not flag_all:
-            if iv is None:
+            if iv is None and not has_locations:
                 continue
 
         is_startable = iv.is_startable() if iv is not None else False
@@ -125,8 +129,7 @@ def list(**kwargs: str):
 if __name__ == "__main__":
     kwargs = {
         "all": True,
-        # "types": True,
-        # "extended": True,
+        "verbose": True,
     }
 
     list(**kwargs)

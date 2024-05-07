@@ -21,7 +21,7 @@ class DiscoveredPakkages:
     def __setitem__(self, key: str, value: Pakkage):
         self.discovered_packages[key] = value
 
-    def merge(self, new_pakkages: DiscoveredPakkages) -> dict[str, Pakkage]:
+    def merge(self, new_pakkages: DiscoveredPakkages) -> DiscoveredPakkages:
         """Merge the discovered pakkages."""
 
         self.undiscovered_packages.update(new_pakkages.undiscovered_packages)
@@ -35,6 +35,8 @@ class DiscoveredPakkages:
                 self.discovered_packages[id] = pakkage
             
             self.undiscovered_packages.discard(id)
+
+        return self
     
     @staticmethod
     def discover(connectors: list[Connector], quiet: bool = False) -> DiscoveredPakkages:

@@ -18,7 +18,36 @@ class LocalConnector(Connector):
     def __init__(self, **kwargs):
         self.all_pakkges_dir = MainConfig.get_config().paths.all_pakkages_dir.value
 
-    def discover(self):
+        self.additional_locations: list[str] = []
+        print(kwargs)
+        if "location" in kwargs:
+            locations_set = set()
+            for location in kwargs["location"]:
+                if location not in self.additional_locations:
+                    path = self.get_absolute_path(location)
+                    if path is not None:
+                        locations_set.add(path)
+
+            self.additional_locations = list(locations_set)
+
+        logger.debug(f"Additional local locations: {self.additional_locations}")
+
+
+    @staticmethod
+    def get_absolute_path(location: str) -> str | None:
+        if location.startswith("/"):
+            return location
+        
+        if location.startswith("~"):
+            return os.path.expanduser(location)
+        
+        if location.startswith("."):
+            return os.path.abspath(os.path.join(os.getcwd(), location))
+        
+        # If location is not a file path
+        return None
+
+    def discover_installed(self) -> DiscoveredPakkages:
         """Discover all local installed pakkages."""
 
         all_pakkges_dir = self.all_pakkges_dir
@@ -55,3 +84,51 @@ class LocalConnector(Connector):
             break
 
         return pakkages
+    
+    def discover_in_path(self, pakkages: DiscoveredPakkages, path: str, recursive: bool = True):
+        
+        # Check if the directory contains a pakkage file
+        pakkage_config = PakkageConfig.from_directory(path)
+        if pakkage_config is not None:
+            versions = PakkageVersions()
+            versions.available[pakkage_config.version] = pakkage_config
+
+            if pakkage_config.state is None:
+                # logger.warning(f"Pakkage state is not None for local provided {pakkage_config.id}")
+                pakkage_config.state = PakkageState(PakkageInstallState.DISCOVERED)
+
+            if pakkage_config.state.install_state == PakkageInstallState.INSTALLED:
+                versions.installed = pakkage_config
+            elif (
+                pakkage_config.state.install_state == PakkageInstallState.FETCHED
+                # or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
+            ):
+                versions.target = pakkage_config
+            # else:
+            #     logger.debug(f"Unknown install state: {pakkage_config.state.install_state}")
+
+            pakkage = Pakkage(versions)
+            pakkages[pakkage.id] = pakkage
+        else:
+            # Iter each subdirectory
+            if recursive:
+                for subdir, dirs, _ in os.walk(path):
+                    for d in dirs:
+                        abs_path = os.path.join(subdir, d)
+                        self.discover_in_path(pakkages, abs_path, recursive)
+
+
+    def discover_available(self) -> DiscoveredPakkages:
+        """Discover all local available pakkages in provided local directories."""
+
+        pakkages = DiscoveredPakkages()
+
+        for location_path in self.additional_locations:
+            self.discover_in_path(pakkages, location_path, True)
+
+        return pakkages
+
+    def discover(self):
+        installed_pakkages = self.discover_installed()
+        available_pakkages = self.discover_available()
+        return installed_pakkages.merge(available_pakkages)

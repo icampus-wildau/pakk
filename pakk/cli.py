@@ -143,9 +143,11 @@ def install(ctx: Context, **kwargs):
 @cli.command(aliases=['ls'])
 @click.argument('REGEX_FILTER', required=False)
 @click.option('-x', '--extended', is_flag=True, default=False, help='Show extended information.')
+@click.option('-v', '--verbose', is_flag=True, default=False, help='Give more output.')
 @click.option('--available', is_flag=True, default=False, help='Show available versions for installed pakkages.')
 @click.option('-a', '--all', is_flag=True, default=False, help='Show all available pakkages.')
-@click.option('-l', '--limit-available', default=5,
+@click.option('-l', '--location', multiple=True, help='Add lookup locations for pakkages.')
+@click.option('--limit-available', default=5,
               help="Limit the number of shown available versions to the newest n'th.")
 @click.option('-n', '--name', is_flag=True, default=False, help='Show the name of the pakkage.')
 # @click.option('-d', '--description', is_flag=True, default=False, help='Show the description of the pakkage.')

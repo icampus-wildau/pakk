@@ -5,7 +5,7 @@ import logging
 import nodesemver
 import jellyfish
 
-from pakk.pakk.args.install_config import InstallConfig
+from pakk.args.install_args import InstallArgs
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
 from pakk.helper.lockfile import PakkLock
@@ -52,7 +52,7 @@ class VersionNotFoundException(Exception):
 
 def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # Initialize install_config containing flags for other modules
-    install_config = InstallConfig.set(**kwargs)
+    install_config = InstallArgs.set(**kwargs)
     # Initialize logger that prints to rich console
     Logger.setup_logger(logging.DEBUG if install_config.verbose else logging.INFO)
 
