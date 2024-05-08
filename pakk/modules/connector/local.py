@@ -13,13 +13,15 @@ logger = logging.getLogger(__name__)
 class LocalConnector(Connector):
 
     PRIORITY = 20
-    CONFIG_CLS: Type[PakkConfigBase] = None
+    CONFIG_CLS = None
 
     def __init__(self, **kwargs):
+        super().__init__()
+        
         self.all_pakkges_dir = MainConfig.get_config().paths.all_pakkages_dir.value
 
         self.additional_locations: list[str] = []
-        print(kwargs)
+        # print(kwargs)
         if "location" in kwargs:
             locations_set = set()
             for location in kwargs["location"]:

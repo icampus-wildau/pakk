@@ -1,5 +1,7 @@
 from __future__ import annotations
+from typing import Type
 
+from pakk.config.base import PakkConfigBase
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 
@@ -57,9 +59,31 @@ class DiscoveredPakkages:
         return pakkages
 
 class Connector(Module):
-    def __init__(self, pakkages: dict[str, Pakkage]):
+    
+    PRIORITY = 100
+    """The priority of the connector. The lower the number, the higher the priority."""
+
+    CONFIG_CLS: Type[PakkConfigBase] | None = None
+    """
+    The configuration class used for the connector.
+    If None, this connector does not require a configuration.
+    """
+    
+    def __init__(self):
         super().__init__()
-        self.pakkages = pakkages
+
+    @classmethod
+    def is_configured(cls):
+        """Check if the connector is configured."""
+        return cls.CONFIG_CLS is None or cls.CONFIG_CLS.exists()
+
+    @classmethod
+    def is_enabled(cls) -> bool:
+        """
+        Check if the connector is enabled.
+        Override this method to implement a custom check.
+        """
+        return True
 
     def discover(self) -> DiscoveredPakkages:
         """Discover all the packages with the implemented discoverer."""

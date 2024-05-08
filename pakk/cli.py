@@ -183,7 +183,7 @@ def tree(ctx: Context, **kwargs):
 
 # @click.argument('NAME_REGEX', required=False)
 # @click.option("-d", "--depth", default=0, help="Maximum depth of the tree. 0 prints the complete tree.")
-@cli.command(aliases=['cfg'])
+@cli.command(aliases=[''])
 @click.option("-v", "--verbose", is_flag=True, default=False, help='Give more output.')
 @click.pass_context
 def config(ctx: Context, **kwargs):
@@ -193,6 +193,20 @@ def config(ctx: Context, **kwargs):
     """
     from pakk.actions.config import config
     config(**kwargs)
+
+@cli.command(aliases=['cfg'])
+@click.argument('configuration', required=False)
+@click.option("-v", "--verbose", is_flag=True, default=False, help='Give more output.')
+@click.pass_context
+def configure(ctx: Context, **kwargs):
+    """
+    Configure pakk.
+    If no configuration is given, everything of pakk is configured.
+    You can specify a CONFIGURATION to configure only a specific part / connector of pakk.
+    """
+    from pakk.actions.configure import configure
+    configure(**kwargs)
+
 
 
 @cli.command(aliases=['s'])

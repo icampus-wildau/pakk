@@ -23,13 +23,27 @@ class PakkConfigBase(Configuration):
         path = os.path.join(self.get_configs_dir(), name)
         super().__init__(path)
 
-        self.load(inquire_if_missing=True)
+        # if is_required and not os.path.exists(path):
+        #     raise FileNotFoundError(f"Configuration file {path} not found. Please configure it using `pakk configure {name}`.")
+
+        # self.load(inquire_if_missing=False)
         
+    @classmethod
+    def get_path(cls):
+        """Return the path to the configuration file."""
+        if cls.NAME is None:
+            raise ValueError(f"NAME of the Configuration must be set. Override the static variable NAME in your {cls.__name__} subclass.")
+        return os.path.join(cls.get_configs_dir(), cls.NAME)
     
     @staticmethod
     def get_configs_dir() -> str:
         """Return the root directory of all config files"""
         return os.environ.get(ENVS.CONFIG_DIR, DEFAULT_CFG_DIR)
+
+    @classmethod
+    def exists(cls) -> bool:
+        """Check if the configuration file exists."""
+        return os.path.exists(cls.get_path())
 
     @property
     def configs_dir(self) -> str:
@@ -46,7 +60,8 @@ class PakkConfigBase(Configuration):
                 raise ValueError(f"NAME of the Configuration must be set. Override the static variable NAME in your {cls.__name__} subclass.")
             
             cls._instance = cls(name=cls.NAME)
-            cls._instance.load()
+            if cls._instance.exists():
+                cls._instance.load()
 
         return cls._instance
         

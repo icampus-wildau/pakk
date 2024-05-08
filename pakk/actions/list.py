@@ -3,6 +3,7 @@ import builtins
 import logging
 
 import re
+from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.modules.connector.base import Connector, DiscoveredPakkages
 from rich.table import Table
@@ -33,12 +34,13 @@ def list(**kwargs: str):
     discoverer_list: builtins.list[Connector] = []
 
     if flag_all or flag_available:
-        connectors = Pakk.get_connectors()
-        from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
-        # TODO Used discoverers should be configurable
-        available_discoverers = [DiscovererGitlabCached()]
+        connectors = PakkLoader.get_connector_classes()
+
+        # from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
+        # # TODO Used discoverers should be configurable
+        # available_discoverers = [DiscovererGitlabCached()]
         
-        discoverer_list = available_discoverers + local_connector
+        # discoverer_list = available_discoverers + local_connector
     else:
         discoverer_list = local_connector
 
