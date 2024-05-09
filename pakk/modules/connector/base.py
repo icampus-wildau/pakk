@@ -58,6 +58,58 @@ class DiscoveredPakkages:
 
         return pakkages
 
+class FetchedPakkages:
+    def __init__(self):
+        # self.quiet = quiet
+        
+        self.pakkages_to_fetch: dict[str, Pakkage] = dict()
+        self.fetched_packages: dict[str, Pakkage] = dict()
+
+    def __getitem__(self, key: str) -> Pakkage:
+        return self.fetched_packages[key]
+    
+    def __setitem__(self, key: str, value: Pakkage):
+        self.fetched_packages[key] = value
+
+    def merge(self, new_pakkages: FetchedPakkages) -> FetchedPakkages:
+        """Merge the fetched pakkages."""
+
+        self.undiscovered_packages.update(new_pakkages.undiscovered_packages)
+
+        for id, pakkage in new_pakkages.discovered_packages.items():
+            if id in self.fetched_packages:
+                versions = self.fetched_packages[id].versions
+                versions.available.update(pakkage.versions.available)
+                versions.installed = pakkage.versions.installed
+            else:
+                self.fetched_packages[id] = pakkage
+            
+            self.undiscovered_packages.discard(id)
+
+        return self
+    
+    def fetched(self, pakkage: Pakkage):
+        self.fetched_packages[pakkage.id] = pakkage
+        self.pakkages_to_fetch.pop(pakkage.id, None)
+    
+    def fetch(self, connectors: list[Connector], quiet: bool = False) -> FetchedPakkages:
+
+        if not quiet:
+            Module.print_rule(f"Discovering pakkages")
+
+        pakkages = DiscoveredPakkages()
+        for connector in connectors:
+            discovered_pakkages = connector.discover()
+            pakkages.merge(discovered_pakkages)
+
+        # Check if all installed versions are also available, otherwise there are problems with reinstalling
+        for pakkage in pakkages.discovered_packages.values():
+            if pakkage.versions.installed and len(pakkage.versions.available) > 0 and pakkage.versions.installed.version not in pakkage.versions.available:
+                logger.warn(f"Inconsistency detected for pakkage {pakkage.id}: installed version {pakkage.versions.installed.version} is not available in the discovered versions {pakkage.versions.available}")
+
+        return pakkages
+
+
 class Connector(Module):
     
     PRIORITY = 100
@@ -89,7 +141,7 @@ class Connector(Module):
         """Discover all the packages with the implemented discoverer."""
         raise NotImplementedError()
 
-    def fetch(self) -> dict[str, Pakkage]:
+    def fetch(self) -> FetchedPakkages:
         """Fetch all the packages with the implemented fetcher."""
         raise NotImplementedError()
 

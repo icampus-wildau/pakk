@@ -5,7 +5,7 @@ import os
 import shlex
 import braceexpand
 
-from pakk.pakk.args.base_config import BaseConfig
+from pakk.args.base_args import BaseArgs
 from pakk.config.process import Process
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
@@ -223,7 +223,7 @@ class TypeSetup(TypeBase):
         """Install by executing the setup instruction."""
         logger.info(f"Execute setup instructions for '{self.pakkage_version.id}'...")
 
-        base_cfg = BaseConfig.get()
+        base_cfg = BaseArgs.get()
         v = self.pakkage_version
 
         if isinstance(self.env, LinuxEnvironment):
@@ -247,7 +247,7 @@ class TypeSetup(TypeBase):
     def install_multiple(types: list[TypeSetup]):
         """Install multiple setup types in parallel."""
         logger.info(f"Execute setup instructions for {[t.pakkage_version.id for t in types]}...")
-        base_cfg = BaseConfig.get()
+        base_cfg = BaseArgs.get()
 
         for t in types:
             if not isinstance(t.env, LinuxEnvironment):

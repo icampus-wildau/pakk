@@ -166,10 +166,10 @@ class TypeBase(Module):
     @staticmethod
     def initialize():
         """Imports all types defined in the pakk config."""
-        from pakk.helper.module_importer import ModuleImporter
+        from pakk.helper.loader import PakkLoader
 
         # Import the defined setup and installation modules
-        TypeBase._imported_type_classes = ModuleImporter.import_modules(TypeBase.SECTION_NAME, TypeBase)
+        TypeBase._imported_type_classes = PakkLoader.get_type_classes()
 
         from pakk.modules.types.type_generic import TypeGeneric
         if TypeGeneric not in TypeBase._imported_type_classes:

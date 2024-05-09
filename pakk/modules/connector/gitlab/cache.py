@@ -36,8 +36,12 @@ class CachedProjectTag:
         self.tag = ""
         self.last_activity_at: datetime = datetime.now()
 
-        self.pakk_config: CompactPakkageConfig = pakk_config
+        self.c_pakk_config: CompactPakkageConfig = pakk_config
         self.is_pakk_version = False
+
+    @property
+    def pakk_config(self) -> PakkageConfig:
+        return PakkageConfig.from_compact_pakkage_config(self.c_pakk_config)
 
     @property
     def version(self) -> str:
@@ -99,10 +103,10 @@ class CachedProjectTag:
 
                         if pakk_cfg is not None:
                             pakk_cfg = CompactPakkageConfig.from_pakkage_config(pakk_cfg)
-                            pt.pakk_config = pakk_cfg
+                            pt.c_pakk_config = pakk_cfg
 
-                            pt.pakk_config.attributes[ATTR_GITLAB_HTTP_SOURCE] = cached_project.http_url_to_repo
-                            pt.pakk_config.attributes[ATTR_GITLAB_SOURCE_TAG] = pt.tag
+                            pt.c_pakk_config.attributes[ATTR_GITLAB_HTTP_SOURCE] = cached_project.http_url_to_repo
+                            pt.c_pakk_config.attributes[ATTR_GITLAB_SOURCE_TAG] = pt.tag
 
                             pt.is_pakk_version = True
                         else:
@@ -227,6 +231,7 @@ class CachedProject:
                and loaded_cp.last_activity_at == cp.last_activity_at
                 and loaded_cp.V == CACHING_VERSION
             ):
+                
                 return loaded_cp, True
         else:
             loaded_cp = None

@@ -2,20 +2,28 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
 import re
+import subprocess
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
 import gitlab
-from pakk.modules.connector.gitlab.cache import CachedProject
+from pakk.config.main_cfg import MainConfig
 from requests import ConnectTimeout
-from rich.progress import (MofNCompleteColumn, Progress, SpinnerColumn,
-                           TimeElapsedColumn)
+from rich.progress import (BarColumn, MofNCompleteColumn, Progress,
+                           SpinnerColumn, TextColumn, TimeElapsedColumn,
+                           TimeRemainingColumn)
 
-from pakk.modules.connector.base import Connector, DiscoveredPakkages
+from pakk.helper.file_util import remove_dir
+from pakk.logger import console
+from pakk.modules.connector.base import Connector, DiscoveredPakkages, FetchedPakkages
+from pakk.modules.connector.gitlab.cache import CachedProject
 from pakk.modules.connector.gitlab.config import GitlabConfig
-from pakk.pakkage.core import Pakkage, PakkageVersions
-
+from pakk.modules.module import Module
+from pakk.args.install_args import InstallArgs
+from pakk.pakkage.core import (Pakkage, PakkageConfig, PakkageInstallState,
+                               PakkageVersions)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +56,14 @@ class GitlabConnector(Connector):
 
         self.cached_projects: list[CachedProject] = list()
         self.discovered_pakkages: DiscoveredPakkages = DiscoveredPakkages()
+
+
+        # Progress object for pbars
+        self._pbar_progress = None
+        # Pbar tasks for multiple workers
+        self._pbars = []
+        # Array storing free pbar indices, workers select the next free index
+        self._free_pbars = []
 
     @staticmethod
     def get_gitlab_instance() -> gitlab.Gitlab:
@@ -189,7 +205,7 @@ class GitlabConnector(Connector):
         logger.debug(f"Finished loading {len(projects)} projects:")
         logger.debug(f"  {results['not cached']} loaded from gitlab api")
         logger.debug(f"  {results['cached']} loaded from cache")
-        logger.debug(f"  {results['archived']} archived projects were skipped" if results["archived"] > 0 else None)
+        logger.debug(f"  {results['archived']} archived projects were skipped" if results["archived"] > 0 else "No archived projects found")
 
         dps = self.retrieve_discovered_pakkages()
         n_versions = 0
@@ -199,3 +215,161 @@ class GitlabConnector(Connector):
         logger.info(f"Discovered {len(dps.discovered_packages)} pakk packages with {n_versions} versions")
 
         return dps
+
+    def checkout_target_version(self, pakkage: Pakkage) -> Pakkage | None:
+        if not pakkage.versions.is_update_candidate():
+            return None
+
+        # Get the next free pbar
+        pbar_index = self._free_pbars.index(True)
+        # Acquire the pbar
+        self._free_pbars[pbar_index] = False
+        # Get the related pbar
+        pbar = self._pbars[pbar_index]
+
+        fetched_dir = MainConfig.get_config().paths.fetch_dir.value
+
+        target_version = pakkage.versions.target
+        if target_version is None:
+            raise Exception(f"Target version of {pakkage.name} is None.")
+
+        if ATTR_GITLAB_HTTP_SOURCE in target_version.attributes and ATTR_GITLAB_SOURCE_TAG in target_version.attributes:
+            url = target_version.attributes[ATTR_GITLAB_HTTP_SOURCE]
+            url_with_token = self.get_gitlab_http_with_token(url)
+            tag = target_version.attributes[ATTR_GITLAB_SOURCE_TAG]
+
+            name = target_version.basename
+            path = os.path.join(fetched_dir, name)
+
+            fetch = True
+            if os.path.exists(path):
+                if self.install_args.refetch or self.install_args.clear_cache:
+                    logger.debug(f"Directory {path} already exists. Refetching it.")
+
+                    # delete existing directory
+                    remove_dir(path)
+                else:
+                    # Check if the directory is empty
+                    with os.scandir(path) as it:
+                        if not any(it):
+                            fetch = True
+                            logger.debug(f"Directory {path} already exists but is empty. Refetching it.")
+                            remove_dir(path)
+                        else:
+                            fetch = False
+                            logger.debug(f"Directory {path} already exists. Skipping fetch and using local version.")
+
+            if fetch:
+                os.makedirs(path, exist_ok=True)
+
+                # Clone the repository
+                # -c advice.detachedHead=false is for ignoring the warning about detached HEAD
+                # We don't need git history, so we use --depth=1
+                # The --progress option is required to get the continuous progress output
+                cmd = f"git clone -c advice.detachedHead=false --depth=1 --branch {tag} {url_with_token} {name} --progress"
+                retry_count = 2
+                tries = 0
+
+                while tries < retry_count:
+                    with subprocess.Popen(
+                            cmd,
+                            cwd=fetched_dir,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            bufsize=1,
+                            universal_newlines=True,
+                    ) as p:
+
+                        # Capture the output of the subprocess to print the info in the pbar
+                        for line in p.stdout:
+                            self._pbar_progress.update(pbar, pakkage=pakkage.id, info=line.strip().replace("\r", ""))
+
+                    if PakkageConfig.from_directory(path):
+                        break
+                    
+                    tries += 1
+                    if tries < retry_count:
+                        logger.warning(f"Fetch of {pakkage.id} failed. Retrying...")
+
+            # Load the PakkageConfig from the fetched directory
+            target_version = PakkageConfig.from_directory(path)
+            if target_version is None:
+                raise Exception(f"Could not load PakkageConfig from {path}")
+
+            # If there was an installed version, copy the state
+            target_version.state.copy_from(pakkage.versions.installed)
+            target_version.state.install_state = PakkageInstallState.FETCHED
+            target_version.local_path = path
+
+            # Create the .pakk directory and store the state
+            target_version.save_state(path)
+            pakkage.versions.target = target_version
+
+        self._free_pbars[pbar_index] = True
+        self._pbar_progress.update(pbar, pakkage="Done", info="")
+        return pakkage
+
+    def fetch(self, pakkages: FetchedPakkages) -> FetchedPakkages:
+        Module.print_rule(f"Fetching pakkages")
+
+        self.install_args = InstallArgs.get()
+
+        num_workers = int(self.config.num_fetcher_workers.value)
+
+        # packages_to_fetch = [pakkage for pakkage in self.pakkages.values() if pakkage.versions.is_update_candidate()]
+        packages_to_fetch = pakkages.pakkages_to_fetch.values()
+
+        # try:
+        if len(packages_to_fetch) == 0:
+            logger.info("No pakkages to fetch.")
+            return pakkages
+
+        with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                # TaskProgressColumn(),
+                MofNCompleteColumn(),
+                TimeRemainingColumn(),
+                TimeElapsedColumn(),
+                TextColumn("{task.fields[pakkage]}"),
+                TextColumn("{task.fields[info]}"),
+                transient=True,
+                console=console
+        ) as progress:
+            self._pbar_progress = progress
+
+            pbar = progress.add_task("[blue]Fetching Total:", total=len(packages_to_fetch), pakkage="", info="")
+
+            if num_workers > 1:
+                num_workers = min(num_workers, len(packages_to_fetch))
+                for i in range(num_workers):
+                    self._pbars.append(progress.add_task(f"[cyan]Worker{i + 1}:", total=None, pakkage="", info=""))
+                    self._free_pbars.append(True)
+
+                # Don't use multiprocessing.Pool since it will spawn new processes and not threads,
+                # thus the data will not be shared.
+                # See:
+                # https://stackoverflow.com/questions/3033952/threading-pool-similar-to-the-multiprocessing-pool
+                # https://stackoverflow.com/questions/52486811/how-to-properly-reference-to-instances-of-a-class-in-multiprocessing-pool-map
+                # https://towardsdatascience.com/demystifying-python-multiprocessing-and-multithreading-9b62f9875a27
+                with ThreadPool(num_workers) as pool:
+                    for res in pool.imap_unordered(self.checkout_target_version, packages_to_fetch):
+                        progress.update(pbar, advance=1, info="")
+                        if res is not None:
+                            logger.info(f"Fetched {res.name}.")
+                            pakkages.fetched(res)
+                pool.join()
+            else:
+                self._pbars.append(progress.add_task(f"[cyan]Worker{1}:", total=None, pakkage="", info=""))
+                self._free_pbars.append(True)
+
+                for pakkage in packages_to_fetch:
+                    self.checkout_target_version(pakkage)
+                    progress.update(pbar, advance=1, info=f"Fetching: {pakkage.name}")
+                    logger.info(f"Fetched {pakkage.name}.")
+                    pakkages.fetched(pakkage)
+
+        logger.info("Done fetching")
+        return pakkages

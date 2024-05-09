@@ -62,6 +62,7 @@ class PakkageState:
 class CompactPakkageConfig:
     def __init__(self):
         self.cfg_sections: list[str] = list()
+        """The sections of the pakkage config."""
 
         self.id: str = ""
         """The ID of the pakkage. E.g. ros2-motors"""
@@ -88,7 +89,7 @@ class CompactPakkageConfig:
     @staticmethod
     def from_pakkage_config(config: PakkageConfig) -> CompactPakkageConfig:
         cpc = CompactPakkageConfig()
-
+        cpc.cfg_sections = config.cfg_sections
         cpc.id = config.id
         cpc.version = config.version
         cpc.name = config.name
@@ -119,6 +120,7 @@ class PakkageConfig:
         self._cfg.optionxform = str
         """The configparser object, which is used to store the pakk.cfg data."""
         self.cfg_sections: list[str] = list()
+        """The sections of the pakkage config."""
 
         self.id: str = ""
         """The ID of the pakkage. E.g. ros2-motors"""
@@ -151,6 +153,21 @@ class PakkageConfig:
 
         self._environments: dict[type[EnvironmentBase], EnvironmentBase] = dict()
         """The stored environments of the pakkage. Used to use the same environment for multiple types."""
+
+    @staticmethod
+    def from_compact_pakkage_config(compact: CompactPakkageConfig) -> PakkageConfig:
+        pc = PakkageConfig()
+        pc.cfg_sections = compact.cfg_sections
+        pc.id = compact.id
+        pc.version = compact.version
+        pc.name = compact.name
+        pc.description = compact.description
+        pc.author = compact.author
+        pc.keywords = compact.keywords
+        pc.license = compact.license
+        pc.dependencies = compact.dependencies
+        pc.attributes = compact.attributes
+        return pc
 
     @property
     def cfg(self):
