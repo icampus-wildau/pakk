@@ -20,7 +20,7 @@ class PakkConfigBase(Configuration):
     _instance: None | PakkConfigBase = None
     
     def __init__(self, name: str):
-        path = os.path.join(self.get_configs_dir(), name)
+        path = os.path.abspath(os.path.join(self.get_configs_dir(), name))
         super().__init__(path)
 
         # if is_required and not os.path.exists(path):

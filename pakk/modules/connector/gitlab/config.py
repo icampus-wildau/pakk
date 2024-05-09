@@ -18,10 +18,8 @@ class GitlabConfig(PakkConfigBase):
         self.enabled = gitlab.ConfirmationOption("enabled", True, "Enable the GitLab connector", inquire=True)
         
         section_connection = ConfigSection("GitLab.Connection")
-        self.url = section_connection.Option("url", "", "URL of the GitLab instance", inquire=self.is_enabled)
-        """URL of the GitLab instance"""
 
-        self._api_version = section_connection.Option("api_version", "v4", "", inquire=False)
+        self._api_version = section_connection.Option("api_version", "4", "", inquire=False)
         self._ssl_verify = section_connection.Option("ssl_verify", "True", "", inquire=False)
         self._timeout = section_connection.Option("timeout", "10", "", inquire=False)
 
@@ -30,6 +28,9 @@ class GitlabConfig(PakkConfigBase):
         self.include_archived = section_projects.ConfirmationOption("include_archived", False, "Include archived projects", inquire=self.is_enabled)
 
         section_connector = ConfigSection("GitLab.Connector")
+        self.url = section_connection.Option("url", "", "URL of the GitLab instance", inquire=self.is_enabled)
+        """URL of the GitLab instance"""
+        self.private_token = section_connection.Option("private_token", "", "Private token for the GitLab instance", inquire=self.is_enabled)
         self.num_discover_workers = section_connector.Option("num_discover_workers", "4", "Number of workers for the discoverer", inquire=self.is_enabled, long_instruction="If num_workers is > 1, the discoverer will use multithreading")
         self.num_fetcher_workers = section_connector.Option("num_fetcher_workers", "4", "Number of workers for the fetcher", inquire=self.is_enabled, long_instruction="If num_workers is > 1, the fetcher will use multithreading")
 

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def configure(**kwargs):
     # f = Figlet(font='cyberlarge')
     verbose = kwargs.get("verbose", False)
+    reset = kwargs.get("reset", False)
     Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
 
     console = Logger.get_console()
@@ -50,8 +51,9 @@ def configure(**kwargs):
         if configs_are_specified or not config.exists():
             Module.print_rule(f"Configuring {config_name}")
             console.print(f"Configuring {config_name} at {config.config_path}")
-            config.inquire()
+            config.inquire(not reset)
             config.write()
+            console.print(f"Finished configuration of {config_name} at {config.config_path}!")
         else:
             console.print(f"Configuration file {config.config_path} already exists. Use `pakk configure {config_name}` to explicitly configure  it.")
 

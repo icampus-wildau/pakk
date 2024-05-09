@@ -60,7 +60,8 @@ class PakkLoader:
 
             # if connector.CONFIG_CLS is not None:
                 
-
+        # Sort connectors by PRIORITY
+        connectors.sort(key=lambda x: x.PRIORITY)
 
         return connectors
     

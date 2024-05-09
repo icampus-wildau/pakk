@@ -59,6 +59,48 @@ class PakkageState:
         self.running = other.running
 
 
+class CompactPakkageConfig:
+    def __init__(self):
+        self.cfg_sections: list[str] = list()
+
+        self.id: str = ""
+        """The ID of the pakkage. E.g. ros2-motors"""
+        self.version: str = ""
+        """The version of the pakkage. E.g. 0.1.0"""
+        self.name: str = ""
+        """The name of the pakkage. E.g. ROS2 Motors"""
+        self.description: str = ""
+        """The description of the pakkage. E.g. A pakkage for controlling motors."""
+        self.author: str = ""
+        """The author of the pakkage."""
+        self.keywords: list[str] = list()
+        """The keywords of the pakkage. E.g. ['ros2', 'motors']"""
+        self.license: str = ""
+        """The license of the pakkage. E.g. MIT"""
+
+        self.dependencies: dict[str, str] = dict()
+        """The dependencies of the pakkage. E.g. {"ros2": "0.1.0"}"""
+
+        self.attributes: dict[str, Any] = dict()
+        """Custom attributes for following modules."""
+
+
+    @staticmethod
+    def from_pakkage_config(config: PakkageConfig) -> CompactPakkageConfig:
+        cpc = CompactPakkageConfig()
+
+        cpc.id = config.id
+        cpc.version = config.version
+        cpc.name = config.name
+        cpc.description = config.description
+        cpc.author = config.author
+        cpc.keywords = config.keywords
+        cpc.license = config.license
+        cpc.dependencies = config.dependencies
+        cpc.attributes = config.attributes
+
+        return cpc
+
 class PakkageConfig:
     """
     The configuration of a pakkage, defined in the pakk.json / pakk.cfg / etc.

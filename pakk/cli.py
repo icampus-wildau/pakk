@@ -197,6 +197,7 @@ def config(ctx: Context, **kwargs):
 @cli.command(aliases=['cfg'])
 @click.argument('configuration', required=False)
 @click.option("-v", "--verbose", is_flag=True, default=False, help='Give more output.')
+@click.option("-r", "--reset", is_flag=True, default=False, help='Reset the configuration.')
 @click.pass_context
 def configure(ctx: Context, **kwargs):
     """

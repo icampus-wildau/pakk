@@ -35,6 +35,7 @@ def list(**kwargs: str):
 
     if flag_all or flag_available:
         connectors = PakkLoader.get_connector_classes()
+        discoverer_list = [c(**kwargs) for c in connectors]
 
         # from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
         # # TODO Used discoverers should be configurable
