@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
-import logging
-from typing import TYPE_CHECKING, TypeVar, Type
+from typing import TYPE_CHECKING
+from typing import Type
+from typing import TypeVar
 
 from pakk.config.main_cfg import MainConfig
 from pakk.config.process import Process
-
 from pakk.modules.environments.base import GenericEnvironment
-from pakk.modules.types.base_instruction_parser import InstructionParser, InstallInstructionParser, RunInstructionParser
 from pakk.modules.module import Module
+from pakk.modules.types.base_instruction_parser import InstallInstructionParser
+from pakk.modules.types.base_instruction_parser import InstructionParser
+from pakk.modules.types.base_instruction_parser import RunInstructionParser
 
 if TYPE_CHECKING:
     from pakk.modules.environments.base import EnvironmentBase
@@ -32,14 +35,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound="InstructionParser", covariant=True)
-InstructionParserType = TypeVar('InstructionParserType', bound=InstructionParser)
+InstructionParserType = TypeVar("InstructionParserType", bound=InstructionParser)
+
 
 class TypeBase(Module):
     PAKKAGE_TYPE: str | None = None
     """
     The name of this pakkage type.
     This name is also used as prefix for pakk section names to determine if this type supports the pakkage.
-    
+
     The name is also shown as in the types section of pakkages.
     """
 
@@ -63,16 +67,12 @@ class TypeBase(Module):
 
     INSTRUCTION_PARSER: list[type[InstructionParser]] = []
     """
-    List of instruction parsers for this type. 
+    List of instruction parsers for this type.
     The order is important.
     The classes in this list are used to create the instruction parser objects automatically.
     """
 
-    def __init__(
-            self,
-            pakkage_version: PakkageConfig,
-            environment: EnvironmentBase
-    ):
+    def __init__(self, pakkage_version: PakkageConfig, environment: EnvironmentBase):
         super().__init__()
 
         if self.PAKKAGE_TYPE is None:
@@ -80,7 +80,7 @@ class TypeBase(Module):
 
         self.pakkage_version = pakkage_version
         """The pakkage version this type belongs to."""
-        self.env = environment # or GenericEnvironment()
+        self.env = environment  # or GenericEnvironment()
         """The environment used to install this pakkage type."""
 
         self.install_type = InstallType()
@@ -88,11 +88,11 @@ class TypeBase(Module):
 
         self.instruction_parser: dict[str, InstructionParser] = {}
         """Dictionary of instruction parsers for this type. Key is the instruction name."""
-        
+
         for p in self.INSTRUCTION_PARSER:
             if p.INSTRUCTION_NAME is None:
                 continue
-            
+
             parser = p(self.env)
             if isinstance(p.INSTRUCTION_NAME, list):
                 for instruction_name in p.INSTRUCTION_NAME:
@@ -100,14 +100,21 @@ class TypeBase(Module):
             elif isinstance(p.INSTRUCTION_NAME, str):
                 self.instruction_parser[p.INSTRUCTION_NAME] = parser
             else:
-                raise ValueError(f"Invalid instruction name '{p.INSTRUCTION_NAME}' in instruction parser '{p.__name__}'.")
-                
+                raise ValueError(
+                    f"Invalid instruction name '{p.INSTRUCTION_NAME}' in instruction parser '{p.__name__}'."
+                )
 
-        self._instruction_parser_by_cls: dict[type[InstructionParser], InstructionParser] = {p.__class__: p for p in self.instruction_parser.values()}
+        self._instruction_parser_by_cls: dict[type[InstructionParser], InstructionParser] = {
+            p.__class__: p for p in self.instruction_parser.values()
+        }
 
-        self.instruction_parser_install = [p for p in self.instruction_parser.values() if isinstance(p, InstallInstructionParser)]
+        self.instruction_parser_install = [
+            p for p in self.instruction_parser.values() if isinstance(p, InstallInstructionParser)
+        ]
         """List of instruction parsers that are used for installation."""
-        self.instruction_parser_run = [p for p in self.instruction_parser.values() if isinstance(p, RunInstructionParser)]
+        self.instruction_parser_run = [
+            p for p in self.instruction_parser.values() if isinstance(p, RunInstructionParser)
+        ]
         """List of instruction parsers that are used for running commands."""
 
         self.config_sections = TypeConfigSection.get_sections(self.pakkage_version, self.PAKKAGE_TYPE)
@@ -116,7 +123,7 @@ class TypeBase(Module):
 
     def __str__(self):
         return f"{self.PAKKAGE_TYPE} {self.pakkage_version.id}"
-    
+
     def __repr__(self):
         return str(self)
 
@@ -137,8 +144,12 @@ class TypeBase(Module):
                 if section.instruction is None:
                     for instruction_name, instruction_content in section.section_content.items():
                         if instruction_name in self.instruction_parser:
-                            logger.debug(f"Parsing instruction '{instruction_name}' for type '{self.PAKKAGE_TYPE}': {instruction_content}.")
-                            self.instruction_parser[instruction_name].parse_instruction(instruction_content, instruction_name)
+                            logger.debug(
+                                f"Parsing instruction '{instruction_name}' for type '{self.PAKKAGE_TYPE}': {instruction_content}."
+                            )
+                            self.instruction_parser[instruction_name].parse_instruction(
+                                instruction_content, instruction_name
+                            )
                         else:
                             self.parse_undefined_instruction(instruction_name, instruction_content)
                 # If the explicit instruction name is given, like in "[Setup:pip]"
@@ -146,9 +157,13 @@ class TypeBase(Module):
                 else:
                     if section.instruction in self.instruction_parser:
                         for sub_instruction, instruction_content in section.section_content.items():
-                            self.instruction_parser[section.instruction].parse_instruction(instruction_content, instruction_name, sub_instruction)
+                            self.instruction_parser[section.instruction].parse_instruction(
+                                instruction_content, instruction_name, sub_instruction
+                            )
                     else:
-                        logger.warning(f"TODO: Unknown instruction '{section.instruction}' in pakk.cfg of {self.pakkage_version.id}.")
+                        logger.warning(
+                            f"TODO: Unknown instruction '{section.instruction}' in pakk.cfg of {self.pakkage_version.id}."
+                        )
                         # TODO: is this parameter correct?
                         self.parse_undefined_instruction(section.instruction, section.section_content)
 
@@ -172,6 +187,7 @@ class TypeBase(Module):
         TypeBase._imported_type_classes = PakkLoader.get_type_classes()
 
         from pakk.modules.types.type_generic import TypeGeneric
+
         if TypeGeneric not in TypeBase._imported_type_classes:
             TypeBase._imported_type_classes.append(TypeGeneric)
 
@@ -181,14 +197,14 @@ class TypeBase(Module):
         path = pakkage_version.local_path
         if path is None:
             raise ValueError("Pakkage version has no local path.")
-        
+
         if cls.PAKKAGE_TYPE is None:
             raise ValueError(f"PAKKAGE_TYPE must be set for {cls.__name__}.")
 
         pakkages_dir = MainConfig.get_config().paths.pakkages_dir.value
         if pakkages_dir is None:
             raise ValueError("pakkages_dir is not set in the pakk config.")
-        
+
         dest_dir = os.path.join(pakkages_dir, cls.PAKKAGE_TYPE)
         dest_path = os.path.join(dest_dir, pakkage_version.basename)
 
@@ -202,7 +218,7 @@ class TypeBase(Module):
             raise ValueError(f"PAKKAGE_TYPE must be set for {cls.__name__}.")
         if pakkages_dir is None:
             raise ValueError("pakkages_dir is not set in the pakk config.")
-        
+
         dest_dir = os.path.join(pakkages_dir, cls.PAKKAGE_TYPE)
         dest_path = os.path.join(dest_dir, pakkage_version.basename)
 
@@ -227,7 +243,7 @@ class TypeBase(Module):
             return True
 
         return False
-    
+
     @classmethod
     def supports_environment(cls, environment: EnvironmentBase) -> bool:
         """Return if the type supports the given environment."""
@@ -245,14 +261,14 @@ class TypeBase(Module):
         for instruction in self.instruction_parser_run:
             if instruction.has_cmd():
                 return True
-            
+
         return False
-    
+
     def run(self) -> None:
         """Run the pakkage with this type."""
         if not self.is_runnable():
             raise ValueError("Pakkage is not runnable.")
-        
+
         run_instructions: list[RunInstructionParser] = []
         for instruction in self.instruction_parser_run:
             if instruction.has_cmd():
@@ -267,19 +283,18 @@ class TypeBase(Module):
             if instruction not in fetched_instructions:
                 fetched_instructions.add(instruction)
                 if instruction.has_cmd():
-                    cmds.append(instruction.get_cmd())            
+                    cmds.append(instruction.get_cmd())
 
         cmd = " && ".join(cmds)
         envs = Process.get_env_vars()
         logger.info(f"Running pakkage with command '{cmd}'")
-        
+
         # Expand the environment variables
         os_envs = os.environ.copy()
         pakk_envs = Process.get_env_vars()
         envs = {**os_envs, **pakk_envs}
 
         self.run_commands(cmd, print_output=True, execute_in_bash=True, env=envs)
-                
 
     def install(self) -> None:
         """Install the package version with this type."""
@@ -297,7 +312,6 @@ class TypeBase(Module):
     def uninstall(self) -> None:
         """Uninstall the package with the implemented installer."""
         raise NotImplementedError()
-
 
 
 class TypeConfigSection:
@@ -318,13 +332,17 @@ class TypeConfigSection:
         self.section_content = pakkage_version.cfg[cfg_section_name]
 
     @staticmethod
-    def get_sections(pakkage_version: PakkageConfig, type_name: str, instruction_name: str | None = None) -> list[TypeConfigSection]:
+    def get_sections(
+        pakkage_version: PakkageConfig, type_name: str, instruction_name: str | None = None
+    ) -> list[TypeConfigSection]:
         """Get the sections for the given type and instruction name."""
         sections = []
         section_names = pakkage_version.cfg.sections()
         for section_name in section_names:
             cfg_section = TypeConfigSection(pakkage_version, section_name)
-            if cfg_section.type_name == type_name and (instruction_name is None or cfg_section.instruction == instruction_name):
+            if cfg_section.type_name == type_name and (
+                instruction_name is None or cfg_section.instruction == instruction_name
+            ):
                 sections.append(cfg_section)
         return sections
 
@@ -335,7 +353,7 @@ class InstallType:
         """If True, the installation can be started even if the dependencie installations not have finished yet."""
 
         self.is_combinable_with_children = False
-        """If True, the installation can be combined with other install instructions of the same type of the child (parent nodes when looking from the dep tree view) nodes, 
+        """If True, the installation can be combined with other install instructions of the same type of the child (parent nodes when looking from the dep tree view) nodes,
         even if they are not independent from dependency nodes and thus should be executed one after the other."""
 
         """
@@ -344,19 +362,19 @@ class InstallType:
         --> ROS nodes should be build only after dependency nodes are finished (e.g. to setup Asset Symlinks etc.)
         --> ROS installation can be combined with other ROS installation (that are independent leaf nodes) (this combining installation is handled by overriding `install_multiple` method in the ROS type)
         --> If a node has only the ROS installation left, it can be combined with other ROS installations in the dependency hierarchie, thus these types are installed before the current dependency node is finished
-        
+
         Setup: IndependentFromDependencies
         --> Can be installed independently from dependencies, thus can be allways installed first from all nodes
 
         Asset: Not IndependentFromDependencies + Not CombinableWithChildren
-        --> Asset nodes should be build only after dependency nodes are finished (e.g. to setup other Asset Symlinks etc.)        
+        --> Asset nodes should be build only after dependency nodes are finished (e.g. to setup other Asset Symlinks etc.)
         --> Asset installation can not be combined with other Asset installations
         """
 
         self.has_impact_on_children = True
         """
         If True, the installation of this type has an impact on the installation of the child (parent nodes when looking from the dep tree view) nodes.
-        If False, the installation of child nodes can already start before the installation of this type is finished. 
+        If False, the installation of child nodes can already start before the installation of this type is finished.
         """
 
         self.is_finished = False
@@ -370,26 +388,22 @@ class InstallType:
         - combinable (low priority)
         - combinable across hierarchy (lowest priority)
         """
-        
+
         if self.is_independent:
             return 2
         elif not self.is_combinable_with_children:
             return 1
         else:
             return 0
-        
 
     def __lt__(self, other: InstallType):
         """
         Compares the install priority of two InstallType objects.
         """
         return self.install_priority < other.install_priority
-    
+
     def __eq__(self, other: InstallType):
         """
         Compares the install priority of two InstallType objects.
         """
         return self.install_priority == other.install_priority
-
-
-

@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 import builtins
 import logging
-
 import re
+
+from rich.table import Table
+
 from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
-from pakk.modules.connector.base import Connector, DiscoveredPakkages
-from rich.table import Table
 from pakk.logger import Logger
+from pakk.modules.connector.base import Connector
+from pakk.modules.connector.base import DiscoveredPakkages
 from pakk.modules.connector.local import LocalConnector
-
-import builtins
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,6 @@ def list(**kwargs: str):
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the list could be wrong.")
 
-
-    
-
     local_connector: builtins.list[Connector] = [LocalConnector(**kwargs)]
     discoverer_list: builtins.list[Connector] = []
 
@@ -40,7 +38,7 @@ def list(**kwargs: str):
         # from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
         # # TODO Used discoverers should be configurable
         # available_discoverers = [DiscovererGitlabCached()]
-        
+
         # discoverer_list = available_discoverers + local_connector
     else:
         discoverer_list = local_connector
@@ -48,10 +46,11 @@ def list(**kwargs: str):
     if flag_types:
         print("Initializing types...")
         from pakk.modules.types.base import TypeBase
+
         TypeBase.initialize()
 
     pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
-    
+
     # To avoid problems in the type initialization... Maybe there is a better way
     for pakkage in pakkages_discovered.discovered_packages.values():
         for version in pakkage.versions.available.values():
@@ -65,7 +64,7 @@ def list(**kwargs: str):
         "Installed": True,
         "Available Versions": has_locations or kwargs.get("available", False) or kwargs.get("all"),
         "Pakkage Type": x or kwargs.get("types", False),
-        "Description": True, # x or kwargs.get("description", False),
+        "Description": True,  # x or kwargs.get("description", False),
         "Keywords": x or kwargs.get("keywords", False),
     }
 
@@ -108,14 +107,21 @@ def list(**kwargs: str):
             v = iv or av_list[0]
             types = v.pakk_types
             is_startable = v.is_startable()
-            type_names = [f"[underline]{t.PAKKAGE_TYPE}[/underline]" if t.is_runnable() else t.PAKKAGE_TYPE for t in types if t.PAKKAGE_TYPE is not None and t.VISIBLE_TYPE]
+            type_names = [
+                f"[underline]{t.PAKKAGE_TYPE}[/underline]" if t.is_runnable() else t.PAKKAGE_TYPE
+                for t in types
+                if t.PAKKAGE_TYPE is not None and t.VISIBLE_TYPE
+            ]
             # types = v.pakk_type_names
             types_str = ", ".join(type_names) if len(type_names) > 0 else "Library"
         else:
             types_str = "Unknown"
 
-        kws = iv.keywords if iv is not None else builtins.list(av.values())[0].keywords if av is not None and len(
-            av) > 0 else []
+        kws = (
+            iv.keywords
+            if iv is not None
+            else builtins.list(av.values())[0].keywords if av is not None and len(av) > 0 else []
+        )
 
         kws = ", ".join(kws)
 
@@ -133,6 +139,7 @@ def list(**kwargs: str):
 
     Logger.get_console().print(table)
     Logger.get_console().print(f"Executable pakkages are underlined.")
+
 
 if __name__ == "__main__":
     kwargs = {

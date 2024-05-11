@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import logging
 import os
-import shlex
 import re
+import shlex
 
-from pakk.helper import file_util
 from pakk.config.process import Process
+from pakk.helper import file_util
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import InstallInstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +127,9 @@ class TypeAsset(TypeBase):
 
         ... then the instruction is unknown, thus we parse it as an env var.
         """
-        self.get_instruction_parser_by_cls(EnvVarInstructionParser).parse_instruction(f"{instruction_name} {instruction_content}")
+        self.get_instruction_parser_by_cls(EnvVarInstructionParser).parse_instruction(
+            f"{instruction_name} {instruction_content}"
+        )
 
     def get_environment_vars(self) -> dict[str, str]:
         env_vars = {}
@@ -149,10 +153,7 @@ class TypeAsset(TypeBase):
                 # Replace all occurences of the temp env var with its value
                 val = pattern.sub(temp_val, val)
 
-            names = [
-                key,
-                f"{key}_{v.version}"
-            ]
+            names = [key, f"{key}_{v.version}"]
             for name in names:
                 n = self.fix_name_for_env_var(name)
                 env_vars[n] = val
@@ -173,27 +174,41 @@ class TypeAsset(TypeBase):
 
         cmd = Process.get_cmd_env_var_setup()
         for symlink in symlinks:
-            if '$' in symlink.target:
-                result = self.run_commands(cmd + " && echo " + symlink.target, env=Process.get_temp_env_vars(self.pakkage_version)).strip()
+            if "$" in symlink.target:
+                result = self.run_commands(
+                    cmd + " && echo " + symlink.target, env=Process.get_temp_env_vars(self.pakkage_version)
+                ).strip()
                 symlink.target = result
-            if '$' in symlink.link_name:
-                result = self.run_commands(cmd + " && echo " + symlink.link_name, env=Process.get_temp_env_vars(self.pakkage_version)).strip()
+            if "$" in symlink.link_name:
+                result = self.run_commands(
+                    cmd + " && echo " + symlink.link_name, env=Process.get_temp_env_vars(self.pakkage_version)
+                ).strip()
                 symlink.link_name = result
 
-            src = symlink.target if os.path.isabs(symlink.target) else os.path.abspath(os.path.join(self.pakkage_version.local_path, symlink.target))
-            dst = symlink.link_name if os.path.isabs(symlink.link_name) else os.path.abspath(os.path.join(self.pakkage_version.local_path, symlink.link_name))
+            src = (
+                symlink.target
+                if os.path.isabs(symlink.target)
+                else os.path.abspath(os.path.join(self.pakkage_version.local_path, symlink.target))
+            )
+            dst = (
+                symlink.link_name
+                if os.path.isabs(symlink.link_name)
+                else os.path.abspath(os.path.join(self.pakkage_version.local_path, symlink.link_name))
+            )
 
             if os.path.exists(src):
                 if os.path.exists(dst):
                     if os.path.islink(dst):
                         os.remove(dst)
                     else:
-                        raise ValueError(f"Cannot create symlink '{dst}' because a file or directory already exists at that location.")
+                        raise ValueError(
+                            f"Cannot create symlink '{dst}' because a file or directory already exists at that location."
+                        )
                 if os.path.isfile(src):
                     file_util.create_file_symlink(src, dst)
                 else:
                     file_util.create_dir_symlink(src, dst)
-                    
+
             else:
                 # TODO: better error handling, leading to unsuccessful installation
                 raise ValueError(f"Cannot create symlink '{dst}' because the source file '{src}' does not exist.")
@@ -225,7 +240,14 @@ class TypeAsset(TypeBase):
 class InitHelper(InitHelperBase):
     @staticmethod
     def help() -> list[InitConfigSection]:
-        return [InitConfigSection("Asset", [
-            InitConfigOption("# ENV_VAR_KEY", "Environment variable value. (Add as many as you want)"),
-            InitConfigOption("# link", 'link_source link_target (Add as many of these source/target pairs as you want)'),
-        ])]
+        return [
+            InitConfigSection(
+                "Asset",
+                [
+                    InitConfigOption("# ENV_VAR_KEY", "Environment variable value. (Add as many as you want)"),
+                    InitConfigOption(
+                        "# link", "link_source link_target (Add as many of these source/target pairs as you want)"
+                    ),
+                ],
+            )
+        ]

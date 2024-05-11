@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import logging
 
-from pakk.pakk.args.install_config import InstallConfig
+from rich import print
+from rich.tree import Tree
+
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-
-from rich.tree import Tree
-from rich import print
+from pakk.pakk.args.install_config import InstallConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ def show_tree(**kwargs):
     lock = PakkLock("tree", create_lock=False)
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the tree could be wrong.")
-
 
     discoverer = DiscoveredPakkagesMerger([DiscovererLocal()], quiet=True)
 

@@ -9,21 +9,29 @@ from functools import cmp_to_key
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 from typing import Dict
-from semver.version import Version
 
 import jsons
-from requests import ConnectTimeout
 import semver
 from gitlab.v4.objects import GroupProject
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
+from requests import ConnectTimeout
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TimeElapsedColumn
+from semver.version import Version
 
 import pakk.config.pakk_config as cfg
-from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections
 from pakk.helper import gitlab_util
-from pakk.helper.gitlab_util import get_gitlab_instance as get_gl, get_gitlab_http_with_token
-from pakk.modules.discoverer.base import Discoverer  # , DiscoveredPackage, DiscoveredVersion
-from pakk.pakkage.core import PakkageConfig, Pakkage, PakkageVersions
+from pakk.helper.gitlab_util import get_gitlab_http_with_token
+from pakk.helper.gitlab_util import get_gitlab_instance as get_gl
+from pakk.modules.discoverer.base import (
+    Discoverer,  # , DiscoveredPackage, DiscoveredVersion
+)
+from pakk.pakk.args.install_config import InstallConfig
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +41,7 @@ ATTR_GITLAB_HTTP_SOURCE = "gitlab_http"
 ATTR_GITLAB_SOURCE_TAG = "gitlab_tag"
 
 
-class CachedProjectTag():
+class CachedProjectTag:
     def __init__(self, pakk_config: PakkageConfig = None):
         self.commit = ""
         self.tag = ""
@@ -69,8 +77,10 @@ class CachedProjectTag():
             pt.commit = tag.attributes["commit"]["id"]
             pt.last_activity_at = tag.attributes["commit"]["committed_date"]  # created_at
 
-            if pt.tag in cached_project.versions and \
-                    pt.last_activity_at == cached_project.versions[pt.tag].last_activity_at:
+            if (
+                pt.tag in cached_project.versions
+                and pt.last_activity_at == cached_project.versions[pt.tag].last_activity_at
+            ):
                 pt = cached_project.versions[pt.tag]
             else:
                 # Load the pakk information from the tag
@@ -80,12 +90,14 @@ class CachedProjectTag():
                 repo_tree = gl_project.repository_tree(ref=pt.commit, all=True)
                 pakk_files = cfg.get().pakk_configuration_files
                 for item in repo_tree:
-                    if item['name'] in pakk_files:
-                        file_info = gl_project.repository_blob(item['id'])
-                        file_content = base64.b64decode(file_info['content'])
+                    if item["name"] in pakk_files:
+                        file_info = gl_project.repository_blob(item["id"])
+                        file_content = base64.b64decode(file_info["content"])
                         pakk_content_str = file_content.decode("utf-8")
 
-                        temp_file = tempfile.NamedTemporaryFile(mode="w+", prefix="z", suffix=item['name'], delete=False)
+                        temp_file = tempfile.NamedTemporaryFile(
+                            mode="w+", prefix="z", suffix=item["name"], delete=False
+                        )
                         temp_file.write(pakk_content_str)
                         temp_file.flush()
                         temp_file.close()
@@ -94,14 +106,14 @@ class CachedProjectTag():
                         os.remove(temp_file.name)
 
                         if pakk_cfg is not None:
-                            pt.pakk_config = pakk_cfg 
+                            pt.pakk_config = pakk_cfg
 
                             pt.pakk_config.attributes[ATTR_GITLAB_HTTP_SOURCE] = cached_project.http_url_to_repo
                             pt.pakk_config.attributes[ATTR_GITLAB_SOURCE_TAG] = pt.tag
 
                             pt.is_pakk_version = True
                         else:
-                            logger.warning("Failed to load pakk configuration from %s", item['name'])
+                            logger.warning("Failed to load pakk configuration from %s", item["name"])
 
             tags[pt.tag] = pt
 
@@ -113,7 +125,7 @@ class CachedProjectTag():
         # return semver.compare(a.version, b.version)
 
 
-class CachedProject():
+class CachedProject:
     def __init__(self, versions: dict[str, CachedProjectTag] | None = None):
         self.V = "0.0.0"
 
@@ -213,7 +225,11 @@ class CachedProject():
         if not ic.clear_cache:
             # If there are no new changes on the project, we can use the cached version
             loaded_cp = CachedProject.load(cp)
-            if loaded_cp is not None and loaded_cp.last_activity_at == cp.last_activity_at and loaded_cp.V == CACHING_VERSION:
+            if (
+                loaded_cp is not None
+                and loaded_cp.last_activity_at == cp.last_activity_at
+                and loaded_cp.V == CACHING_VERSION
+            ):
                 return loaded_cp, True
         else:
             loaded_cp = None
@@ -245,7 +261,7 @@ class DiscovererGitlabCached(Discoverer):
         try:
             self.gl.auth()
             self.connected = True
-        except (ConnectTimeout) as e:
+        except ConnectTimeout as e:
             logger.error("Failed to connect to gitlab: %s", e)
             pass
 
@@ -283,7 +299,9 @@ class DiscovererGitlabCached(Discoverer):
 
         logger.info("Discovering projects from GitLab")
         logger.debug(f"Main group id: {main_group_id}")
-        logger.debug(f"Including archived projects: {self.config.getboolean(Sections.GITLAB_PROJECTS, 'include_archived')}")
+        logger.debug(
+            f"Including archived projects: {self.config.getboolean(Sections.GITLAB_PROJECTS, 'include_archived')}"
+        )
         logger.debug(f"Using {num_workers} workers" if num_workers > 1 else None)
 
         main_group = self.gl.groups.get(main_group_id)
@@ -299,18 +317,24 @@ class DiscovererGitlabCached(Discoverer):
             "cached": 0,
             "not cached": 0,
             "archived": 0,
-            "pbar": None
+            "pbar": None,
         }
 
         # self.print_info(f"Discovering {len(projects)} projects...")
         logger.debug(f"Looking at {len(projects)} projects...")
 
         filtered_group_projects = list(
-            filter(lambda gp: not gp.attributes.get("archived") or include_archived, projects))
+            filter(lambda gp: not gp.attributes.get("archived") or include_archived, projects)
+        )
         results["archived"] = len(projects) - len(filtered_group_projects)
 
         # with tqdm.tqdm(total=len(filtered_group_projects)) as pbar:
-        with Progress(SpinnerColumn(), *Progress.get_default_columns(), MofNCompleteColumn(), TimeElapsedColumn(), ) as progress:
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+        ) as progress:
             pbar = progress.add_task("[cyan]Discovering projects", total=len(filtered_group_projects))
 
             results["pbar"] = pbar
@@ -339,7 +363,7 @@ class DiscovererGitlabCached(Discoverer):
         logger.debug(f"Finished loading {len(projects)} projects:")
         logger.debug(f"  {results['not cached']} loaded from gitlab api")
         logger.debug(f"  {results['cached']} loaded from cache")
-        logger.debug(f"  {results['archived']} archived projects were skipped" if results['archived'] > 0 else None)
+        logger.debug(f"  {results['archived']} archived projects were skipped" if results["archived"] > 0 else None)
 
         dps = self.retrieve_discovered_pakkages()
         n_versions = 0

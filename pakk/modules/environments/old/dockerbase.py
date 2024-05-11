@@ -4,9 +4,9 @@ import logging
 import os
 
 from pakk.config import pakk_config
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.pakk_config import Sections as ConfigSections
 from pakk.modules.module import Module
+from pakk.pakk.args.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class DockerEnvironment(Module):
         for container_path, host_path in self.mounts.items():
             cmd_parts.append(f'-v "{host_path}":"{container_path}"')
 
-        cmd_parts.append(f'{self.image_name}')
+        cmd_parts.append(f"{self.image_name}")
 
         return " ".join(cmd_parts)
 
@@ -136,7 +136,10 @@ class DockerEnvironment(Module):
         # Save dockerfile
         content = self.dockerfile.content
         if dockerfile_path is None:
-            dockerfile_path = os.path.join(self.config.get_abs_path("dockerfiles_dir", DockerEnvironment.SECTION_NAME, create_dir=True), f"{self.dockerfile_name}.dockerfile")
+            dockerfile_path = os.path.join(
+                self.config.get_abs_path("dockerfiles_dir", DockerEnvironment.SECTION_NAME, create_dir=True),
+                f"{self.dockerfile_name}.dockerfile",
+            )
         with open(dockerfile_path, "w") as f:
             f.write(content)
 

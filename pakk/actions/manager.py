@@ -1,21 +1,21 @@
 from __future__ import annotations
-import functools
 
+import functools
 import logging
 import subprocess
 import threading
 
-from pakk.pakk.args.base_config import BaseConfig
+from InquirerPy import inquirer
+
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+
 # from pakk.modules.environments.dockerbase import DockerEnvironment
 from pakk.modules.types.base import TypeBase
-
-from InquirerPy import inquirer
-
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 class NotSupportedError(Exception):
     def __init__(self, message: str):
         super().__init__(message)
+
 
 class PakkageNotFoundException(Exception):
     def __init__(self, message: str):
@@ -50,8 +51,9 @@ class ErrorHandling:
             logger.error(str(e))
 
 
-
-def _get_startable_pakkages(pakkage_names, select_message="Select pakkage to start:", **kwargs: dict[str, str]) -> list[PakkageConfig]:
+def _get_startable_pakkages(
+    pakkage_names, select_message="Select pakkage to start:", **kwargs: dict[str, str]
+) -> list[PakkageConfig]:
     base_config = BaseConfig.set(**kwargs)
     get_all = kwargs.get("all", False)
 
@@ -68,23 +70,23 @@ def _get_startable_pakkages(pakkage_names, select_message="Select pakkage to sta
     pakkage_names = [split_name_version(n)[0] for n in pakkage_names]
 
     startable_pakkages: dict[str, PakkageConfig] = dict()
-    
+
     for p in pakkages_discovered.values():
         v = p.versions.installed
         if v is None:
             continue
-        
+
         if not pakkage_names or (len(pakkage_names) > 0 and v.id in pakkage_names):
             if v.is_startable():
                 startable_pakkages[v.id] = v
-            
+
     if len(startable_pakkages) == 0:
         # if pakkage_names:
         #     logger.error(f"No startable pakkages found with name '{pakkage_names}'")
         # else:
         #     logger.error("No startable pakkages found")
         return [], pakkages_discovered
-    
+
     pakkages_to_start: list[PakkageConfig] = []
     if not pakkage_names and not get_all:
         action = inquirer.fuzzy(
@@ -103,6 +105,7 @@ def _get_startable_pakkages(pakkage_names, select_message="Select pakkage to sta
 
     return pakkages_to_start, pakkages_discovered
 
+
 @ErrorHandling
 def run(pakkage_names, **kwargs: dict[str, str]):
     pakkages_to_start, pakkages_discovered = _get_startable_pakkages(pakkage_names, "Select pakkage to run:", **kwargs)
@@ -111,11 +114,11 @@ def run(pakkage_names, **kwargs: dict[str, str]):
         raise PakkageNotFoundException("No pakkages to run")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to run is not supported yet")
-    
-    
+
     logger.info(f"Loading environment vars")
     Process.set_from_pakkages(pakkages_discovered)
     pakkages_to_start[0].run()
+
 
 @ErrorHandling
 def start(pakkage_names, **kwargs: dict[str, str]):
@@ -128,8 +131,9 @@ def start(pakkage_names, **kwargs: dict[str, str]):
         raise PakkageNotFoundException("Found no pakkages to start")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to start is not supported yet")
-    
+
     pakkages_to_start[0].start()
+
 
 @ErrorHandling
 def stop(pakkage_names, **kwargs: dict[str, str]):
@@ -142,8 +146,9 @@ def stop(pakkage_names, **kwargs: dict[str, str]):
         raise PakkageNotFoundException("Found no pakkages to stop")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to stop is not supported yet")
-    
+
     pakkages_to_start[0].stop()
+
 
 @ErrorHandling
 def enable(pakkage_names, **kwargs: dict[str, str]):
@@ -156,8 +161,9 @@ def enable(pakkage_names, **kwargs: dict[str, str]):
         raise PakkageNotFoundException("Found no pakkages to enable")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to enable is not supported yet")
-    
+
     pakkages_to_start[0].enable()
+
 
 @ErrorHandling
 def disable(pakkage_names, **kwargs: dict[str, str]):
@@ -170,8 +176,9 @@ def disable(pakkage_names, **kwargs: dict[str, str]):
         raise PakkageNotFoundException("Found no pakkages to start")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to disable is not supported yet")
-    
+
     pakkages_to_start[0].disable()
+
 
 @ErrorHandling
 def restart(pakkage_names, **kwargs: str | bool):
@@ -184,14 +191,13 @@ def restart(pakkage_names, **kwargs: str | bool):
 
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to restart:", **kwargs)
 
-
     if len(pakkages_to_start) == 0:
         if len(pakkage_names) >= 1:
             raise PakkageNotFoundException(f"No pakkages to restart found with name '{', '.join(list(pakkage_names))}'")
         raise PakkageNotFoundException("Found no pakkages to restart")
     # if len(pakkages_to_start) > 1:
     #     raise NotSupportedError("Multiple pakkages to restart is not supported yet")
-    
+
     threads: list[tuple[PakkageConfig, threading.Thread]] = []
 
     if all_running:
@@ -203,9 +209,10 @@ def restart(pakkage_names, **kwargs: str | bool):
         t = threading.Thread(target=p.restart)
         t.start()
         threads.append((p, t))
-    
+
     for p, t in threads:
-        t.join()        
+        t.join()
+
 
 @ErrorHandling
 def follow_log(pakkage_names, **kwargs: str | bool):
@@ -216,16 +223,21 @@ def follow_log(pakkage_names, **kwargs: str | bool):
         kwargs["all"] = True
         pakkage_names = []
 
-    pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to follow the log messages:", **kwargs)
+    pakkages_to_start, _ = _get_startable_pakkages(
+        pakkage_names, "Select pakkage to follow the log messages:", **kwargs
+    )
 
     if len(pakkages_to_start) == 0:
         if len(pakkage_names) >= 1:
-            raise PakkageNotFoundException(f"No pakkages to follow log found with name '{', '.join(list(pakkage_names))}'")
+            raise PakkageNotFoundException(
+                f"No pakkages to follow log found with name '{', '.join(list(pakkage_names))}'"
+            )
         raise PakkageNotFoundException("Found no pakkages to follow log")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to follow log is not supported yet")
-    
+
     pakkages_to_start[0].follow_log()
+
 
 if __name__ == "__main__":
     # kwargs = {

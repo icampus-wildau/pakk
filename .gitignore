@@ -279,3 +279,5 @@ examples/test.py
 
 # Programm data
 /data/*
+
+config/**.cfg

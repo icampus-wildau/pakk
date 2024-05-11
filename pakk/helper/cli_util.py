@@ -1,5 +1,7 @@
+from __future__ import annotations
 
 VERSION_DELIMITER = ["@", "==", "="]
+
 
 def split_name_version(name: str) -> tuple[str, str | None]:
     """

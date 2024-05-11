@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 import re
 from typing import Type
 
-
-from pakk import DEFAULT_CFG_DIR, ENVS, DEFAULT_CFG_FILENAME, DEFAULT_USR_CFG_FILENAME
-
+from pakk import DEFAULT_CFG_DIR
+from pakk import DEFAULT_CFG_FILENAME
+from pakk import DEFAULT_USR_CFG_FILENAME
+from pakk import ENVS
 from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.loader import PakkLoader
 from pakk.logger import Logger
 from pakk.modules.module import Module
 
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 def configure(**kwargs):
     # f = Figlet(font='cyberlarge')
@@ -32,7 +33,7 @@ def configure(**kwargs):
 
     configs_cls: dict[str, Type[PakkConfigBase]] = dict()
     configs_cls["main"] = MainConfig
-    
+
     connectors = PakkLoader.get_connector_classes()
     for connector in connectors:
         if connector.CONFIG_CLS is not None:
@@ -55,5 +56,6 @@ def configure(**kwargs):
             config.write()
             console.print(f"Finished configuration of {config_name} at {config.config_path}!")
         else:
-            console.print(f"Configuration file {config.config_path} already exists. Use `pakk configure {config_name}` to explicitly configure  it.")
-
+            console.print(
+                f"Configuration file {config.config_path} already exists. Use `pakk configure {config_name}` to explicitly configure  it."
+            )

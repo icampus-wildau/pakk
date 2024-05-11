@@ -1,11 +1,18 @@
-import os
-from typing import Type
-from pakk.config.base import PakkConfigBase
-from pakk.config.main_cfg import MainConfig
-from pakk.modules.connector.base import Connector, DiscoveredPakkages
-from pakk.pakkage.core import Pakkage, PakkageConfig, PakkageInstallState, PakkageState, PakkageVersions
+from __future__ import annotations
 
 import logging
+import os
+from typing import Type
+
+from pakk.config.base import PakkConfigBase
+from pakk.config.main_cfg import MainConfig
+from pakk.modules.connector.base import Connector
+from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +24,7 @@ class LocalConnector(Connector):
 
     def __init__(self, **kwargs):
         super().__init__()
-        
+
         self.all_pakkges_dir = MainConfig.get_config().paths.all_pakkages_dir.value
 
         self.additional_locations: list[str] = []
@@ -34,18 +41,17 @@ class LocalConnector(Connector):
 
         logger.debug(f"Additional local locations: {self.additional_locations}")
 
-
     @staticmethod
     def get_absolute_path(location: str) -> str | None:
         if location.startswith("/"):
             return location
-        
+
         if location.startswith("~"):
             return os.path.expanduser(location)
-        
+
         if location.startswith("."):
             return os.path.abspath(os.path.join(os.getcwd(), location))
-        
+
         # If location is not a file path
         return None
 
@@ -86,9 +92,9 @@ class LocalConnector(Connector):
             break
 
         return pakkages
-    
+
     def discover_in_path(self, pakkages: DiscoveredPakkages, path: str, recursive: bool = True):
-        
+
         # Check if the directory contains a pakkage file
         pakkage_config = PakkageConfig.from_directory(path)
         if pakkage_config is not None:
@@ -102,7 +108,8 @@ class LocalConnector(Connector):
             if pakkage_config.state.install_state == PakkageInstallState.INSTALLED:
                 versions.installed = pakkage_config
             elif (
-                pakkage_config.state.install_state == PakkageInstallState.FETCHED
+                pakkage_config.state.install_state
+                == PakkageInstallState.FETCHED
                 # or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
             ):
                 versions.target = pakkage_config
@@ -118,7 +125,6 @@ class LocalConnector(Connector):
                     for d in dirs:
                         abs_path = os.path.join(subdir, d)
                         self.discover_in_path(pakkages, abs_path, recursive)
-
 
     def discover_available(self) -> DiscoveredPakkages:
         """Discover all local available pakkages in provided local directories."""

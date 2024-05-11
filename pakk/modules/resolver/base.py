@@ -5,7 +5,6 @@ import nodesemver
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
-
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 
@@ -26,6 +25,7 @@ class Resolver(Module):
             if not ver_range.test(version):
                 return False
         return True
+
 
 class ResolverException(Exception):
     def __init__(self, pakkage: Pakkage, parent_pakkages: list[Pakkage], pakkages: dict[str, Pakkage] = None):
@@ -60,14 +60,13 @@ class ResolverException(Exception):
         for pp in self.parent_pakkages:
             root_nodes.append(current_deptree.get_root_node(pp))
 
-
         printer = TreePrinter(self.pakkages, current_deptree)
 
         def str_method(pakkage: Pakkage, parent_pakkage: Pakkage | None = None):
-            
+
             if pakkage.versions.target is None:
                 return f"{pakkage.id}"
-            
+
             s = f"{pakkage.id} @ {pakkage.versions.target.version}"
 
             if pakkage.versions.target.version not in pakkage.versions.available:
@@ -78,7 +77,7 @@ class ResolverException(Exception):
 
             if pakkage.id not in parent_pakkage.versions.target.dependencies:
                 return s
-        
+
             dependency_version = parent_pakkage.versions.target.dependencies[pakkage.id]
             target_version = pakkage.versions.target.version
 
@@ -92,6 +91,7 @@ class ResolverException(Exception):
         # for root in root_nodes:
         t = printer.get_tree(name=f"Dependencies of {str(self.pakkage)}", root_nodes=[self.pakkage.id])
         Logger.get_console().print(t)
-        t = printer.get_tree(name=f"Pakkages having {self.pakkage.id} as dependency", root_nodes=[root.id for root in root_nodes])
+        t = printer.get_tree(
+            name=f"Pakkages having {self.pakkage.id} as dependency", root_nodes=[root.id for root in root_nodes]
+        )
         Logger.get_console().print(t)
-        

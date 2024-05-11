@@ -4,7 +4,8 @@ import nodesemver
 
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.module import Module
-from pakk.modules.resolver.base import Resolver, ResolverException
+from pakk.modules.resolver.base import Resolver
+from pakk.modules.resolver.base import ResolverException
 from pakk.pakkage.core import Pakkage
 
 

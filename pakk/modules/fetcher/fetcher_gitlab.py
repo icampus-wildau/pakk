@@ -5,18 +5,27 @@ import os
 import subprocess
 from multiprocessing.pool import ThreadPool
 
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, TextColumn, BarColumn, TimeRemainingColumn, \
-    MofNCompleteColumn
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
+from rich.progress import TimeRemainingColumn
 
 import pakk.config.pakk_config as cfg
-from pakk.pakk.args.install_config import InstallConfig
 from pakk.helper.file_util import remove_dir
 from pakk.helper.gitlab_util import get_gitlab_http_with_token
-from pakk.logger import console, Logger
-from pakk.modules.discoverer.discoverer_gitlab import ATTR_GITLAB_HTTP_SOURCE, ATTR_GITLAB_SOURCE_TAG
+from pakk.logger import Logger
+from pakk.logger import console
+from pakk.modules.discoverer.discoverer_gitlab import ATTR_GITLAB_HTTP_SOURCE
+from pakk.modules.discoverer.discoverer_gitlab import ATTR_GITLAB_SOURCE_TAG
 from pakk.modules.fetcher.base import Fetcher
 from pakk.modules.module import Module
-from pakk.pakkage.core import Pakkage, PakkageInstallState, PakkageConfig
+from pakk.pakk.args.install_config import InstallConfig
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +40,7 @@ class FetcherGitlab(Fetcher):
     CONFIG_REQUIREMENTS = {
         cfg.Sections.GITLAB_CONNECTION: ["private_token"],
         cfg.Sections.SUBDIRS: ["fetched_dir"],
-        cfg.Sections.FETCHER_GITLAB: ["num_workers"]
+        cfg.Sections.FETCHER_GITLAB: ["num_workers"],
     }
 
     def __init__(self, pakkages: dict[str, Pakkage]):
@@ -40,7 +49,7 @@ class FetcherGitlab(Fetcher):
         self.config = cfg.get()
         self.install_config = InstallConfig.get()
 
-        self.fetched_dir: str = self.config.get_abs_path('fetched_dir', cfg.Sections.SUBDIRS) # type: ignore
+        self.fetched_dir: str = self.config.get_abs_path("fetched_dir", cfg.Sections.SUBDIRS)  # type: ignore
 
         # Progress object for pbars
         self.pbar_progress = None
@@ -103,13 +112,13 @@ class FetcherGitlab(Fetcher):
 
                 while tries < retry_count:
                     with subprocess.Popen(
-                            cmd,
-                            cwd=self.fetched_dir,
-                            shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            bufsize=1,
-                            universal_newlines=True,
+                        cmd,
+                        cwd=self.fetched_dir,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        bufsize=1,
+                        universal_newlines=True,
                     ) as p:
 
                         # Capture the output of the subprocess to print the info in the pbar
@@ -118,7 +127,7 @@ class FetcherGitlab(Fetcher):
 
                     if PakkageConfig.from_directory(path):
                         break
-                    
+
                     tries += 1
                     if tries < retry_count:
                         logger.warning(f"Fetch of {pakkage.id} failed. Retrying...")
@@ -154,17 +163,17 @@ class FetcherGitlab(Fetcher):
             return self.pakkages
 
         with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                # TaskProgressColumn(),
-                MofNCompleteColumn(),
-                TimeRemainingColumn(),
-                TimeElapsedColumn(),
-                TextColumn("{task.fields[pakkage]}"),
-                TextColumn("{task.fields[info]}"),
-                transient=True,
-                console=console
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            # TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeRemainingColumn(),
+            TimeElapsedColumn(),
+            TextColumn("{task.fields[pakkage]}"),
+            TextColumn("{task.fields[info]}"),
+            transient=True,
+            console=console,
         ) as progress:
             self.pbar_progress = progress
 

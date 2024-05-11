@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pakk.modules.environments.base import GenericEnvironment, EnvironmentBase
+from pakk.modules.environments.base import EnvironmentBase
+from pakk.modules.environments.base import GenericEnvironment
 from pakk.modules.types.base import TypeBase
-
 from pakk.pakkage.core import PakkageInstallState
 
 if TYPE_CHECKING:

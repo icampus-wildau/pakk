@@ -1,10 +1,11 @@
 from __future__ import annotations
-from functools import wraps
 
 import logging
+from functools import wraps
 
 from rich.console import Console
-from rich.progress import Progress, TaskID
+from rich.progress import Progress
+from rich.progress import TaskID
 
 console = Console()
 

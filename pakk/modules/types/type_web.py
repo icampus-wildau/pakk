@@ -11,7 +11,9 @@ from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import InstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 

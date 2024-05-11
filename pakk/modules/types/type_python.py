@@ -8,7 +8,8 @@ from pakk.config.base import TypeConfiguration
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.types.base import TypeBase
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 

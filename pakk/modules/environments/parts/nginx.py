@@ -7,9 +7,7 @@ from pakk.modules.module import Module
 
 class EnvPartNginx(Module):
     SECTION_NAME = "Env.Nginx"
-    CONFIG_REQUIREMENTS = {
-        SECTION_NAME: ["locations"]
-    }
+    CONFIG_REQUIREMENTS = {SECTION_NAME: ["locations"]}
 
     def __init__(self):
         super().__init__()

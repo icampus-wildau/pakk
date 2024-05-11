@@ -39,18 +39,22 @@ class DefaultRos2DockerEnvironment(DockerEnvironment):
         self.dockerfile.base_image = "ros:humble-ros-base-jammy"
 
         # Install and update pip and setuptools
-        self.dockerfile.add_lines(*[
-            "RUN apt update && apt install -y python3-pip",
-            "RUN pip install -U pip",
-            "RUN pip install setuptools==58.2.0",
-        ])
+        self.dockerfile.add_lines(
+            *[
+                "RUN apt update && apt install -y python3-pip",
+                "RUN pip install -U pip",
+                "RUN pip install setuptools==58.2.0",
+            ]
+        )
 
         # Setup ENVs
-        self.dockerfile.add_lines(*[
-            f"ENV {self.ENV_PYTHONPATH}={self.python_package_path()}:${self.ENV_PYTHONPATH}",
-            f"ENV {self.ENV_MOUNTED_WS_DIR}={self.ws_path()}",
-            f"ENV {self.ENV_MOUNTED_PYTHON_PACKAGE_DIR}={self.python_package_path()}",
-        ])
+        self.dockerfile.add_lines(
+            *[
+                f"ENV {self.ENV_PYTHONPATH}={self.python_package_path()}:${self.ENV_PYTHONPATH}",
+                f"ENV {self.ENV_MOUNTED_WS_DIR}={self.ws_path()}",
+                f"ENV {self.ENV_MOUNTED_PYTHON_PACKAGE_DIR}={self.python_package_path()}",
+            ]
+        )
 
 
 class SharedRos2DockerEnvironment(DockerEnvironment, Ros2Environment):  # Environment
@@ -120,9 +124,7 @@ class SharedRos2DockerEnvironment(DockerEnvironment, Ros2Environment):  # Enviro
 
         search_path = os.path.join(pakkage_dir, "*").replace("\\", "/")
 
-        cmds = [
-            self.get_cmd_colcon_list_packages(search_path)
-        ]
+        cmds = [self.get_cmd_colcon_list_packages(search_path)]
 
         cmd = self.get_docker_command(cmds)
         result = Module.run_commands(cmd)
@@ -143,8 +145,8 @@ class SharedRos2DockerEnvironment(DockerEnvironment, Ros2Environment):  # Enviro
         # Otherwise some "error in 'egg_base'" error occurs
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
         cmds = [
-            f'cd {DefaultRos2DockerEnvironment.ws_path()}',
-            self.get_cmd_colcon_build(package_names, symlink_install=False)
+            f"cd {DefaultRos2DockerEnvironment.ws_path()}",
+            self.get_cmd_colcon_build(package_names, symlink_install=False),
         ]
         cmd = self.get_docker_command(cmds)
 

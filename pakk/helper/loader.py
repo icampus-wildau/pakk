@@ -1,18 +1,20 @@
+from __future__ import annotations
 
 import importlib
 import inspect
+import logging
 import os
 import pkgutil
-from typing import Type, TypeVar
+from typing import Type
+from typing import TypeVar
+
 from pakk.modules.connector.base import Connector
-
-import logging
-
 from pakk.modules.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
 
 class PakkLoader:
     __connector_sub_paths = ["modules.connector", "connector"]
@@ -45,7 +47,7 @@ class PakkLoader:
                 search_path = os.path.join(module_path, sub_module_path.replace(".", os.sep))
                 for _, module_name, _ in pkgutil.iter_modules([search_path]):
                     sub_modules.append(".".join([pakk_module, sub_path, module_name]))
-        return sub_modules 
+        return sub_modules
 
     @staticmethod
     def get_module_subclasses(module_names: str | list[str], base_class: type[T]) -> list[type[T]]:
@@ -55,40 +57,43 @@ class PakkLoader:
         classes = []
         for module_name in module_names:
             module = importlib.import_module(module_name)
-            for name, cls in inspect.getmembers(module, lambda x: inspect.isclass(x) and issubclass(x, base_class) and x != base_class):
+            for name, cls in inspect.getmembers(
+                module, lambda x: inspect.isclass(x) and issubclass(x, base_class) and x != base_class
+            ):
                 classes.append(cls)
         return classes
 
     @staticmethod
     def get_connector_classes() -> list[type[Connector]]:
-        
+
         connector_modules = PakkLoader.__get_pakk_sub_modules(PakkLoader.__connector_sub_paths)
         logger.debug(f"Found connector modules: {connector_modules}")
-        
+
         # Import all connector classes that inherit from Connector
         connectors = PakkLoader.get_module_subclasses(connector_modules, Connector)
         logger.debug(f"Found connectors: {connectors}")
 
         valid_connectors: list[type[Connector]] = []
         # Check if connectors require configuration
-        for connector in connectors:            
+        for connector in connectors:
             if not connector.is_enabled():
                 logger.info(f"Skipping disabled connector '{connector.__name__}'.")
                 continue
-            
+
             if not connector.is_configured():
-                logger.error(f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`.")
+                logger.error(
+                    f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`."
+                )
                 continue
 
             valid_connectors.append(connector)
-        
+
             # if connector.CONFIG_CLS is not None:
-                
+
         # Sort connectors by PRIORITY
         valid_connectors.sort(key=lambda x: x.PRIORITY)
 
         return valid_connectors
-    
 
     @staticmethod
     def get_connector_instances(**kwargs):
@@ -98,8 +103,6 @@ class PakkLoader:
             connector = connector_cls(**kwargs)
             instances.append(connector)
         return instances
-        
-
 
     @staticmethod
     def get_type_classes() -> list[type[TypeBase]]:

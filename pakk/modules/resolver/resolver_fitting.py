@@ -4,12 +4,14 @@ import logging
 
 import nodesemver
 
-from pakk.pakk.args.install_config import InstallConfig, UpdateStrategy
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.module import Module
-from pakk.modules.resolver.base import Resolver, ResolverException
+from pakk.modules.resolver.base import Resolver
+from pakk.modules.resolver.base import ResolverException
+from pakk.pakk.args.install_config import InstallConfig
+from pakk.pakk.args.install_config import UpdateStrategy
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,6 @@ class ResolverFitting(Resolver):
             ver_range = nodesemver.Range(ver_range_str, loose=True)
             fitting_versions = [v for v in fitting_versions if ver_range.test(v)]
         return fitting_versions
-
 
     def filter_and_sort_versions(self, pakkage: Pakkage, versions: list[str]) -> list[str]:
         """Filter the given versions by the install config
@@ -118,7 +119,7 @@ class ResolverFitting(Resolver):
 
         self.deptree.init_pakkages(add_dependencies_for_non_installed=False)
         root = self.pakkage_to_be_installed
-        try: 
+        try:
             self._resolve_node(root)
         except ResolverException as e:
             logger.error(f"Could not resolve {root}")
@@ -170,13 +171,17 @@ class ResolverFitting(Resolver):
 
         available_versions = list(pakkage.versions.available.keys())
 
-        parents_with_fixed_versions: list[Pakkage] = [self.pakkages[pn] for pn in parent_nodes if self.pakkages[pn].versions.target_fixed]
+        parents_with_fixed_versions: list[Pakkage] = [
+            self.pakkages[pn] for pn in parent_nodes if self.pakkages[pn].versions.target_fixed
+        ]
         parents_without_fixed_versions: list[Pakkage] = [
             self.pakkages[pn] for pn in parent_nodes if not self.pakkages[pn].versions.target_fixed
         ]
 
         dependency_versions_of_fixed_parents = [
-            p.versions.target.dependencies[pakkage.id] for p in parents_with_fixed_versions if p.versions.target is not None
+            p.versions.target.dependencies[pakkage.id]
+            for p in parents_with_fixed_versions
+            if p.versions.target is not None
         ]
 
         # Check which versions fits all fixed parents

@@ -19,7 +19,7 @@ For full documentation enter `pakk -h` or `pakk [CMD] -h` for a specific command
 
 # Setup pakk for your system
 
-After the first installation you want to setup pakk properly. 
+After the first installation you want to setup pakk properly.
 
 ```
 # Run the configuration setup for Pakk. This helps you to interactively create a pakk.cfg configuration file.
@@ -35,7 +35,7 @@ pakk setup
 pakk install PAKKAGE
 ```
 
-Install a PAKKAGE (or multiple PAKKAGES). 
+Install a PAKKAGE (or multiple PAKKAGES).
 You can specify a version with PAKKAGE@VERSION.
  If no version is specified, the latest version will be installed.
 
@@ -139,7 +139,7 @@ Just execute `pakk source` to see the environment variables that are set by pakk
 
 ### Tree
 ```bash
-pakk tree 
+pakk tree
 ```
 
 Show the dependency tree of a pakkage.
@@ -150,7 +150,7 @@ Options:
 
 ### Init
 
-```bash	
+```bash
 pakk init PATH
 ```
 
@@ -239,7 +239,7 @@ This pakkage type installs the pakkage as ros2 package. Besides the installation
 start = ros_package_name the_launch_script.launch.py
 # Define if the pakkage should be started with ROS_LOCALHOST_ONLY=1, to only allow communication with local nodes.
 # Defaults to true, so you only need to set it to false if you want communication with nodes on other machines.
-local = False 
+local = False
 ```
 
 ### Asset
@@ -252,14 +252,14 @@ This pakkage type installs the pakkage as asset. Assets can be e.g. used for:
 
 #### Environment variables
 
-The best practice for Asset-pakkages that include data files is the creation of environment variables, that can be used in other pakkages.  
+The best practice for Asset-pakkages that include data files is the creation of environment variables, that can be used in other pakkages.
 
 ```ini
 [Asset]
 # In this case we create an environment variable that points to the data file found in the data directory of this asset pakkage.
 # Other pakkages can use this environment variable CUSTOM_DATA_FILE to access the data file.
 CUSTOM_DATA_FILE=./data/custom_data_file.dat
-``` 
+```
 
 This environment variable is automatically passed to the environment of other pakkages, as soon as they are executed (with `pakk start` or `pakk run`).
 In this way you can avoid the definition of absolute paths in your pakkages and make them more portable.
@@ -270,7 +270,7 @@ You can create softlinks in your pakkage with the `link` option. This is for exa
 
 ```ini
 [Asset]
-link = ./extremely_long_model_name.onnx ./short_alias.onnx 
+link = ./extremely_long_model_name.onnx ./short_alias.onnx
        ./extremely_long_model_name.onnx.json ./short_alias.onnx.json
        # Go on with more pairs of files to link
 ```
@@ -284,8 +284,8 @@ $MODEL = my-model-name
 
 [Asset]
 # Global wnvironment variable for other pakkages.
-MY_MODEL_NAME = $MODEL 
-# Link the model to the target directory /opt/pakk/my_models 
+MY_MODEL_NAME = $MODEL
+# Link the model to the target directory /opt/pakk/my_models
 linke = ./$MY_MODEL_NAME /opt/pakk/my_models/$MY_MODEL_NAME
 # If there is an environment variable that defines the target directory, we can use it as well. The following syntax searches for TARGET_DIR if exists, otherwise it uses the default value.
 link = ./$MY_MODEL_NAME ${TARGET_DIR:-/opt/pakk/my_models}/$MY_MODEL_NAME

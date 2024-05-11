@@ -16,9 +16,7 @@ class PythonEnvironment(Environment):
         super().__init__()
 
         self.path_python_packages = self.config.get_abs_path(
-            "python_package_path", PythonEnvironment.SECTION_NAME,
-            create_dir=True,
-            none_if_val_is="NONE"
+            "python_package_path", PythonEnvironment.SECTION_NAME, create_dir=True, none_if_val_is="NONE"
         )
 
     def setup(self):

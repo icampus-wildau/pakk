@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import builtins
 import logging
-
 import re
-from pakk.helper.lockfile import PakkLock
+
 from rich.table import Table
+
+from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
@@ -18,20 +20,19 @@ def status(**kwargs: str):
     # flag_types = kwargs.get("types", False) or kwargs.get("extended", False)
     flag_types = True
     Logger.setup_logger(logging.INFO)
-    
+
     lock = PakkLock("status", create_lock=False)
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the list could be wrong.")
 
-
     if flag_types:
         from pakk.modules.types.base import TypeBase
+
         TypeBase.initialize()
 
     local_discoverer = [DiscovererLocal()]
     discoverer = DiscoveredPakkagesMerger(local_discoverer, quiet=True)
     pakkages_discovered = discoverer.merge()
-
 
     x = kwargs.get("extended", False)
 
@@ -81,7 +82,11 @@ def status(**kwargs: str):
         if flag_types:
             types = iv.pakk_types
             is_startable = iv.is_startable()
-            type_names = [f"[underline]{t.PAKKAGE_TYPE}[/underline]" if t.is_runnable() else t.PAKKAGE_TYPE for t in types if t.PAKKAGE_TYPE is not None and t.VISIBLE_TYPE]
+            type_names = [
+                f"[underline]{t.PAKKAGE_TYPE}[/underline]" if t.is_runnable() else t.PAKKAGE_TYPE
+                for t in types
+                if t.PAKKAGE_TYPE is not None and t.VISIBLE_TYPE
+            ]
             types_str = ", ".join(type_names) if len(type_names) > 0 else "Unknown"
         else:
             types_str = "Unknown"
@@ -90,15 +95,19 @@ def status(**kwargs: str):
         if is_startable:
             id = f"[underline]{id}[/underline]"
 
-        enabled_str = "[white on green]Enabled[/white on green]" if iv.is_enabled() else "[white on red]Disabled[/white on red]"
-        status_str = "[white on green]Running[/white on green]" if iv.is_active() else "[white on red]Stopped[/white on red]"
+        enabled_str = (
+            "[white on green]Enabled[/white on green]" if iv.is_enabled() else "[white on red]Disabled[/white on red]"
+        )
+        status_str = (
+            "[white on green]Running[/white on green]" if iv.is_active() else "[white on red]Stopped[/white on red]"
+        )
 
         data = [
-            id, 
-            enabled_str, 
+            id,
+            enabled_str,
             status_str,
-            iv_str, 
-            types_str, 
+            iv_str,
+            types_str,
         ]
         data_for_row = []
         for i, field in enumerate(fields_visible.keys()):
@@ -109,6 +118,7 @@ def status(**kwargs: str):
 
     Logger.get_console().print(table)
     # Logger.get_console().print(f"Executable pakkages are underlined.")
+
 
 if __name__ == "__main__":
     kwargs = {

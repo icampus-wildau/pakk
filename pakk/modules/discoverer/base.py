@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import TypeVar
-
-import logging
 
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
+
 
 class Discoverer(Module):
     def __init__(self, config_requirements: dict[str, list[str]] | None = None):
@@ -20,6 +20,7 @@ class Discoverer(Module):
 
 
 # DiscovererType = TypeVar("DiscovererType", bound=Discoverer)
+
 
 class DiscoveredPakkagesMerger:
     def __init__(self, discoverers: list[Discoverer], quiet: bool = False):
@@ -46,7 +47,13 @@ class DiscoveredPakkagesMerger:
 
         # Check if all installed versions are also available, otherwise there are problems with reinstalling
         for pakkage in pakkages.values():
-            if pakkage.versions.installed and len(pakkage.versions.available) > 0 and pakkage.versions.installed.version not in pakkage.versions.available:
-                logger.warn(f"Inconsistency detected for pakkage {pakkage.id}: installed version {pakkage.versions.installed.version} is not available in the discovered versions {pakkage.versions.available}")
+            if (
+                pakkage.versions.installed
+                and len(pakkage.versions.available) > 0
+                and pakkage.versions.installed.version not in pakkage.versions.available
+            ):
+                logger.warn(
+                    f"Inconsistency detected for pakkage {pakkage.id}: installed version {pakkage.versions.installed.version} is not available in the discovered versions {pakkage.versions.available}"
+                )
 
         return pakkages

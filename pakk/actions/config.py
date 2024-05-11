@@ -4,26 +4,29 @@ import datetime
 import os
 import re
 
+from InquirerPy import inquirer
+from InquirerPy import prompt
+
+from pakk import DEFAULT_CFG_DIR
+from pakk import DEFAULT_CFG_FILENAME
+from pakk import DEFAULT_USR_CFG_FILENAME
+from pakk import ENVS
+from pakk.logger import Logger
+from pakk.modules.module import Module
+
 # print("Import figlet")
 # from pyfiglet import Figlet
 
-from InquirerPy import prompt, inquirer
-from pakk import DEFAULT_CFG_DIR, ENVS, DEFAULT_CFG_FILENAME, DEFAULT_USR_CFG_FILENAME
-
-from pakk.logger import Logger
-from pakk.modules.module import Module
 
 # Probably using https://github.com/CITGuru/PyInquirer
 
 
 CFG_REPLACE_PATTERN = re.compile(r"((#+ .*?\n)*)(.*?)( ?[=:] ?)(\[\[((.*?)(\|\|))?(.*?)\]\])\n", re.MULTILINE)
-"""
-Group 1: Comment lines above the config entry
-Group 3: The config option key name
-Group 5: The config option value with double brackets as placeholder
-Group 7: The config option name for inquire
-Group 9: The config option default value
-"""
+# Group 1: Comment lines above the config entry
+# Group 3: The config option key name
+# Group 5: The config option value with double brackets as placeholder
+# Group 7: The config option name for inquire
+# Group 9: The config option default value
 
 
 def config(**kwargs):
@@ -40,7 +43,9 @@ def config(**kwargs):
     path = os.path.abspath(os.path.join(config_dir, out_name))
 
     console.print(f"The config file will be created at: {path}")
-    console.print(f"You can change the config file location by setting the environment variables {ENVS.CONFIG_DIR} and {ENVS.CONFIG_NAME}.\n")
+    console.print(
+        f"You can change the config file location by setting the environment variables {ENVS.CONFIG_DIR} and {ENVS.CONFIG_NAME}.\n"
+    )
 
     template_path = os.path.join(DEFAULT_CFG_DIR, "user_cfg_template.cfg")
 

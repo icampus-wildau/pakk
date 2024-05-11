@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from pakk.pakkage.core import Pakkage, PakkageConfig
+    from pakk.pakkage.core import Pakkage
+    from pakk.pakkage.core import PakkageConfig
 
 
 class Process:

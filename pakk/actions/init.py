@@ -1,38 +1,45 @@
 from __future__ import annotations
-# pyright: reportPrivateImportUsage=false
-
-import logging
-import os
-import io
-import re
 
 import configparser
-
-from InquirerPy import inquirer
-from InquirerPy.validator import Validator
-
-from pakk.pakk.args.base_config import BaseConfig
-from pakk.helper.module_importer import ModuleImporter
-from pakk.logger import Logger
-# from git import Repo
+import io
+import logging
+import os
+import re
+from typing import TYPE_CHECKING
 
 import semver
+from InquirerPy import inquirer
+from InquirerPy.validator import Validator
+from prompt_toolkit.completion import CompleteEvent
+from prompt_toolkit.completion import Completer
+from prompt_toolkit.completion import Completion
+from prompt_toolkit.validation import ValidationError
+
+from pakk.helper.module_importer import ModuleImporter
+from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
+from pakk.pakk.args.base_config import BaseConfig
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
+
+# pyright: reportPrivateImportUsage=false
 
 
-from typing import TYPE_CHECKING
-from prompt_toolkit.completion import Completer, CompleteEvent, Completion
-from prompt_toolkit.validation import ValidationError
+# from git import Repo
 
-from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
+
 if TYPE_CHECKING:
-    from prompt_toolkit.document import Document 
-    from pakk.pakkage.core import PakkageConfig, Pakkage
+    from prompt_toolkit.document import Document
+
+    from pakk.pakkage.core import Pakkage
+    from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
+
 
 class IdValidator(Validator):
     def validate(self, document: Document):
@@ -40,15 +47,15 @@ class IdValidator(Validator):
         pos = document.cursor_position
         if len(val) == 0:
             raise ValidationError(pos, "ID cannot be empty")
-        
+
         # Check if value contains uppercase letters
         if any(c.isupper() for c in val):
             raise ValidationError(pos, "ID must be lowercase")
-        
+
         # Check if value contains spaces
         if any(c.isspace() for c in val):
             raise ValidationError(pos, "ID must not contain spaces")
-        
+
         # Check if value contains special characters
         if any(c in "!@#$%^&*()[]{};:,./<>?\|`~=+" for c in val):
             raise ValidationError(pos, "ID must not contain special characters")
@@ -57,7 +64,8 @@ class IdValidator(Validator):
             raise ValidationError(pos, "ID should use `-` instead of underscores")
 
         return True
-    
+
+
 class VersionValidator(Validator):
     def validate(self, document: Document):
         val = document.text
@@ -68,7 +76,8 @@ class VersionValidator(Validator):
             raise ValidationError(pos, "Invalid version")
 
         return True
-    
+
+
 class DependencyCompleter(Completer):
     def __init__(self, packages: dict[str, Pakkage]):
         self.packages = packages
@@ -79,7 +88,7 @@ class DependencyCompleter(Completer):
         splits = re.split(r"[\s,]+", line)
         splits = [s.strip() for s in splits if s.strip() != ""]
         return splits
-        
+
     def get_completions(self, document: Document, complete_event: CompleteEvent):
 
         # word = document.get_word_before_cursor()
@@ -94,7 +103,11 @@ class DependencyCompleter(Completer):
             for id in self.ids:
                 if current_prefix in id:
                     p = self.packages[id]
-                    v = self.packages[id].versions.installed or (list(self.packages[id].versions.available.values())[-1] if len(self.packages[id].versions.available) > 0 else None)
+                    v = self.packages[id].versions.installed or (
+                        list(self.packages[id].versions.available.values())[-1]
+                        if len(self.packages[id].versions.available) > 0
+                        else None
+                    )
                     if v is not None:
                         v = v.version
                     else:
@@ -102,7 +115,7 @@ class DependencyCompleter(Completer):
 
                     v = "^" + v
                     # ver = semver.VersionInfo.parse(v)
-                    
+
                     id_with_version = f"{id}={v}"
                     yield Completion(
                         text=id_with_version,
@@ -148,19 +161,34 @@ def init(path: str, **kwargs: str):
 
     basename = os.path.basename(path)
 
-    pid = inquirer.text("Pakkage ID:", validate=IdValidator(), long_instruction="The unique id to identify your pakkage", default=basename).execute()
+    pid = inquirer.text(
+        "Pakkage ID:",
+        validate=IdValidator(),
+        long_instruction="The unique id to identify your pakkage",
+        default=basename,
+    ).execute()
     ptitle = inquirer.text("Title:", default=pid, long_instruction="The verbose title of your pakkage").execute()
-    pver = inquirer.text("Current version:", validate=VersionValidator(), default="0.0.1", long_instruction="Current semnatic version of your pakkage").execute()
+    pver = inquirer.text(
+        "Current version:",
+        validate=VersionValidator(),
+        default="0.0.1",
+        long_instruction="Current semnatic version of your pakkage",
+    ).execute()
     pdescription = inquirer.text("Description:", long_instruction="A short description of your pakkage").execute()
     pkeywords = inquirer.text("Keywords:", long_instruction="A comma separated list of keywords").execute()
 
-    cfg_sections.append(InitConfigSection("info", [
-        InitConfigOption("id", pid),
-        InitConfigOption("version", pver),
-        InitConfigOption("title", ptitle),
-        InitConfigOption("description", pdescription),
-        InitConfigOption("keywords", pkeywords),
-    ]))
+    cfg_sections.append(
+        InitConfigSection(
+            "info",
+            [
+                InitConfigOption("id", pid),
+                InitConfigOption("version", pver),
+                InitConfigOption("title", ptitle),
+                InitConfigOption("description", pdescription),
+                InitConfigOption("keywords", pkeywords),
+            ],
+        )
+    )
 
     local_discoverer = DiscovererLocal()
     discoverer = DiscoveredPakkagesMerger([local_discoverer])
@@ -169,12 +197,12 @@ def init(path: str, **kwargs: str):
 
     dep_confirmed = False
     dependencies = []
-    while not dep_confirmed:    
+    while not dep_confirmed:
         dependencies_str = inquirer.text(
             message="Dependencies:",
             long_instruction="A comma separated list of dependencies (pakkage IDs)",
             completer=DependencyCompleter(pakkages_discovered),
-            qmark=">"
+            qmark=">",
         ).execute()
 
         dependencies = DependencyCompleter.split_depedencies(dependencies_str)
@@ -198,7 +226,11 @@ def init(path: str, **kwargs: str):
     type_map = {t.PAKKAGE_TYPE: t for t in types}
     available_type_choices = [t.PAKKAGE_TYPE for t in types if t.CONFIGURABLE_TYPE]
     while True:
-        type_choices = inquirer.checkbox(message="Select pakkage types (select with TAB, proceed with ENTER)", choices=available_type_choices, cycle=True).execute()
+        type_choices = inquirer.checkbox(
+            message="Select pakkage types (select with TAB, proceed with ENTER)",
+            choices=available_type_choices,
+            cycle=True,
+        ).execute()
         if len(type_choices) > 0:
             break
         if inquirer.confirm("No pakkage types selected. Proceed?", default=False).execute():
@@ -216,13 +248,15 @@ def init(path: str, **kwargs: str):
             cfg_sections.append(InitConfigSection(c.PAKKAGE_TYPE, []))
             continue
         if not issubclass(helper_cls, InitHelperBase):
-            logger.warning(f"InitHelper class {helper_cls.__name__} from {module_name} is not a subclass of InitHelperBase")
+            logger.warning(
+                f"InitHelper class {helper_cls.__name__} from {module_name} is not a subclass of InitHelperBase"
+            )
             cfg_sections.append(InitConfigSection(c.PAKKAGE_TYPE, []))
             continue
-        
+
         helper: InitHelperBase = helper_cls()
         sections = helper.help()
-        cfg_sections.extend(sections)        
+        cfg_sections.extend(sections)
 
     # Create the config file from the saved sections
     config = configparser.ConfigParser()
@@ -233,7 +267,7 @@ def init(path: str, **kwargs: str):
             config.set(section.name, option.key, option.value)
 
     f = io.StringIO()
-    config.write(f)    
+    config.write(f)
 
     Module.print_rule(f"Content of pakk.cfg")
     print(f.getvalue())
@@ -244,7 +278,7 @@ def init(path: str, **kwargs: str):
     if not proceed:
         logger.info("Aborting")
         return
-    
+
     with open(os.path.join(path, "pakk.cfg"), "w") as f:
         logger.info("Writing pakk.cfg")
         config.write(f)

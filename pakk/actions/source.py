@@ -8,7 +8,6 @@ import subprocess
 
 from rich.table import Table
 
-from pakk.pakk.args.base_config import BaseConfig
 import pakk.config.pakk_config as config
 from pakk.config.process import Process
 from pakk.logger import Logger
@@ -16,6 +15,7 @@ from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 from pakk.modules.types.base import TypeBase
+from pakk.pakk.args.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 

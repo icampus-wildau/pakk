@@ -4,15 +4,23 @@ import logging
 from multiprocessing.pool import ThreadPool
 from typing import Callable
 
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, TextColumn, BarColumn, TimeRemainingColumn, \
-    MofNCompleteColumn
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
+from rich.progress import TimeRemainingColumn
 
-from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections as CfgSections
-from pakk.logger import Logger, ProgressTasks
+from pakk.logger import Logger
+from pakk.logger import ProgressTasks
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.module import Module
-from pakk.pakkage.core import Pakkage, PakkageInstallState, PakkageConfig
+from pakk.pakk.args.install_config import InstallConfig
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +32,7 @@ class InstallerSequential(Module):
 
     SECTION_NAME = "Installer"
 
-    CONFIG_REQUIREMENTS = {
-        CfgSections.SUBDIRS: ["fetched_dir", "all_pakkges_dir"]
-    }
+    CONFIG_REQUIREMENTS = {CfgSections.SUBDIRS: ["fetched_dir", "all_pakkges_dir"]}
 
     def __init__(self, pakkages: dict[str, Pakkage], dependency_tree: DependencyTree):
         """
@@ -45,8 +51,8 @@ class InstallerSequential(Module):
         self.pakkages = pakkages
         self.deptree = dependency_tree
 
-        self.fetched_dir: str = self.config.get_abs_path("fetched_dir") # type: ignore
-        self.all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir") # type: ignore
+        self.fetched_dir: str = self.config.get_abs_path("fetched_dir")  # type: ignore
+        self.all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir")  # type: ignore
 
         self.status_callback: Callable[[str], None] | None = None
         self.tasks = None
@@ -73,7 +79,9 @@ class InstallerSequential(Module):
                 if pakkage.versions.installed is None:
                     logger.info(f"Will install {pakkage.name} ({pakkage.versions.target.version})")
                 else:
-                    logger.info(f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})")
+                    logger.info(
+                        f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
+                    )
                     pakkages_to_uninstall.append(pakkage)
             elif pakkage.versions.target is not None:
                 if pakkage.versions.reinstall and pakkage.versions.installed is not None:
@@ -83,7 +91,9 @@ class InstallerSequential(Module):
                 else:
                     if pakkage.versions.installed is None:
                         raise ValueError(f"Installed version of {pakkage.name} is None")
-                    logger.debug(f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})")
+                    logger.debug(
+                        f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})"
+                    )
 
         self.pakkages_to_uninstall: list[Pakkage] = pakkages_to_uninstall
         self.pakkages_to_install: list[Pakkage] = pakkages_to_install

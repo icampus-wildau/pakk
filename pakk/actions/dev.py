@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import logging
 import os
-
 import re
-from pakk.pakk.args.base_config import BaseConfig
-from pakk.logger import Logger
 
 from git import Repo
+
+from pakk.logger import Logger
+from pakk.pakk.args.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 def dev(path: str, **kwargs: str):
     base_config = BaseConfig.set(**kwargs)
     flag_verbose = base_config.verbose
-    
+
     Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
 
     if path is None or len(path) == 0:
@@ -28,11 +29,11 @@ def dev(path: str, **kwargs: str):
 
     # If not on a branch
     active_branch = None
-    try: 
+    try:
         active_branch = repo.active_branch
     except TypeError:
         pass
-        
+
     if active_branch is None:
         # Adapt origin url by removing the access token
         origin = repo.remotes.origin
@@ -47,7 +48,9 @@ def dev(path: str, **kwargs: str):
             logger.info(f"Adapter origin url from `{old_origin_url}` to `{origin_url}`")
 
         # Adapt the fetch config
-        repo.config_writer(config_level="repository").set_value('remote "origin"', "fetch", "+refs/heads/*:refs/remotes/origin/*")
+        repo.config_writer(config_level="repository").set_value(
+            'remote "origin"', "fetch", "+refs/heads/*:refs/remotes/origin/*"
+        )
 
         # Fetch
         origin = repo.remotes.origin
@@ -61,12 +64,12 @@ def dev(path: str, **kwargs: str):
         if len(remote_branches) == 0:
             logger.warning("No remote branches")
             return
-        
+
         # Checkout the first remote branch
         remote_branch = remote_branches[0]
         logger.info("Checkout remote branch: " + remote_branch.name)
 
-        local_branch_name = remote_branch.name.replace('origin/', '')
+        local_branch_name = remote_branch.name.replace("origin/", "")
 
         # Check if local branch already exists
         branches = repo.branches
@@ -80,5 +83,3 @@ def dev(path: str, **kwargs: str):
     else:
         logger.info(f"Already on branch: {active_branch.name}")
         return
-    
-    

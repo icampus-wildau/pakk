@@ -4,14 +4,18 @@ import logging
 import os
 import tempfile
 
+from InquirerPy import inquirer
+
 from pakk import ROOT_DIR
 from pakk.config import pakk_config
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.config.pakk_config import Sections
 from pakk.logger import Logger
-from pakk.modules.manager.systemd.unit_generator import PakkParentService, PakkServiceFileBase, ServiceFile, PakkAutoUpdateService
+from pakk.modules.manager.systemd.unit_generator import PakkAutoUpdateService
+from pakk.modules.manager.systemd.unit_generator import PakkParentService
+from pakk.modules.manager.systemd.unit_generator import PakkServiceFileBase
+from pakk.modules.manager.systemd.unit_generator import ServiceFile
+from pakk.pakk.args.base_config import BaseConfig
 
-from InquirerPy import inquirer
 # from pyfiglet import Figlet
 
 # Probably using https://github.com/CITGuru/PyInquirer
@@ -63,7 +67,7 @@ def setup(**kwargs):
     paths = [
         "# Created by pakk setup\n",
         "# Allow pakk group to execute setup scripts in pakkages",
-        f"{data_root_dir}/*/*/*", # TODO: bspw. für Lilv benötigt, das muss aber besser gehen
+        f"{data_root_dir}/*/*/*",  # TODO: bspw. für Lilv benötigt, das muss aber besser gehen
         f"{data_root_dir}/*/*/*/*",
         "/usr/bin/bash",
         "# Allow pakk group to execute apt commands for setups",
@@ -79,7 +83,7 @@ def setup(**kwargs):
     sudoers_file_content = ""
     for p in paths:
         s = p if p.startswith("#") else f"%{group_name} ALL=(root) NOPASSWD: {p}"
-        s+= "\n"
+        s += "\n"
         sudoers_file_content += s
 
     # Copy sudoers file to /etc/sudoers.d/pakk and change mod to 440
@@ -116,7 +120,7 @@ def setup(**kwargs):
     start_pattern = "### PAKK LOCATIONS ###"
     end_pattern = "### END PAKK LOCATIONS ###"
     content = f"include {locations_dir}/*;"
-    all_content = fr"{start_pattern}\n{content}\n{end_pattern}"
+    all_content = rf"{start_pattern}\n{content}\n{end_pattern}"
     # Escape every $.*/[\]^+?(){}| so that sed does not interpret them as regex
     escape_dict = {
         "$": r"\$",
@@ -132,7 +136,7 @@ def setup(**kwargs):
         ")": r"\)",
         "{": r"\{",
         "}": r"\}",
-        "|": r"\|"
+        "|": r"\|",
     }
     escaped_content = all_content.translate(str.maketrans(escape_dict))
 
@@ -141,11 +145,11 @@ def setup(**kwargs):
     # If the pattern already exists, replace the content
     if os.system(grep_command) == 0:
         logger.info(f"Replacing existing nginx content")
-        sed_command = fr"sudo sed -i '/{start_pattern}/,/{end_pattern}/c\\{escaped_content}' {nginx_config_path}"
+        sed_command = rf"sudo sed -i '/{start_pattern}/,/{end_pattern}/c\\{escaped_content}' {nginx_config_path}"
         os.system(sed_command)
     # Otherwise append the content after the server_name
     else:
-        sed_command = fr"sudo sed -i '/server_name _;/a\\{escaped_content}' {nginx_config_path}"
+        sed_command = rf"sudo sed -i '/server_name _;/a\\{escaped_content}' {nginx_config_path}"
         logger.info(f"Appending nginx sites content: {sed_command}")
         os.system(sed_command)
 
@@ -174,13 +178,16 @@ def setup(**kwargs):
         os.system(f"sudo systemctl enable {s.service_file.filepath}")
 
     # logger.info(f"It is recommended to restart the system now to apply all changes properly")
-    proceed = inquirer.confirm(message="It is recommended to restart the system now to apply all changes properly. Restart now?", default=True).execute()
+    proceed = inquirer.confirm(
+        message="It is recommended to restart the system now to apply all changes properly. Restart now?", default=True
+    ).execute()
 
     if proceed:
         logger.info(f"Restarting system")
         os.system(f"sudo reboot now")
 
     return
+
 
 if __name__ == "__main__":
     setup()

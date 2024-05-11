@@ -7,7 +7,8 @@ import os
 import tempfile
 from datetime import datetime
 from functools import cmp_to_key
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
 from pakk.config.main_cfg import MainConfig
 
@@ -20,7 +21,8 @@ from gitlab.v4.objects import GroupProject
 from semver.version import Version
 
 from pakk.args.install_args import InstallArgs
-from pakk.pakkage.core import CompactPakkageConfig, PakkageConfig
+from pakk.pakkage.core import CompactPakkageConfig
+from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class CachedProjectTag:
 
     @staticmethod
     def load_tags(connector: GitlabConnector, cached_project: CachedProject) -> dict[str, CachedProjectTag]:
-        
+
         gl_project = connector.get_gitlab_instance().projects.get(cached_project.id)
         project_tags = gl_project.tags.list()
 
@@ -172,7 +174,7 @@ class CachedProject:
     def save(self):
         """Save the project as single json file to the cache directory."""
         # json_str = jsons.dumps(self, strip_properties=True, strip_privates=True, strip_class_variables=True)
-        json_str: str = jsonpickle.encode(self) #, make_refs=True) # , unpicklable=False
+        json_str: str = jsonpickle.encode(self)  # , make_refs=True) # , unpicklable=False
         # json_str: str = json.dumps(self, cls=CachedProjectEncoder, check_circular=False)
         # json_str = jsonpickle.encode(self)
         with open(self.file_path, "w") as f:
@@ -228,10 +230,10 @@ class CachedProject:
             loaded_cp = CachedProject.load(cp)
             if (
                 loaded_cp is not None
-               and loaded_cp.last_activity_at == cp.last_activity_at
+                and loaded_cp.last_activity_at == cp.last_activity_at
                 and loaded_cp.V == CACHING_VERSION
             ):
-                
+
                 return loaded_cp, True
         else:
             loaded_cp = None
@@ -247,14 +249,12 @@ class CachedProject:
     #     return self.connector.get_gitlab_http_with_token(self.http_url_to_repo)
 
 
-
 class CachedProjectEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)       
-    
+        super().__init__(*args, **kwargs)
+
     def strip_privates(self, dict: Any):
         return {k: v for k, v in dict.items() if not k.startswith("_")}
-    
 
     def default(self, o):
         if isinstance(o, CachedProject):
@@ -287,4 +287,3 @@ class CachedProjectDecoder(json.JSONDecoder):
                 versions[key] = CachedProjectTag(**versions[key])
 
         return CachedProject(**obj)
-    

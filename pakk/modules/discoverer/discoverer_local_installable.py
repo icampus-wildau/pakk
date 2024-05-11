@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from pakk.config.pakk_config import Sections
 from pakk.modules.discoverer.base import Discoverer
-from pakk.pakkage.core import Pakkage, PakkageVersions, PakkageConfig, PakkageInstallState
-
-import logging
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
+
 class DiscovererLocalInstallable(Discoverer):
-    CONFIG_REQUIREMENTS = {
-        Sections.SUBDIRS: ["all_pakkges_dir"]
-    }
+    CONFIG_REQUIREMENTS = {Sections.SUBDIRS: ["all_pakkges_dir"]}
 
     def __init__(self, pakkage_paths: str | list[str]):
         super().__init__()
@@ -23,7 +24,7 @@ class DiscovererLocalInstallable(Discoverer):
     def discover(self) -> dict[str, Pakkage]:
         """Discover installable pakkages from a local directory."""
 
-        all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir", Sections.SUBDIRS) # type: ignore
+        all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir", Sections.SUBDIRS)  # type: ignore
 
         pakkages = {}
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import shlex
+
 import braceexpand
 
 from pakk.args.base_args import BaseArgs
@@ -12,15 +13,14 @@ from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.environments.parts.python import EnvPartPython
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.modules.types.base_instruction_parser import (
-    InstructionParser,
-    InstallInstructionParser,
-    CombinableInstructionParser,
-)
+from pakk.modules.types.base_instruction_parser import CombinableInstructionParser
+from pakk.modules.types.base_instruction_parser import InstallInstructionParser
+from pakk.modules.types.base_instruction_parser import InstructionParser
 from pakk.modules.types.type_python import PythonTypeConfiguration
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
-
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class PipInstructionParser(InstructionParser):
             requirements_file=self.requirement_file, packages=self.pip_packages
         )
         return cmd
-    
+
     def parse_install(self, instruction_content: str):
         parts = shlex.split(instruction_content)
         if "-r" in parts:

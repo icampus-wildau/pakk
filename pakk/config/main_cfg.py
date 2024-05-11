@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from extended_configparser.configuration import ConfigEntryCollection, ConfigSection
+from extended_configparser.configuration import ConfigEntryCollection
+from extended_configparser.configuration import ConfigSection
 from networkx import is_path
+
 from pakk.config.base import PakkConfigBase
 
 logger = logging.getLogger(__name__)

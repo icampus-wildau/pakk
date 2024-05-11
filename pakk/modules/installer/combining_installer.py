@@ -5,19 +5,22 @@ from typing import Callable
 
 import networkx as nx
 
-from pakk.pakk.args.install_config import InstallConfig
 from pakk.config.pakk_config import Sections as CfgSections
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.pakkage.core import Pakkage, PakkageInstallState, PakkageConfig
+from pakk.pakk.args.install_config import InstallConfig
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
 
 class InstallNode:
     """Node in the install graph."""
+
     def __init__(self, pakkage_config: PakkageConfig, depth: int = 0):
         """Initialize the install node for the given pakkage config."""
         self.depth = depth
@@ -30,16 +33,17 @@ class InstallNode:
     @property
     def is_finished(self):
         return len(self.types_to_install) == 0
-    
+
     def __str__(self):
         return f"InstallNode: {self.pakkage_config.id} ({self.types_to_install})"
-    
+
     def __repr__(self):
         return str(self)
-    
+
 
 class InstallGraph:
     """Graph representing the dependency tree as nodes of pakkage configs to be installed."""
+
     def __init__(self, pakkages_to_install: list[Pakkage], deptree: DependencyTree):
         """Initialize the install graph for the given pakkages to install and resolved dependency tree.
 
@@ -58,11 +62,10 @@ class InstallGraph:
         self.package_ids_to_install = set([p.id for p in pakkages_to_install])
         """Set of pakkage ids to install."""
 
-        self.install_tree: nx.DiGraph = deptree.tree.copy() # type: ignore
+        self.install_tree: nx.DiGraph = deptree.tree.copy()  # type: ignore
         """The directed graph representing the dependency tree only with nodes that needs to be installed."""
-        self.install_tree_reverse: nx.DiGraph = deptree.tree_reverse.copy() # type: ignore
+        self.install_tree_reverse: nx.DiGraph = deptree.tree_reverse.copy()  # type: ignore
         """The reversed directed graph representing the dependency tree only with nodes that needs to be installed."""
-
 
         # Remove all nodes that are not in the pakkages_to_install list
         nodes_to_remove = set()
@@ -87,7 +90,7 @@ class InstallGraph:
             v = p.versions.target
             if v is None:
                 raise ValueError(f"Target version of {p.name} is None")
-            
+
             # Find the generation of the node
             depth = 0
             for depth, generation in enumerate(self.sorted_generations):
@@ -96,7 +99,6 @@ class InstallGraph:
 
             install_node = InstallNode(v, depth)
             self.install_nodes[p.id] = install_node
-
 
     @property
     def unfinished_nodes(self):
@@ -130,7 +132,7 @@ class InstallGraph:
             if parent not in self.package_ids_to_install:
                 continue
             yield self.install_nodes[parent]
-    
+
     def unfinished_children_of_node(self, node: str | InstallNode):
         """Children of the given node that are not finished yet."""
         if isinstance(node, InstallNode):
@@ -155,9 +157,7 @@ class InstallerCombining(Module):
 
     SECTION_NAME = "Installer"
 
-    CONFIG_REQUIREMENTS = {
-        CfgSections.SUBDIRS: ["fetched_dir", "all_pakkges_dir"]
-    }
+    CONFIG_REQUIREMENTS = {CfgSections.SUBDIRS: ["fetched_dir", "all_pakkges_dir"]}
 
     def __init__(self, pakkages: dict[str, Pakkage], dependency_tree: DependencyTree):
         """
@@ -176,8 +176,8 @@ class InstallerCombining(Module):
         self.pakkages = pakkages
         self.deptree = dependency_tree
 
-        self.fetched_dir: str = self.config.get_abs_path("fetched_dir") # type: ignore
-        self.all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir") # type: ignore
+        self.fetched_dir: str = self.config.get_abs_path("fetched_dir")  # type: ignore
+        self.all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir")  # type: ignore
 
         self.status_callback: Callable[[str], None] | None = None
         self.tasks = None
@@ -204,7 +204,9 @@ class InstallerCombining(Module):
                 if pakkage.versions.installed is None:
                     logger.info(f"Will install {pakkage.name} ({pakkage.versions.target.version})")
                 else:
-                    logger.info(f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})")
+                    logger.info(
+                        f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
+                    )
                     pakkages_to_uninstall.append(pakkage)
             elif pakkage.versions.target is not None:
                 if pakkage.versions.reinstall and pakkage.versions.installed is not None:
@@ -214,7 +216,9 @@ class InstallerCombining(Module):
                 else:
                     if pakkage.versions.installed is None:
                         raise ValueError(f"Installed version of {pakkage.name} is None")
-                    logger.debug(f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})")
+                    logger.debug(
+                        f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})"
+                    )
 
         self.pakkages_to_uninstall: list[Pakkage] = pakkages_to_uninstall
         self.pakkages_to_install: list[Pakkage] = pakkages_to_install
@@ -259,13 +263,12 @@ class InstallerCombining(Module):
                 v = pakkage.versions.target
                 if v is None:
                     raise ValueError(f"Target version of {pakkage.name} is None")
-                
+
                 new_dir = self.all_pakkges_dir
                 logger.debug(f"Moving {v.name} to {new_dir}")
                 v.move_to(new_dir)
 
             install_graph = InstallGraph(self.pakkages_to_install, self.deptree)
-
 
             independent_types: dict[type[TypeBase], list[TypeBase]] = {}
             # Iter all nodes and select types that can be installed independently from dependencies
@@ -287,7 +290,9 @@ class InstallerCombining(Module):
             # After that: while there are still unfinished nodes:
             while len(unfinished_nodes := list(install_graph.unfinished_nodes)) > 0:
                 # Select all leaf nodes
-                leaf_nodes = [n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0]
+                leaf_nodes = [
+                    n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0
+                ]
                 # Get the top bubble of each leaf node
                 top_types = [(node, node.types_to_install[0]) for node in leaf_nodes]
                 # Sort the top_type installations by priority
@@ -306,40 +311,45 @@ class InstallerCombining(Module):
                 if len(selected_leaf_nodes) > 0:
                     leaf_node = selected_leaf_nodes[0]
                     top_type = leaf_node.types_to_install[0]
-                    
+
                     top_types_to_install: list[TypeBase] = []
-                    
+
                     # If selected installation does not allow combination with other installations of the same type on the children:
                     if not top_type.install_type.is_combinable_with_children:
                         # Select and remove the top types from the leaf nodes
                         for node in selected_leaf_nodes:
                             top_types_to_install.append(node.types_to_install.pop(0))
-                        
+
                         for t in top_types_to_install:
                             t.status_callback = callback
-                        top_type.install_multiple(top_types_to_install)                        
+                        top_type.install_multiple(top_types_to_install)
                     # If selected installation allows combination with other installations of the same type on the children:
                     else:
                         i = 0
                         selected_nodes = selected_leaf_nodes.copy()
 
                         # For each of the selected nodes:
-                        #   If the installation type is the last in the node (ignoring TypeGeneric) then: 
-                        #     -> select all nodes having installations of the same type as next coming installation 
+                        #   If the installation type is the last in the node (ignoring TypeGeneric) then:
+                        #     -> select all nodes having installations of the same type as next coming installation
                         #        from all child nodes and add them to selected nodes
                         while i < len(selected_nodes):
                             node = selected_nodes[i]
                             if len(node.types_to_install) == 0:
                                 continue
-                            if (node.types_to_install[0].__class__ == top_type.__class__):
+                            if node.types_to_install[0].__class__ == top_type.__class__:
                                 top_types_to_install.append(node.types_to_install.pop(0))
 
                             # if len(node.types_to_install) == 1 and node.types_to_install[0].__class__ == TypeGeneric or len(node.types_to_install) == 0:
 
-                            if len(node.types_to_install) == 0 or all([not t.install_type.has_impact_on_children for t in node.types_to_install]):
+                            if len(node.types_to_install) == 0 or all(
+                                [not t.install_type.has_impact_on_children for t in node.types_to_install]
+                            ):
                                 parents = list(install_graph.parents_of_node(node))
                                 for parent in parents:
-                                    if len(parent.types_to_install) > 0 and parent.types_to_install[0].__class__ == top_type.__class__:
+                                    if (
+                                        len(parent.types_to_install) > 0
+                                        and parent.types_to_install[0].__class__ == top_type.__class__
+                                    ):
                                         # TODO: It should work without checking if the parent node is already in the list, but maybe add this check later
                                         selected_nodes.append(parent)
 
@@ -356,12 +366,12 @@ class InstallerCombining(Module):
 
                 # Set group of the pakkage directory to pakk
                 v.set_group("pakk")
-                
+
                 if pakkage.versions.installed.is_startable() and pakkage.versions.installed.is_enabled():
                     pakkage.versions.installed.enable()
-                
+
                 logger.info(f"Finished installation of {pakkage.name}.")
-            
+
             Logger.get_console().print("")
 
         elif len(self.pakkages_to_install) == 0:

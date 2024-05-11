@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from pakk.config.pakk_config import Sections
 from pakk.modules.discoverer.base import Discoverer
-from pakk.pakkage.core import Pakkage, PakkageState, PakkageVersions, PakkageConfig, PakkageInstallState
-
-import logging
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
+
 class DiscovererLocal(Discoverer):
-    CONFIG_REQUIREMENTS = {
-        Sections.SUBDIRS: ["all_pakkges_dir"]
-    }
+    CONFIG_REQUIREMENTS = {Sections.SUBDIRS: ["all_pakkges_dir"]}
 
     def __init__(self):
         super().__init__()
@@ -21,7 +23,7 @@ class DiscovererLocal(Discoverer):
     def discover(self) -> dict[str, Pakkage]:
         """Discover all local fetched and installed pakkages."""
 
-        all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir", Sections.SUBDIRS) # type: ignore
+        all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir", Sections.SUBDIRS)  # type: ignore
 
         pakkages = {}
 
@@ -38,11 +40,13 @@ class DiscovererLocal(Discoverer):
                     if pakkage_config.state is None:
                         logger.warning(f"Pakkage state is None for {pakkage_config.id}")
                         pakkage_config.state = PakkageState(PakkageInstallState.FETCHED)
-                        
-                        
+
                     if pakkage_config.state.install_state == PakkageInstallState.INSTALLED:
                         versions.installed = pakkage_config
-                    elif pakkage_config.state.install_state == PakkageInstallState.FETCHED or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED:
+                    elif (
+                        pakkage_config.state.install_state == PakkageInstallState.FETCHED
+                        or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
+                    ):
                         versions.target = pakkage_config
                     else:
                         logger.debug(f"Unknown install state: {pakkage_config.state.install_state}")

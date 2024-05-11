@@ -7,9 +7,7 @@ from pakk.modules.module import Module
 
 class EnvPartROS2(Module):
     SECTION_NAME = "Env.ROS2"
-    CONFIG_REQUIREMENTS = {
-        SECTION_NAME: ["ws_dir"]
-    }
+    CONFIG_REQUIREMENTS = {SECTION_NAME: ["ws_dir"]}
 
     def __init__(self):
         super().__init__()
@@ -26,9 +24,11 @@ class EnvPartROS2(Module):
         """Get the colcon command to list all packages in the given path."""
         path_cmd = "--paths" if not search_recursive else "--base-paths"
         # return f'colcon list --names-only --paths {search_path}'
-        return f'colcon list --names-only {path_cmd} {search_path}'
+        return f"colcon list --names-only {path_cmd} {search_path}"
 
     @staticmethod
     def get_cmd_colcon_build(package_names: list[str], symlink_install: bool = False):
         """Get the colcon command to build the given packages."""
-        return f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
+        return (
+            f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
+        )

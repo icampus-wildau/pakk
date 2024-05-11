@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import logging
 import os
+
 from extended_configparser.configuration.entries.section import ConfigSection
+
 from pakk.config.base import TypeConfiguration
 from pakk.helper.file_util import remove_dir
-
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
+
 # from pakk.modules.environments.parts.ros2 import EnvPartROS2
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import RunInstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +50,15 @@ class Ros2TypeConfiguration(TypeConfiguration):
         """Get the colcon command to list all packages in the given path."""
         path_cmd = "--paths" if not search_recursive else "--base-paths"
         # return f'colcon list --names-only --paths {search_path}'
-        return f'colcon list --names-only {path_cmd} {search_path}'
+        return f"colcon list --names-only {path_cmd} {search_path}"
 
     @staticmethod
     def get_cmd_colcon_build(package_names: list[str], symlink_install: bool = False):
         """Get the colcon command to build the given packages."""
-        return f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
-    
+        return (
+            f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
+        )
+
 
 class RosStartInstructionParser(RunInstructionParser):
     INSTRUCTION_NAME = ["start", "local"]
@@ -77,7 +83,7 @@ class RosStartInstructionParser(RunInstructionParser):
         cmds = [
             self.config.get_cmd_setup_ws(),
             local_env,
-            self.env.get_cmd_in_environment(f"ros2 launch {self.script}")
+            self.env.get_cmd_in_environment(f"ros2 launch {self.script}"),
         ]
         return " && ".join(cmds)
 
@@ -121,9 +127,7 @@ class TypeRos2(TypeBase):
 
             search_path = os.path.join(pakkage_dir, "*").replace("\\", "/")
 
-            cmds = [
-                self.config.get_cmd_colcon_list_packages(search_path)
-            ]
+            cmds = [self.config.get_cmd_colcon_list_packages(search_path)]
 
             result = self.run_commands(cmds, cwd=self.config.path_ros_ws.value)
             return [n for n in result.splitlines() if n != ""]
@@ -146,13 +150,9 @@ class TypeRos2(TypeBase):
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
 
         if isinstance(self.env, LinuxEnvironment):
-            cmds = [
-                self.config.get_cmd_colcon_build(package_names, symlink_install=False)
-            ]
+            cmds = [self.config.get_cmd_colcon_build(package_names, symlink_install=False)]
 
-            code, _, _ = self.run_commands_with_returncode(
-                cmds, cwd=self.config.path_ros_ws.value, print_output=True
-            )
+            code, _, _ = self.run_commands_with_returncode(cmds, cwd=self.config.path_ros_ws.value, print_output=True)
 
             # If the packages could not be built, try to delete the build and install directories
             if code == 2:
@@ -239,6 +239,7 @@ class InitHelper(InitHelperBase):
     @staticmethod
     def help() -> list[InitConfigSection]:
         from InquirerPy import inquirer
+
         sections: list[InitConfigSection] = []
         ros_options: list[InitConfigOption] = []
 

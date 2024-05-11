@@ -5,11 +5,13 @@ import os
 import platform
 import re
 import subprocess
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from typing import Callable
 
-from pakk.config.main_cfg import MainConfig
 import pakk.config.pakk_config as cfg
-from pakk.helper.file_util import create_dir_symlink, unlink_dir_symlink
+from pakk.config.main_cfg import MainConfig
+from pakk.helper.file_util import create_dir_symlink
+from pakk.helper.file_util import unlink_dir_symlink
 from pakk.logger import Logger
 
 if TYPE_CHECKING:
@@ -36,7 +38,7 @@ class Module:
         self.status_callback(pakkage_name, self.get_status_message(status))
 
     def get_status_message(self, msg: str):
-        return fr"\[{self.__class__.__name__}] {msg}"
+        return rf"\[{self.__class__.__name__}] {msg}"
 
     @classmethod
     def print_rule(cls, message: str):
@@ -47,7 +49,13 @@ class Module:
         Logger.get_console().print(n * "\n")
 
     @staticmethod
-    def run_commands_with_returncode(command: str | list[str], cwd: str | None = None, print_output=False, execute_in_bash=False, env: dict[str, str] | None = None) -> tuple(int, str, str):
+    def run_commands_with_returncode(
+        command: str | list[str],
+        cwd: str | None = None,
+        print_output=False,
+        execute_in_bash=False,
+        env: dict[str, str] | None = None,
+    ) -> tuple(int, str, str):
         """
         Run a command.
         If command is a list, the elements are concatenated with "&&".
@@ -84,20 +92,28 @@ class Module:
         return (result.returncode, result.stdout, result.stderr)
 
     @staticmethod
-    def run_commands(command: str | list[str], cwd: str | None = None, print_output=False, execute_in_bash=False, env: dict[str, str] | None = None) -> str:
+    def run_commands(
+        command: str | list[str],
+        cwd: str | None = None,
+        print_output=False,
+        execute_in_bash=False,
+        env: dict[str, str] | None = None,
+    ) -> str:
         """
         See run_commands_with_returncode.
         """
-        returncode, stdout, stderr = Module.run_commands_with_returncode(command, cwd, print_output, execute_in_bash, env)
+        returncode, stdout, stderr = Module.run_commands_with_returncode(
+            command, cwd, print_output, execute_in_bash, env
+        )
         return stdout
 
     @staticmethod
     def run_commands_with_output(
-            command: str | list[str],
-            cwd: str | None = None,
-            catch_dynamic_output=False,
-            callback: Callable[[str], None] | None = None,
-            env: dict[str, str] | None = None
+        command: str | list[str],
+        cwd: str | None = None,
+        catch_dynamic_output=False,
+        callback: Callable[[str], None] | None = None,
+        env: dict[str, str] | None = None,
     ) -> str:
         if command is None:
             return ""
@@ -108,6 +124,7 @@ class Module:
         output_callback = callback
 
         if output_callback is None:
+
             def cb(x):
                 Logger.get_console().print(x)
 
@@ -124,8 +141,15 @@ class Module:
 
         # TODO: Catch stderr separately
         with subprocess.Popen(
-                cmd, cwd=cwd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
-                universal_newlines=True, encoding="utf-8", env=env
+            cmd,
+            cwd=cwd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+            encoding="utf-8",
+            env=env,
         ) as p:
             # Capture the output of the subprocess to print the info in the pbar
             if p.stdout is None:
@@ -135,7 +159,7 @@ class Module:
                 # remove any whitespace including newlines
                 line = line.strip().replace("\r", "").replace("\n", "").strip()
 
-                ansi_escape = re.compile(r'(?:\x1B[@-Z\\-_]|[\x80-\x9A\x9C-\x9F]|(?:\x1B\[|\x9B)[0-?]*[ -/]*[@-~])')
+                ansi_escape = re.compile(r"(?:\x1B[@-Z\\-_]|[\x80-\x9A\x9C-\x9F]|(?:\x1B\[|\x9B)[0-?]*[ -/]*[@-~])")
                 result = ansi_escape.sub("", line)
 
                 with_backslash_escaped = result.replace("\\", "\\\\")

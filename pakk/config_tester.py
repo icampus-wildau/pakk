@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import configparser
 import os
 
@@ -9,16 +11,13 @@ from pakk.config.main_cfg import MainConfig
 # config_parser.set("Test", "Foo", "Bla")
 # with open("test.cfg", "w") as f:
 #     config_parser.write(f)
-    
+
 cfg = MainConfig()
 cfg.inquire()
 cfg.write()
 
 for entry in cfg.entries:
     print(entry)
-
-
-
 
 
 # print("My interpolator")

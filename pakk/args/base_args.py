@@ -4,6 +4,7 @@ from typing import TypeVar
 
 BaseArgsType = TypeVar("BaseArgsType", bound="BaseArgs")
 
+
 class BaseArgs:
     __config: BaseArgs | None = None
 

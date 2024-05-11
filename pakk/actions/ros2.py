@@ -4,21 +4,23 @@ import logging
 import subprocess
 
 from InquirerPy import inquirer
-from mdplus.util.parser.ros2_parser import Package, PackageType
-from pakk.modules.environments.parts.ros2 import EnvPartROS2
-from pakk.modules.module import Module
-from prompt_toolkit.completion import Completer, CompleteEvent, Completion
+from mdplus.util.parser.ros2_parser import Package
+from mdplus.util.parser.ros2_parser import PackageType
+from prompt_toolkit.completion import CompleteEvent
+from prompt_toolkit.completion import Completer
+from prompt_toolkit.completion import Completion
 from prompt_toolkit.document import Document
 
 import pakk.config.pakk_config as pakk_config
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+from pakk.modules.environments.parts.ros2 import EnvPartROS2
+from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.type_ros2 import TypeRos2
+from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import PakkageConfig
-
 
 logger = logging.getLogger(__name__)
 
@@ -110,13 +112,11 @@ def ros2(run_args: str | list[str], **kwargs: dict[str, str]):
             path = installed.local_path
             ros_packages = Package.getPackages(path)
 
-            found_ros_packages.update({p.name: Ros2RunPackage(installed, p) for p in ros_packages if p.package_type == PackageType.PYTHON})
+            found_ros_packages.update(
+                {p.name: Ros2RunPackage(installed, p) for p in ros_packages if p.package_type == PackageType.PYTHON}
+            )
 
-    result = inquirer.text(
-        message="ros2 run",
-        completer=Ros2RunCompleter(found_ros_packages),
-        qmark=">"
-    ).execute()
+    result = inquirer.text(message="ros2 run", completer=Ros2RunCompleter(found_ros_packages), qmark=">").execute()
 
     # print(result)
     package_name, node_name = result.split(" ")
@@ -127,7 +127,7 @@ def ros2(run_args: str | list[str], **kwargs: dict[str, str]):
     # ros_type = next(t for t in pakk_types if isinstance(t, TypeRos2))
     ros_type = next(t for t in pakkage.pakk_types if isinstance(t, TypeRos2))
     env: EnvPartROS2 = ros_type.env
-    
+
     # env.build_image(rebuild_if_exists=flag_rebuild)
     # cmd = env.get_interactive_docker_command(f"ros2 run {result}")
     cmd = env.get_interactive_cmd_in_environment(f"{env.get_cmd_setup_ws()} && ros2 run {result}")

@@ -50,7 +50,7 @@ class ModuleImporter:
         return return_list
 
     @staticmethod
-    def import_type(module_name: str, default_class_name: str = None, source_section: str = None) -> type: # type: ignore
+    def import_type(module_name: str, default_class_name: str = None, source_section: str = None) -> type:  # type: ignore
         """Import the given type by the module and class name."""
 
         global imported_classes
@@ -88,7 +88,7 @@ class ModuleImporter:
     @staticmethod
     def get_class_from_module(module_name: str, class_name: str) -> type | None:
         """Get the class from the given module by name."""
-        
+
         global imported_classes
         global imported_modules
 
@@ -101,7 +101,5 @@ class ModuleImporter:
         m = imported_modules.get(module_name, None)
         if not hasattr(m, class_name):
             return None
-        
+
         return getattr(m, class_name)
-        
-        

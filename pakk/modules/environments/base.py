@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+from abc import ABC
+from abc import abstractmethod
+
 from pakk.modules.module import Module
-from abc import ABC, abstractmethod
 
 
 class EnvironmentBase(Module, ABC):

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import builtins
 import logging
+from typing import TYPE_CHECKING
 
 import networkx as nx
 from graphviz import Digraph
 
-from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
-    from pakk.pakkage.core import Pakkage, PakkageConfig
+    from pakk.pakkage.core import Pakkage
+    from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
 
@@ -61,14 +61,12 @@ class DependencyTree:
         if step == 0:
             if len(visited) == 0:
                 return pakkage
-            
+
             sorted_visited = sorted(visited.items(), key=lambda x: x[1], reverse=True)
             highest_pakkage = self.pakkages[sorted_visited[0][0]]
             return highest_pakkage
-        
+
         return pakkage
-
-
 
     def init_pakkages(self, add_dependencies_for_non_installed=True):
         logger.debug("Initializing pakkages")

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import os
+
 from pakk.config import pakk_config
 from pakk.config.pakk_config import Sections
 from pakk.modules.environments.dockerbase import DockerEnvironment
 from pakk.modules.environments.ros2.base import Ros2Environment
 from pakk.modules.module import Module
-import os
-
 from pakk.pakkage.core import PakkageConfig
 
 
@@ -51,9 +51,7 @@ class LocalRos2Environment(Ros2Environment):
 
         search_path = os.path.join(pakkage_dir, "*").replace("\\", "/")
 
-        cmds = [
-            self.get_cmd_colcon_list_packages(search_path)
-        ]
+        cmds = [self.get_cmd_colcon_list_packages(search_path)]
 
         result = Module.run_commands(cmds)
         return [n for n in result.splitlines() if n != ""]
@@ -72,10 +70,7 @@ class LocalRos2Environment(Ros2Environment):
         # --symlink-install is needed since the packages are symlinked into the workspace
         # Otherwise some "error in 'egg_base'" error occurs
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
-        cmds = [
-            f'cd {self.path_ros_ws}',
-            self.get_cmd_colcon_build(package_names, symlink_install=False)
-        ]
+        cmds = [f"cd {self.path_ros_ws}", self.get_cmd_colcon_build(package_names, symlink_install=False)]
 
         def callback(line):
             self.set_status(pakkage_version.name, line)

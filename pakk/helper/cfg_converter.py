@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 from pakk.pakkage.core import PakkageConfig
@@ -44,4 +46,3 @@ d = cfg.cfg.__dict__
 x = 5
 
 cfg.cfg.write(open("__temp.cfg", "w"))
-

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 
-import nodesemver
 import jellyfish
+import nodesemver
 
 from pakk.args.install_args import InstallArgs
 from pakk.config.process import Process
@@ -21,8 +21,7 @@ from pakk.modules.module import Module
 from pakk.modules.resolver.base import ResolverException
 from pakk.modules.resolver.resolver_fitting import ResolverFitting
 from pakk.modules.types.base import TypeBase
-from pakk.pakkage.core import Pakkage 
-
+from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +33,10 @@ class PakkageNotFoundException(Exception):
     def get_most_similar(name: str, available_names: list[str], n=3):
         # jaro_winkler = [(jellyfish.jaro_winkler_similarity(name, x), x) for x in available_names]
         # sorted_jaro_winkler_tuples = sorted(jaro_wikler, key=lambda x: x[0])
-        sorted_jaro_winkler = sorted(available_names, key=lambda x: (jellyfish.jaro_winkler_similarity(name, x), x), reverse=True)
+        sorted_jaro_winkler = sorted(
+            available_names, key=lambda x: (jellyfish.jaro_winkler_similarity(name, x), x), reverse=True
+        )
         return sorted_jaro_winkler[:n]
-
 
     def __init__(self, package_name: str, available_packages: list[str]):
         s = f"\nPakkage {package_name} not found... Did you mean one of these?\n"
@@ -62,7 +62,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     if not lock.access:
         logger.error("Wait for the other pakk process to finish to continue.")
         return
-    
+
     ### Normalize input
     if isinstance(pakkage_names, str):
         pakkage_names = [pakkage_names]
@@ -90,7 +90,6 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     connectors = PakkLoader.get_connector_instances(**kwargs)
     pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
 
-
     installing_pakkage_ids = []
 
     for n in pakkage_names:
@@ -114,7 +113,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
             elif p.versions.installed is None:
                 available = list(p.versions.available.keys())
                 if len(available) > 0:
-                    version = available[0] 
+                    version = available[0]
                     p.versions.target = p.versions.available.get(version, None)
                 elif p.versions.target is not None:
                     p.versions.available[p.versions.target.version] = p.versions.target
@@ -161,7 +160,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     installer = InstallerCombining(pakkages_resolved, resolver.deptree)
     if install_config.dry_run:
         return
-    
+
     installer.uninstall()
 
     fetcher = FetcherGitlab(pakkages_resolved)

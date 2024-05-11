@@ -3,24 +3,25 @@ from __future__ import annotations
 import configparser
 import enum
 import json
+import logging
 import os
 import re
 import shutil
 import subprocess
-from typing import Any, TYPE_CHECKING
-import logging
-
-from extended_configparser.parser import ExtendedConfigParser
-from pakk.modules.environments.loader import get_current_environment_cls
-import jsons
-from pakk.config.main_cfg import MainConfig
-from pakk.helper.file_util import remove_dir
-from pakk.modules.manager.systemd.unit_generator import PakkChildService
-from semver.version import Version
+from typing import TYPE_CHECKING
+from typing import Any
 
 import dotenv
+import jsons
+from extended_configparser.parser import ExtendedConfigParser
+from semver.version import Version
 
-from pakk.modules.types.base import TypeBase, TypeConfigSection
+from pakk.config.main_cfg import MainConfig
+from pakk.helper.file_util import remove_dir
+from pakk.modules.environments.loader import get_current_environment_cls
+from pakk.modules.manager.systemd.unit_generator import PakkChildService
+from pakk.modules.types.base import TypeBase
+from pakk.modules.types.base import TypeConfigSection
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 
 class PakkageInstallState(enum.Enum):
     """The installation state of a pakkage."""
+
     INSTALLED = "installed"
     UNINSTALLED = "uninstalled"
     FETCHED = "fetched"
@@ -88,7 +90,6 @@ class CompactPakkageConfig:
         self.attributes: dict[str, Any] = dict()
         """Custom attributes for following modules."""
 
-
     @staticmethod
     def from_pakkage_config(config: PakkageConfig) -> CompactPakkageConfig:
         cpc = CompactPakkageConfig()
@@ -110,6 +111,7 @@ class CompactPakkageConfig:
         cpc.attributes = config.attributes
 
         return cpc
+
 
 class PakkageConfig:
     """
@@ -198,16 +200,16 @@ class PakkageConfig:
         """Returns true if the pakkage is startable."""
         if self.state.install_state != PakkageInstallState.INSTALLED:
             return False
-        
+
         startable_types = [t for t in self.pakk_types if t.is_runnable()]
         if len(startable_types) == 0:
             return False
-        
+
         if len(startable_types) > 1:
             raise Exception("Multiple startable types are not supported yet.")
-        
+
         return True
-    
+
     def _run_command_with_return_code_and_output(self, cmd: str) -> tuple[int, str]:
         """Run a command and return the return code and the output."""
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -220,22 +222,23 @@ class PakkageConfig:
         """Runs the pakkage interactively."""
         if not self.is_startable():
             raise Exception("Pakkage is not runnable.")
-        
+
         startable_types = [t for t in self.pakk_types if t.is_runnable()]
         startable_types[0].run()
-
 
     def start(self):
         """Starts the pakkage as service."""
         if not self.is_startable():
             raise Exception("Pakkage is not startable.")
-        
+
         service = PakkChildService(self)
         if not os.path.exists(f"/etc/systemd/system/{service.service_file.filename}"):
             logger.info(f"Writing service file to {service.service_file.filepath}")
             service.service_file.write()
             logger.info(f"Linking service file to /etc/systemd/system/{service.service_file.filename}")
-            os.system(f"sudo ln -sf {service.service_file.filepath} {os.path.join('/etc/systemd/system', service.service_file.filename)}")
+            os.system(
+                f"sudo ln -sf {service.service_file.filepath} {os.path.join('/etc/systemd/system', service.service_file.filename)}"
+            )
             logger.info(f"Reloading systemd daemon")
             os.system(f"sudo systemctl daemon-reload")
 
@@ -247,16 +250,16 @@ class PakkageConfig:
         """Stops the pakkage service."""
         if not self.is_startable():
             raise Exception("Pakkage is not startable.")
-        
+
         service = PakkChildService(self)
         logger.info(f"Stopping {service.service_file.name}")
         os.system(f"sudo systemctl stop {service.service_file.name}")
-        
+
     def follow_log(self):
         """Follows the log of the pakkage service."""
         if not self.is_startable():
             raise Exception(f"Pakkage {self.id} is not startable.")
-        
+
         service = PakkChildService(self)
         logger.info(f"Following log of {service.service_file.name}")
         os.system(f"sudo journalctl -f -u {service.service_file.name}")
@@ -265,25 +268,29 @@ class PakkageConfig:
         """Returns true if the pakkage service is active."""
         if not self.is_startable():
             raise Exception(f"Pakkage {self.id} is not startable.")
-        
+
         service = PakkChildService(self)
-        code, output = self._run_command_with_return_code_and_output(f"sudo systemctl is-active {service.service_file.name}")
+        code, output = self._run_command_with_return_code_and_output(
+            f"sudo systemctl is-active {service.service_file.name}"
+        )
         return code == 0
 
     def is_enabled(self) -> bool:
         """Returns true if the pakkage service is enabled."""
         if not self.is_startable():
             raise Exception(f"Pakkage {self.id} is not startable.")
-        
+
         service = PakkChildService(self)
-        code, output = self._run_command_with_return_code_and_output(f"sudo systemctl is-enabled {service.service_file.name}")
+        code, output = self._run_command_with_return_code_and_output(
+            f"sudo systemctl is-enabled {service.service_file.name}"
+        )
         return code == 0
-    
+
     def enable(self):
         """Enables the autostart of the pakkage as service."""
         if not self.is_startable():
             raise Exception(f"Pakkage {self.id} is not startable.")
-        
+
         service = PakkChildService(self)
         logger.info(f"Writing service file to {service.service_file.filepath}")
         service.service_file.write()
@@ -297,7 +304,7 @@ class PakkageConfig:
         """Disables the autostart of the pakkage service."""
         if not self.is_startable():
             raise Exception("Pakkage is not startable.")
-        
+
         service = PakkChildService(self)
         logger.info(f"Stopping {service.service_file.name}")
         os.system(f"sudo systemctl stop {service.service_file.name}")
@@ -308,12 +315,11 @@ class PakkageConfig:
         """Restarts the pakkage service."""
         if not self.is_startable():
             raise Exception("Pakkage is not startable.")
-        
+
         service = PakkChildService(self)
         logger.info(f"Restarting {service.service_file.name}...")
         os.system(f"sudo systemctl restart {service.service_file.name}")
         logger.info(f"... {service.service_file.name} restarted")
-
 
     @property
     def pakk_types(self) -> list[TypeBase]:
@@ -348,7 +354,6 @@ class PakkageConfig:
                 self._types.append(type_class(self, self.get_environment()))
                 added_types.add(type_class)
 
-
         self._types = [t for t in self._types if t is not None]
 
         return self._types
@@ -364,8 +369,7 @@ class PakkageConfig:
 
         """Load the env vars of the pakkage from the pakk.env file in the .pakk directory of the module."""
         if self.local_path is None:
-            raise Exception(
-                "No path to load the env vars from.")
+            raise Exception("No path to load the env vars from.")
         path = self.local_path
 
         env_vars = dict()
@@ -385,8 +389,7 @@ class PakkageConfig:
         """Save the env vars of the pakkage to the pakk.env file in the .pakk directory of the module."""
 
         if self.local_path is None:
-            raise Exception(
-                "No path to save the env vars to.")
+            raise Exception("No path to save the env vars to.")
         path = self.local_path
 
         pakk_dir = PakkageConfig.PAKK_DIRECTORY_NAME
@@ -404,7 +407,8 @@ class PakkageConfig:
         if path is None:
             if self.local_path is None:
                 raise Exception(
-                    "No path to load the state from. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes.")
+                    "No path to load the state from. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes."
+                )
             path = self.local_path
 
         pakk_dir = PakkageState.DIRECTORY_NAME
@@ -431,7 +435,8 @@ class PakkageConfig:
         if path is None:
             if self.local_path is None:
                 raise Exception(
-                    "No path to save the state to. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes.")
+                    "No path to save the state to. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes."
+                )
             path = self.local_path
 
         pakk_dir = PakkageState.DIRECTORY_NAME
@@ -582,8 +587,9 @@ class PakkageConfig:
 
         pc.id = pc.cfg["info"]["id"]
         pc.version = pc.cfg["info"]["version"]
-        pc.dependencies = {k: v for k, v in pc.cfg.items("dependencies")} if pc.cfg.has_section(
-            "dependencies") else dict()
+        pc.dependencies = (
+            {k: v for k, v in pc.cfg.items("dependencies")} if pc.cfg.has_section("dependencies") else dict()
+        )
 
         if "name" in pc.cfg["info"]:
             pc.name = pc.cfg["info"]["name"]
@@ -593,7 +599,11 @@ class PakkageConfig:
             pc.name = pc.id
 
         pc.description = pc.cfg["info"]["description"] if "description" in pc.cfg["info"] else ""
-        pc.keywords = [kw.strip() for kw in pc.cfg["info"]["keywords"].split(",") if kw.strip() != ""] if "keywords" in pc.cfg["info"] else []
+        pc.keywords = (
+            [kw.strip() for kw in pc.cfg["info"]["keywords"].split(",") if kw.strip() != ""]
+            if "keywords" in pc.cfg["info"]
+            else []
+        )
         pc.author = pc.cfg["info"]["author"] if "author" in pc.cfg["info"] else ""
         pc.license = pc.cfg["info"]["license"] if "license" in pc.cfg["info"] else ""
 
@@ -677,13 +687,12 @@ class PakkageConfig:
         return self.id < other.id
 
 
-
 class PakkageVersions:
     def __init__(
-            self,
-            available: list[PakkageConfig] | dict[str, PakkageConfig] | None = None,
-            installed: PakkageConfig | None = None,
-            target: PakkageConfig | None = None,
+        self,
+        available: list[PakkageConfig] | dict[str, PakkageConfig] | None = None,
+        installed: PakkageConfig | None = None,
+        target: PakkageConfig | None = None,
     ):
         if isinstance(available, list):
             self.available: dict[str, PakkageConfig] = dict()
@@ -749,7 +758,7 @@ class PakkageVersions:
 class Pakkage:
     def __init__(self, pakkage_versions: PakkageVersions | None = None):
         self.versions: PakkageVersions = pakkage_versions or PakkageVersions()
-        """The versions of the pakkage. This includes the available versions, 
+        """The versions of the pakkage. This includes the available versions,
         the installed version and the target version for new installations and updated."""
 
         info_version = None
@@ -761,7 +770,7 @@ class Pakkage:
             info_version = list(self.versions.available.values())[0]
 
         self.id: str = "" if info_version is None else info_version.id
-        """The id of the pakkage. This is used to identify the pakkages in the CLI commands 
+        """The id of the pakkage. This is used to identify the pakkages in the CLI commands
          and the same as the id in the pakkage config file."""
 
         self.name: str = "" if info_version is None else info_version.name

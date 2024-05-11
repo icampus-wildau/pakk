@@ -7,4 +7,6 @@
 # from .source import source
 # from .setup import setup
 
+from __future__ import annotations
+
 __all__ = ["install", "list", "show_tree", "config", "environment", "ros2", "source", "setup"]

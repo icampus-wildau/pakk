@@ -10,5 +10,3 @@ RUN pip install setuptools==58.2.0
 ENV PYTHONPATH=/python-packages:$PYTHONPATH
 
 # docker build -t ros2_env .
-
-

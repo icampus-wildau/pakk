@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import os
 import getpass
+import os
 import tempfile
+from typing import TYPE_CHECKING
+
 from pakk import PAKK_CMD_PATH
 from pakk.config.main_cfg import MainConfig
 from pakk.modules.manager.systemd.unit_file_definition import UnitFileDefinition
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pakk.pakkage.core import PakkageConfig
@@ -27,12 +27,13 @@ class UnitFileSection:
 
 class ServiceFile:
     """Generate unit file for systemd"""
+
     PATH = MainConfig.get_config().paths.services_dir.value
 
     def __init__(self, name: str):
         self.name: str = name
         if name.endswith(".service"):
-            self.name = name[:-len(".service")]
+            self.name = name[: -len(".service")]
 
         self.sections: list[UnitFileSection] = []
 
@@ -48,7 +49,7 @@ class ServiceFile:
         temp_file.close()
         temp_file_path = temp_file.name
         os.system(f"cp {temp_file_path} {self.filepath}")
-        os.system(f"rm {temp_file_path}") 
+        os.system(f"rm {temp_file_path}")
 
     @property
     def content(self) -> str:
@@ -67,9 +68,11 @@ class ServiceFile:
     def __str__(self):
         return self.name
 
+
 class PakkServiceFileBase:
     def __init__(self, name: str):
-            self.service_file = ServiceFile(name)
+        self.service_file = ServiceFile(name)
+
 
 class PakkParentService(PakkServiceFileBase):
     PATH = os.path.join(ServiceFile.PATH, "/pakk.service") if ServiceFile.PATH is not None else None
@@ -88,6 +91,7 @@ class PakkParentService(PakkServiceFileBase):
         install_section = self.service_file.add_section(UnitFileDefinition.Install.NAME)
         install_section.add_line(UnitFileDefinition.Install.WantedBy, "multi-user.target")
 
+
 class PakkAutoUpdateService(PakkServiceFileBase):
     PATH = os.path.join(ServiceFile.PATH, "/pakk-auto-update.service") if ServiceFile.PATH is not None else None
 
@@ -99,7 +103,9 @@ class PakkAutoUpdateService(PakkServiceFileBase):
         service_section = self.service_file.add_section(UnitFileDefinition.Service.NAME)
         service_section.add_line("User", getpass.getuser())
         service_section.add_line(UnitFileDefinition.Service.Type.NAME, "oneshot")
-        service_section.add_line(UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} update --selfupdate --all --auto")
+        service_section.add_line(
+            UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} update --selfupdate --all --auto"
+        )
 
         install_section = self.service_file.add_section(UnitFileDefinition.Install.NAME)
         install_section.add_line(UnitFileDefinition.Install.WantedBy, "multi-user.target")
@@ -117,7 +123,9 @@ class PakkChildService(PakkServiceFileBase):
 
         service_section: UnitFileSection = self.service_file.add_section(UnitFileDefinition.Service.NAME)
         service_section.add_line("User", getpass.getuser())
-        service_section.add_line(UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} run {self.pakkage_version.basename}")
+        service_section.add_line(
+            UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} run {self.pakkage_version.basename}"
+        )
         # service_section.add_line(UnitFileDefinition.Service.ExecStart, f"pakk run {self.pakkage_version.basename}")
         service_section.add_line(UnitFileDefinition.Service.Restart, "on-failure")
         service_section.add_line(UnitFileDefinition.Service.TimeoutSec, "15s")

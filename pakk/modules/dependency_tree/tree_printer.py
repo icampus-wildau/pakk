@@ -3,15 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from pakk.pakk.args.install_config import InstallConfig
+from rich import print
+from rich.tree import Tree
+
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-
-from rich.tree import Tree
-from rich import print
-
+from pakk.pakk.args.install_config import InstallConfig
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class TreePrinter:
     ):
         self.dep_tree = dep_tree
         self.pakkages = pakkages
-        self.str_method = lambda pakkage, parent_pakkage : str(pakkage)
+        self.str_method = lambda pakkage, parent_pakkage: str(pakkage)
         self.format_method = self._get_style
 
     def get_tree(
@@ -41,7 +40,7 @@ class TreePrinter:
         if root_nodes:
             if isinstance(root_nodes, str):
                 root_nodes = [root_nodes]
-            
+
             for root_node in root_nodes:
                 root_package = self.pakkages[root_node]
                 t_root_node = rich_tree.add(self._get_style(root_package) + self.str_method(root_package, None))

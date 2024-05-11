@@ -9,21 +9,29 @@ from multiprocessing.pool import ThreadPool
 from threading import Lock
 
 import gitlab
-from pakk.config.main_cfg import MainConfig
 from requests import ConnectTimeout
-from rich.progress import (BarColumn, MofNCompleteColumn, Progress,
-                           SpinnerColumn, TextColumn, TimeElapsedColumn,
-                           TimeRemainingColumn)
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
+from rich.progress import TimeRemainingColumn
 
+from pakk.args.install_args import InstallArgs
+from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.logger import console
-from pakk.modules.connector.base import Connector, DiscoveredPakkages, FetchedPakkages
+from pakk.modules.connector.base import Connector
+from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.modules.connector.base import FetchedPakkages
 from pakk.modules.connector.gitlab.cache import CachedProject
 from pakk.modules.connector.gitlab.config import GitlabConfig
 from pakk.modules.module import Module
-from pakk.args.install_args import InstallArgs
-from pakk.pakkage.core import (Pakkage, PakkageConfig, PakkageInstallState,
-                               PakkageVersions)
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +64,6 @@ class GitlabConnector(Connector):
 
         self.cached_projects: list[CachedProject] = list()
         self.discovered_pakkages: DiscoveredPakkages = DiscoveredPakkages()
-
 
         # Progress object for pbars
         self._pbar_progress = None
@@ -139,9 +146,7 @@ class GitlabConnector(Connector):
 
         logger.info("Discovering projects from GitLab")
         logger.debug(f"Main group id: {main_group_id}")
-        logger.debug(
-            f"Including archived projects: {self.config.include_archived.value}"
-        )
+        logger.debug(f"Including archived projects: {self.config.include_archived.value}")
         logger.debug(f"Using {num_workers} workers" if num_workers > 1 else None)
 
         main_group = self.gl.groups.get(main_group_id)
@@ -190,8 +195,10 @@ class GitlabConnector(Connector):
                 self.cached_projects.append(cp)
 
             if num_workers > 1:
+
                 def process(gp):
                     return CachedProject.from_project(self, gp)
+
                 # with Pool(num_workers) as pool:
                 with ThreadPool(num_workers) as pool:
                     for res in pool.imap_unordered(process, filtered_group_projects):
@@ -205,7 +212,11 @@ class GitlabConnector(Connector):
         logger.debug(f"Finished loading {len(projects)} projects:")
         logger.debug(f"  {results['not cached']} loaded from gitlab api")
         logger.debug(f"  {results['cached']} loaded from cache")
-        logger.debug(f"  {results['archived']} archived projects were skipped" if results["archived"] > 0 else "No archived projects found")
+        logger.debug(
+            f"  {results['archived']} archived projects were skipped"
+            if results["archived"] > 0
+            else "No archived projects found"
+        )
 
         dps = self.retrieve_discovered_pakkages()
         n_versions = 0
@@ -272,13 +283,13 @@ class GitlabConnector(Connector):
 
                 while tries < retry_count:
                     with subprocess.Popen(
-                            cmd,
-                            cwd=fetched_dir,
-                            shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            bufsize=1,
-                            universal_newlines=True,
+                        cmd,
+                        cwd=fetched_dir,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        bufsize=1,
+                        universal_newlines=True,
                     ) as p:
 
                         # Capture the output of the subprocess to print the info in the pbar
@@ -287,7 +298,7 @@ class GitlabConnector(Connector):
 
                     if PakkageConfig.from_directory(path):
                         break
-                    
+
                     tries += 1
                     if tries < retry_count:
                         logger.warning(f"Fetch of {pakkage.id} failed. Retrying...")
@@ -326,17 +337,17 @@ class GitlabConnector(Connector):
             return pakkages
 
         with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                # TaskProgressColumn(),
-                MofNCompleteColumn(),
-                TimeRemainingColumn(),
-                TimeElapsedColumn(),
-                TextColumn("{task.fields[pakkage]}"),
-                TextColumn("{task.fields[info]}"),
-                transient=True,
-                console=console
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            # TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeRemainingColumn(),
+            TimeElapsedColumn(),
+            TextColumn("{task.fields[pakkage]}"),
+            TextColumn("{task.fields[info]}"),
+            transient=True,
+            console=console,
         ) as progress:
             self._pbar_progress = progress
 
