@@ -1,11 +1,12 @@
 from __future__ import annotations
+
+import logging
 from typing import Type
 
-from pakk.config.base import PakkConfigBase
+from pakk.config.base import ConnectorConfiguration
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -115,7 +116,7 @@ class Connector(Module):
     PRIORITY = 100
     """The priority of the connector. The lower the number, the higher the priority."""
 
-    CONFIG_CLS: Type[PakkConfigBase] | None = None
+    CONFIG_CLS: Type[ConnectorConfiguration] | None = None
     """
     The configuration class used for the connector.
     If None, this connector does not require a configuration.
@@ -135,7 +136,9 @@ class Connector(Module):
         Check if the connector is enabled.
         Override this method to implement a custom check.
         """
-        return True
+        if cls.CONFIG_CLS is None:
+            return True
+        return cls.CONFIG_CLS.exists() and cls.CONFIG_CLS.get_config().is_enabled()
 
     def discover(self) -> DiscoveredPakkages:
         """Discover all the packages with the implemented discoverer."""

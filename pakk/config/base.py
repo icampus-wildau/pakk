@@ -76,6 +76,10 @@ class PakkConfigBase(Configuration):
         return cls._instance
         
 
+class ConnectorConfiguration(PakkConfigBase):
+    def is_enabled(self) -> bool:
+        raise NotImplementedError(f"is_enabled() must be implemented in the subclass of {self.__class__.__name__}")
+
 class TypeConfiguration(PakkConfigBase):
     """
     Base class for pakkage type configurations

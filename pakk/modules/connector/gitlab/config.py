@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from faulthandler import is_enabled
 import logging
 
-from extended_configparser.configuration import ConfigEntryCollection, ConfigSection
-from pakk.config.base import PakkConfigBase
+from extended_configparser.configuration import ConfigSection
+from pakk.config.base import ConnectorConfiguration
 
 logger = logging.getLogger(__name__)
 
-class GitlabConfig(PakkConfigBase):
+class GitlabConfig(ConnectorConfiguration):
     NAME = "gitlab.cfg"
 
     def __init__(self, name: str):
         super().__init__(name)
 
         gitlab = ConfigSection("GitLab")
-        self.enabled = gitlab.ConfirmationOption("enabled", True, "Enable the GitLab connector", inquire=True)
+        self.enabled = gitlab.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)
         
         section_connection = ConfigSection("GitLab.Connection")
 

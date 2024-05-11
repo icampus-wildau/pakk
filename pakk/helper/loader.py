@@ -69,18 +69,25 @@ class PakkLoader:
         connectors = PakkLoader.get_module_subclasses(connector_modules, Connector)
         logger.debug(f"Found connectors: {connectors}")
 
+        valid_connectors: list[type[Connector]] = []
         # Check if connectors require configuration
         for connector in connectors:            
-            if connector.is_enabled():
-                if not connector.is_configured():
-                    logger.error(f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`.")
+            if not connector.is_enabled():
+                logger.info(f"Skipping disabled connector '{connector.__name__}'.")
+                continue
+            
+            if not connector.is_configured():
+                logger.error(f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`.")
+                continue
 
+            valid_connectors.append(connector)
+        
             # if connector.CONFIG_CLS is not None:
                 
         # Sort connectors by PRIORITY
-        connectors.sort(key=lambda x: x.PRIORITY)
+        valid_connectors.sort(key=lambda x: x.PRIORITY)
 
-        return connectors
+        return valid_connectors
     
 
     @staticmethod
