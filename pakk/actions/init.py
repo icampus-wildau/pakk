@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 from prompt_toolkit.completion import Completer, CompleteEvent, Completion
 from prompt_toolkit.validation import ValidationError
 
-from pakk.pakkage.init_helper import ConfigOption, ConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
 if TYPE_CHECKING:
     from prompt_toolkit.document import Document 
     from pakk.pakkage.core import PakkageConfig, Pakkage
@@ -144,7 +144,7 @@ def init(path: str, **kwargs: str):
             logger.info("Aborting")
             return
 
-    cfg_sections: list[ConfigSection] = []
+    cfg_sections: list[InitConfigSection] = []
 
     basename = os.path.basename(path)
 
@@ -154,12 +154,12 @@ def init(path: str, **kwargs: str):
     pdescription = inquirer.text("Description:", long_instruction="A short description of your pakkage").execute()
     pkeywords = inquirer.text("Keywords:", long_instruction="A comma separated list of keywords").execute()
 
-    cfg_sections.append(ConfigSection("info", [
-        ConfigOption("id", pid),
-        ConfigOption("version", pver),
-        ConfigOption("title", ptitle),
-        ConfigOption("description", pdescription),
-        ConfigOption("keywords", pkeywords),
+    cfg_sections.append(InitConfigSection("info", [
+        InitConfigOption("id", pid),
+        InitConfigOption("version", pver),
+        InitConfigOption("title", ptitle),
+        InitConfigOption("description", pdescription),
+        InitConfigOption("keywords", pkeywords),
     ]))
 
     local_discoverer = DiscovererLocal()
@@ -188,10 +188,10 @@ def init(path: str, **kwargs: str):
         for d in dependencies:
             splits = [s.strip() for s in d.split("=") if len(s.strip()) > 0]
             if len(splits) == 2:
-                options.append(ConfigOption(splits[0], splits[1]))
+                options.append(InitConfigOption(splits[0], splits[1]))
             else:
-                options.append(ConfigOption(d, ">=0.0.0"))
-        cfg_sections.append(ConfigSection("dependencies", options))
+                options.append(InitConfigOption(d, ">=0.0.0"))
+        cfg_sections.append(InitConfigSection("dependencies", options))
 
     TypeBase.initialize()
     types = TypeBase.get_type_classes()
@@ -213,11 +213,11 @@ def init(path: str, **kwargs: str):
         helper_cls = ModuleImporter.get_class_from_module(module_name, "InitHelper")
         if helper_cls is None:
             logger.warning(f"Could not find InitHelper class in {module_name}")
-            cfg_sections.append(ConfigSection(c.PAKKAGE_TYPE, []))
+            cfg_sections.append(InitConfigSection(c.PAKKAGE_TYPE, []))
             continue
         if not issubclass(helper_cls, InitHelperBase):
             logger.warning(f"InitHelper class {helper_cls.__name__} from {module_name} is not a subclass of InitHelperBase")
-            cfg_sections.append(ConfigSection(c.PAKKAGE_TYPE, []))
+            cfg_sections.append(InitConfigSection(c.PAKKAGE_TYPE, []))
             continue
         
         helper: InitHelperBase = helper_cls()

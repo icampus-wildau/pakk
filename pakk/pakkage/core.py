@@ -11,6 +11,7 @@ from typing import Any, TYPE_CHECKING
 import logging
 
 from extended_configparser.parser import ExtendedConfigParser
+from pakk.modules.environments.loader import get_current_environment_cls
 import jsons
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
@@ -63,6 +64,8 @@ class CompactPakkageConfig:
     def __init__(self):
         self.cfg_sections: list[str] = list()
         """The sections of the pakkage config."""
+        self.options: dict[str, dict[str, str]] = dict()
+        """The options of the pakkage config."""
 
         self.id: str = ""
         """The ID of the pakkage. E.g. ros2-motors"""
@@ -90,6 +93,12 @@ class CompactPakkageConfig:
     def from_pakkage_config(config: PakkageConfig) -> CompactPakkageConfig:
         cpc = CompactPakkageConfig()
         cpc.cfg_sections = config.cfg_sections
+
+        for section in config.cfg_sections:
+            cpc.options[section] = dict()
+            for key, value in config.cfg.items(section, raw=True):
+                cpc.options[section][key] = value
+
         cpc.id = config.id
         cpc.version = config.version
         cpc.name = config.name
@@ -158,6 +167,12 @@ class PakkageConfig:
     def from_compact_pakkage_config(compact: CompactPakkageConfig) -> PakkageConfig:
         pc = PakkageConfig()
         pc.cfg_sections = compact.cfg_sections
+
+        for section in compact.cfg_sections:
+            pc._cfg.add_section(section)
+            for key, value in compact.options[section].items():
+                pc._cfg.set(section, key, value)
+
         pc.id = compact.id
         pc.version = compact.version
         pc.name = compact.name
@@ -324,13 +339,13 @@ class PakkageConfig:
                     logger.warning(f"Type {type_name} @ cfg of {self.id} is not supported.")
                 continue
 
-            self._types.append(type_class(self, None))
+            self._types.append(type_class(self, self.get_environment()))
             added_types.add(type_class)
 
         # Check if there are types that are not defined by the sections in the config but still support the pakkage
         for type_class in type_classes:
             if type_class not in added_types and type_class.supports(self):
-                self._types.append(type_class(self, None))
+                self._types.append(type_class(self, self.get_environment()))
                 added_types.add(type_class)
 
 
@@ -647,11 +662,12 @@ class PakkageConfig:
 
         return None
 
-    def get_environment(self, env_cls: type[EnvironmentBase]) -> EnvironmentBase:
+    def get_environment(self) -> EnvironmentBase:
         """
         Get the environment for this pakkage.
         """
 
+        env_cls = get_current_environment_cls()
         if env_cls not in self._environments:
             self._environments[env_cls] = env_cls()
 

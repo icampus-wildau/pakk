@@ -2,18 +2,57 @@ from __future__ import annotations
 
 import logging
 import os
+from extended_configparser.configuration.entries.section import ConfigSection
+from pakk.config.base import TypeConfiguration
 from pakk.helper.file_util import remove_dir
 
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
-from pakk.modules.environments.parts.ros2 import EnvPartROS2
+# from pakk.modules.environments.parts.ros2 import EnvPartROS2
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import RunInstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import ConfigOption, ConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
 
 logger = logging.getLogger(__name__)
 
+
+class Ros2TypeConfiguration(TypeConfiguration):
+    def __init__(self):
+        super().__init__()
+
+        self.ros_section = ConfigSection("ROS2")
+        self.path_ros_ws = self.ros_section.Option(
+            "workspace_directory",
+            r"${Pakk.Subdirs:enviroment_dir}/ros2",
+            "The path to your ROS workspace root used for ROS package installation",
+            inquire=False,
+            is_dir=True,
+        )
+
+        self.path_ros_ws_src = self.ros_section.Option(
+            "src_directory",
+            "${ROS2:workspace_directory}/src",
+            "The ROS2 package source directory",
+            inquire=False,
+            is_dir=True,
+        )
+
+    def get_cmd_setup_ws(self):
+        return f". {os.path.join(self.path_ros_ws.value, 'install', 'setup.bash')}"
+
+    @staticmethod
+    def get_cmd_colcon_list_packages(search_path: str, search_recursive: bool = True):
+        """Get the colcon command to list all packages in the given path."""
+        path_cmd = "--paths" if not search_recursive else "--base-paths"
+        # return f'colcon list --names-only --paths {search_path}'
+        return f'colcon list --names-only {path_cmd} {search_path}'
+
+    @staticmethod
+    def get_cmd_colcon_build(package_names: list[str], symlink_install: bool = False):
+        """Get the colcon command to build the given packages."""
+        return f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
+    
 
 class RosStartInstructionParser(RunInstructionParser):
     INSTRUCTION_NAME = ["start", "local"]
@@ -21,9 +60,10 @@ class RosStartInstructionParser(RunInstructionParser):
 
     def __init__(self, environment: EnvironmentBase):
         super().__init__(environment)
-        if not isinstance(environment, EnvPartROS2):
-            raise TypeError(f"Environment must be of type '{EnvPartROS2.__name__}'")
-        self.ros_env: EnvPartROS2 = environment
+        # if not isinstance(environment, EnvPartROS2):
+        #     raise TypeError(f"Environment must be of type '{EnvPartROS2.__name__}'")
+        self.env = environment
+        self.config = Ros2TypeConfiguration.get_config()
 
         self.script = None
 
@@ -35,7 +75,7 @@ class RosStartInstructionParser(RunInstructionParser):
     def get_cmd(self):
         local_env = f"export ROS_LOCALHOST_ONLY={1 if self.local else 0}"
         cmds = [
-            self.ros_env.get_cmd_setup_ws(),
+            self.config.get_cmd_setup_ws(),
             local_env,
             self.env.get_cmd_in_environment(f"ros2 launch {self.script}")
         ]
@@ -56,21 +96,15 @@ class TypeRos2(TypeBase):
     PAKKAGE_TYPE: str = "ROS2"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
 
-    SECTION_NAME = "Type.ROS2"
-
-    # CONFIG_REQUIREMENTS = TypeBase.CONFIG_REQUIREMENTS | {
-    #     SECTION_NAME: ["dockerized"]
-    # }
-
     INSTRUCTION_PARSER = [
         RosStartInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase | None = None):
-        env = env or pakkage_version.get_environment(LinuxEnvironment)
+    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
         super().__init__(pakkage_version, env)
 
         self.install_type.is_combinable_with_children = True
+        self.config = Ros2TypeConfiguration.get_config()
 
     def get_ros_package_names(self) -> list[str]:
         """
@@ -80,18 +114,18 @@ class TypeRos2(TypeBase):
         -------
         list[str]: The names of the ROS packages in the pakkage.
         """
-        if isinstance(self.env, EnvPartROS2):
-            src_dir = self.env.path_ros_ws_src
+        if isinstance(self.env, LinuxEnvironment):
+            src_dir = self.config.path_ros_ws_src.value
             # pakkage_dir = os.path.join(src_dir, self.pakkage_version.basename)
             pakkage_dir = os.path.join(src_dir, self.pakkage_version.id)
 
             search_path = os.path.join(pakkage_dir, "*").replace("\\", "/")
 
             cmds = [
-                self.env.get_cmd_colcon_list_packages(search_path)
+                self.config.get_cmd_colcon_list_packages(search_path)
             ]
 
-            result = self.run_commands(cmds, cwd=self.env.path_ros_ws)
+            result = self.run_commands(cmds, cwd=self.config.path_ros_ws.value)
             return [n for n in result.splitlines() if n != ""]
         else:
             raise NotImplementedError()
@@ -111,13 +145,13 @@ class TypeRos2(TypeBase):
         # Otherwise some "error in 'egg_base'" error can occur
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
 
-        if isinstance(self.env, EnvPartROS2):
+        if isinstance(self.env, LinuxEnvironment):
             cmds = [
-                self.env.get_cmd_colcon_build(package_names, symlink_install=False)
+                self.config.get_cmd_colcon_build(package_names, symlink_install=False)
             ]
 
             code, _, _ = self.run_commands_with_returncode(
-                cmds, cwd=self.env.path_ros_ws, print_output=True
+                cmds, cwd=self.config.path_ros_ws.value, print_output=True
             )
 
             # If the packages could not be built, try to delete the build and install directories
@@ -125,13 +159,13 @@ class TypeRos2(TypeBase):
                 logger.warning("Build failed. Trying to delete build and install directories...")
                 for p in package_names:
                     for d in ["build", "install"]:
-                        path = os.path.join(self.env.path_ros_ws, d, p)
+                        path = os.path.join(self.config.path_ros_ws.value, d, p)
                         if os.path.exists(path):
                             remove_dir(path)
 
                 logger.warning("Trying to build again...")
                 code, _, _ = self.run_commands_with_returncode(
-                    cmds, cwd=self.env.path_ros_ws, print_output=True
+                    cmds, cwd=self.config.path_ros_ws.value, print_output=True
                 )
 
     def install(self) -> None:
@@ -148,7 +182,7 @@ class TypeRos2(TypeBase):
         # Link into ROS workspace
         self.set_status(v.name, f"Linking {v.basename} into ROS workspace...")
         # Don't use v.basename here. ROS supports atm only one version simultaneously, thus it should always be the same name
-        ros_src_pakkage_path = os.path.join(self.env.path_ros_ws_src, v.id)
+        ros_src_pakkage_path = os.path.join(self.config.path_ros_ws_src.value, v.id)
         self.symlink_pakkage_to(v, ros_src_pakkage_path)
 
         # return
@@ -184,7 +218,7 @@ class TypeRos2(TypeBase):
             # Link into ROS workspace
             # Don't use v.basename here. ROS supports atm only one version simultaneously, thus it should always be the same name
             t.set_status(t.pakkage_version.name, f"Linking {t.pakkage_version.basename} into ROS workspace...")
-            ros_src_pakkage_path = os.path.join(t.env.path_ros_ws_src, t.pakkage_version.id)
+            ros_src_pakkage_path = os.path.join(t.config.path_ros_ws_src.value, t.pakkage_version.id)
             t.symlink_pakkage_to(t.pakkage_version, ros_src_pakkage_path)
 
             # Get ROS packages present in the pakkage
@@ -197,16 +231,16 @@ class TypeRos2(TypeBase):
 
     def uninstall(self) -> None:
         TypeRos2.unlink_pakkage_in_pakkages_dir(self.pakkage_version)
-        ros_src_pakkage_path = os.path.join(self.env.path_ros_ws_src, self.pakkage_version.id)
+        ros_src_pakkage_path = os.path.join(self.config.path_ros_ws_src.value, self.pakkage_version.id)
         TypeRos2.unlink_pakkage_from(ros_src_pakkage_path)
 
 
 class InitHelper(InitHelperBase):
     @staticmethod
-    def help() -> list[ConfigSection]:
+    def help() -> list[InitConfigSection]:
         from InquirerPy import inquirer
-        sections: list[ConfigSection] = []
-        ros_options: list[ConfigOption] = []
+        sections: list[InitConfigSection] = []
+        ros_options: list[InitConfigOption] = []
 
         launchable = inquirer.confirm("Is the ROS2 pakkage startable?", default=False).execute()
 
@@ -214,8 +248,8 @@ class InitHelper(InitHelperBase):
             package_name = inquirer.text("Name of the launchable ROS2 pakkage:").execute()
             launch_script = inquirer.text("Which launch script:").execute()
 
-            ros_options.append(ConfigOption("start", f"{package_name} {launch_script}"))
+            ros_options.append(InitConfigOption("start", f"{package_name} {launch_script}"))
 
-        sections.append(ConfigSection("ROS2", ros_options))
+        sections.append(InitConfigSection("ROS2", ros_options))
 
         return sections

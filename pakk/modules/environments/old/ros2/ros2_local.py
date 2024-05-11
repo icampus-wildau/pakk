@@ -26,7 +26,7 @@ class LocalRos2Environment(Ros2Environment):
         if cmd is None:
             return None
         if self.path_python_packages is not None:
-            cmd += " -t {self.path_python_packages}"
+            cmd += f" -t {self.path_python_packages}"
         return cmd
 
     def get_interactive_cmd_in_environment(self, cmd: str) -> str:

@@ -12,7 +12,7 @@ from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import InstallInstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import ConfigOption, ConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +114,7 @@ class TypeAsset(TypeBase):
         EnvVarInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase | None = None):
-        env = env or pakkage_version.get_environment(LinuxEnvironment)
+    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
         super().__init__(pakkage_version, env)
 
     def parse_undefined_instruction(self, instruction_name: str, instruction_content: str):
@@ -131,6 +130,8 @@ class TypeAsset(TypeBase):
     def get_environment_vars(self) -> dict[str, str]:
         env_vars = {}
         v = self.pakkage_version
+        if v.local_path is None:
+            raise ValueError(f"Local path for pakkage '{v.id}' is not set.")
 
         parser = self.get_instruction_parser_by_cls(EnvVarInstructionParser)
         for env_var in parser.env_vars:
@@ -153,16 +154,23 @@ class TypeAsset(TypeBase):
                 f"{key}_{v.version}"
             ]
             for name in names:
-                n = self.config.fix_name_for_env_var(name)
+                n = self.fix_name_for_env_var(name)
                 env_vars[n] = val
 
         return env_vars
+
+    @staticmethod
+    def fix_name_for_env_var(name: str) -> str:
+        return name.replace("-", "_").replace(".", "_").replace(":", "_").upper()
 
     def get_symlinks(self) -> list[LinkInstructionParser.Link]:
         parser = self.get_instruction_parser_by_cls(LinkInstructionParser)
         return parser.links
 
     def setup_symlinks(self, symlinks: list[LinkInstructionParser.Link]):
+        if self.pakkage_version.local_path is None:
+            raise ValueError(f"Local path for pakkage '{self.pakkage_version.id}' is not set.")
+
         cmd = Process.get_cmd_env_var_setup()
         for symlink in symlinks:
             if '$' in symlink.target:
@@ -216,8 +224,8 @@ class TypeAsset(TypeBase):
 
 class InitHelper(InitHelperBase):
     @staticmethod
-    def help() -> list[ConfigSection]:
-        return [ConfigSection("Asset", [
-            ConfigOption("# ENV_VAR_KEY", "Environment variable value. (Add as many as you want)"),
-            ConfigOption("# link", 'link_source link_target (Add as many of these source/target pairs as you want)'),
+    def help() -> list[InitConfigSection]:
+        return [InitConfigSection("Asset", [
+            InitConfigOption("# ENV_VAR_KEY", "Environment variable value. (Add as many as you want)"),
+            InitConfigOption("# link", 'link_source link_target (Add as many of these source/target pairs as you want)'),
         ])]

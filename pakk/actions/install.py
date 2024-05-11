@@ -8,8 +8,10 @@ import jellyfish
 from pakk.args.install_args import InstallArgs
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
+from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
+from pakk.modules.connector.base import DiscoveredPakkages
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
@@ -78,12 +80,16 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # Import necessary modules
     TypeBase.initialize()
 
-    # TODO Used discoverers should be configurable, look at setup and installer classes
-    discoverer = DiscoveredPakkagesMerger([
-        DiscovererGitlabCached(use_cache=(not install_config.clear_cache)),
-        DiscovererLocal()
-    ])
-    pakkages_discovered = discoverer.merge()
+    # # TODO Used discoverers should be configurable, look at setup and installer classes
+    # discoverer = DiscoveredPakkagesMerger([
+    #     DiscovererGitlabCached(use_cache=(not install_config.clear_cache)),
+    #     DiscovererLocal()
+    # ])
+    # pakkages_discovered = discoverer.merge()
+
+    connectors = PakkLoader.get_connector_instances(**kwargs)
+    pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
+
 
     installing_pakkage_ids = []
 

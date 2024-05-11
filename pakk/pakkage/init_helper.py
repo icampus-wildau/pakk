@@ -1,14 +1,14 @@
-class ConfigOption():
+class InitConfigOption():
     def __init__(self, key: str, value: str):
         self.key = key
         self.value = value
 
-class ConfigSection():
-    def __init__(self, name: str, options: list[ConfigOption]):
+class InitConfigSection():
+    def __init__(self, name: str, options: list[InitConfigOption]):
         self.name = name
         self.options = options
 
 class InitHelperBase():
     @staticmethod
-    def help() -> list[ConfigSection]:
+    def help() -> list[InitConfigSection]:
         raise NotImplementedError()

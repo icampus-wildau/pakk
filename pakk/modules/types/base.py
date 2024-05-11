@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound="InstructionParser", covariant=True)
-InstructionParserType = TypeVar('InstructionParserType', bound='InstructionParser')
+InstructionParserType = TypeVar('InstructionParserType', bound=InstructionParser)
 
 class TypeBase(Module):
     PAKKAGE_TYPE: str | None = None
@@ -71,7 +71,7 @@ class TypeBase(Module):
     def __init__(
             self,
             pakkage_version: PakkageConfig,
-            environment: EnvironmentBase | None
+            environment: EnvironmentBase
     ):
         super().__init__()
 
@@ -80,7 +80,7 @@ class TypeBase(Module):
 
         self.pakkage_version = pakkage_version
         """The pakkage version this type belongs to."""
-        self.env = environment or GenericEnvironment()
+        self.env = environment # or GenericEnvironment()
         """The environment used to install this pakkage type."""
 
         self.install_type = InstallType()
@@ -227,6 +227,12 @@ class TypeBase(Module):
             return True
 
         return False
+    
+    @classmethod
+    def supports_environment(cls, environment: EnvironmentBase) -> bool:
+        """Return if the type supports the given environment."""
+        # raise NotImplementedError()
+        return True
 
     @classmethod
     def supports_section(cls, section_name: str) -> bool:

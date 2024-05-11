@@ -12,9 +12,15 @@ from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.environments.parts.python import EnvPartPython
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.modules.types.base_instruction_parser import InstructionParser, InstallInstructionParser, CombinableInstructionParser
+from pakk.modules.types.base_instruction_parser import (
+    InstructionParser,
+    InstallInstructionParser,
+    CombinableInstructionParser,
+)
+from pakk.modules.types.type_python import PythonTypeConfiguration
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import ConfigOption, ConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +50,7 @@ class AptInstructionParser(CombinableInstructionParser):
     def get_combined_cmd(parser: list[AptInstructionParser]):
         if len(parser) == 0:
             return None
-        
+
         apt_packages = []
         for i in parser:
             apt_packages.extend(i.apt_packages)
@@ -54,9 +60,8 @@ class AptInstructionParser(CombinableInstructionParser):
 
         if combined_parser.has_cmd():
             return combined_parser.get_cmd()
-    
-        return None
 
+        return None
 
 
 class PipInstructionParser(InstructionParser):
@@ -67,21 +72,17 @@ class PipInstructionParser(InstructionParser):
         super().__init__(environment)
         self.requirement_file = None
         self.pip_packages: list[str] = []
+        self.python_config = PythonTypeConfiguration.get_config()
 
     def has_cmd(self):
         return len(self.pip_packages) > 0 or self.requirement_file is not None
 
     def get_cmd(self):
-        cmd = f"pip install "
-        if self.requirement_file is not None:
-            cmd += f"-r {self.requirement_file} "
-        cmd += f"{' '.join(self.pip_packages)}"
-
-        if isinstance(self.env, EnvPartPython):
-            if self.env.path_python_packages is not None:
-                cmd += " -t {self.path_python_packages}"
+        cmd = self.python_config.get_cmd_pip_install_package(
+            requirements_file=self.requirement_file, packages=self.pip_packages
+        )
         return cmd
-
+    
     def parse_install(self, instruction_content: str):
         parts = shlex.split(instruction_content)
         if "-r" in parts:
@@ -89,12 +90,12 @@ class PipInstructionParser(InstructionParser):
             if len(parts) > i + 1:
                 self.parse_requirements(parts[i + 1])
 
-            parts = parts[:i] + parts[i + 2:]
+            parts = parts[:i] + parts[i + 2 :]
         elif "requirements.txt" in parts:
             i = parts.index("requirements.txt")
             self.parse_requirements(parts[i])
 
-            parts = parts[:i] + parts[i + 1:]
+            parts = parts[:i] + parts[i + 1 :]
 
         self.pip_packages.extend(parts)
 
@@ -135,7 +136,10 @@ class ScriptInstructionParser(InstallInstructionParser):
             i += 1
 
     def parse_run_sudo(self, instruction_content: str):
-        self.scripts.extend([f"sudo bash {self.env.get_path_in_environment(s)}" for s in shlex.split(instruction_content)])
+        self.scripts.extend(
+            [f"sudo bash {self.env.get_path_in_environment(s)}" for s in shlex.split(instruction_content)]
+        )
+
 
 class LocalEnvVarParser(InstructionParser):
     INSTRUCTION_NAME = "env"
@@ -156,7 +160,7 @@ class LocalEnvVarParser(InstructionParser):
         splits = shlex.split(instruction_content)
         if len(splits) % 2 != 0:
             raise ValueError(f"Invalid env instruction: '{instruction_content}'.")
-        
+
         for i in range(0, len(splits), 2):
             key = splits[i]
             val = splits[i + 1]
@@ -209,15 +213,15 @@ class TypeSetup(TypeBase):
         ScriptInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase | None = None):
-        env = env or pakkage_version.get_environment(LinuxEnvironment)
+    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
         super().__init__(pakkage_version, env)
 
         self.install_type.is_independent = True
 
-
     def parse_undefined_instruction(self, instruction_name: str, instruction_content: str):
-        self.get_instruction_parser_by_cls(LocalEnvVarParser).parse_instruction(instruction_content, instruction_name, instruction_name)
+        self.get_instruction_parser_by_cls(LocalEnvVarParser).parse_instruction(
+            instruction_content, instruction_name, instruction_name
+        )
 
     def install(self) -> None:
         """Install by executing the setup instruction."""
@@ -227,7 +231,7 @@ class TypeSetup(TypeBase):
         v = self.pakkage_version
 
         if isinstance(self.env, LinuxEnvironment):
-            
+
             env_vars = self.get_instruction_parser_by_cls(LocalEnvVarParser).env_vars
             Process.update_temp_env_vars(v, env_vars)
 
@@ -239,7 +243,9 @@ class TypeSetup(TypeBase):
                     continue
                 if setup_instruction_parser.has_cmd():
 
-                    self.set_status(v.name, f"Executing setup instruction '{setup_instruction_parser.INSTRUCTION_NAME}'...")
+                    self.set_status(
+                        v.name, f"Executing setup instruction '{setup_instruction_parser.INSTRUCTION_NAME}'..."
+                    )
                     cmd = setup_instruction_parser.get_cmd()
                     self.run_commands(cmd, cwd=self.pakkage_version.local_path, env=setup_env, print_output=True)
 
@@ -252,33 +258,39 @@ class TypeSetup(TypeBase):
         for t in types:
             if not isinstance(t.env, LinuxEnvironment):
                 raise ValueError(f"Environment '{t.env}' is not a LinuxEnvironment and not supported yet.")
-            
+
         for t in types:
             env_vars = t.get_instruction_parser_by_cls(LocalEnvVarParser).env_vars
             if len(env_vars) > 0:
                 logger.info(f"Set temporal environment variables for '{t.pakkage_version.id}'...")
                 Process.update_temp_env_vars(t.pakkage_version, env_vars)
-        
+
         for instruction_parser in TypeSetup.INSTRUCTION_PARSER:
             if instruction_parser == LocalEnvVarParser:
                 continue
-            
+
             if issubclass(instruction_parser, CombinableInstructionParser):
-                types_with_instruction = [t for t in types if t.get_instruction_parser_by_cls(instruction_parser).has_cmd()]
+                types_with_instruction = [
+                    t for t in types if t.get_instruction_parser_by_cls(instruction_parser).has_cmd()
+                ]
                 parser = [t.get_instruction_parser_by_cls(instruction_parser) for t in types_with_instruction]
-                
+
                 cmd = instruction_parser.get_combined_cmd(parser)
 
                 if cmd is None:
                     continue
 
-                logger.info(f"Executing '{instruction_parser.INSTRUCTION_NAME}' instruction for {[t.pakkage_version.id for t in types_with_instruction]}...")
+                logger.info(
+                    f"Executing '{instruction_parser.INSTRUCTION_NAME}' instruction for {[t.pakkage_version.id for t in types_with_instruction]}..."
+                )
                 Module.run_commands(cmd, print_output=True)
             else:
                 for t in types:
                     parser = t.get_instruction_parser_by_cls(instruction_parser)
                     if parser.has_cmd():
-                        logger.info(f"Executing '{instruction_parser.INSTRUCTION_NAME}' instruction for '{t.pakkage_version.id}'...")
+                        logger.info(
+                            f"Executing '{instruction_parser.INSTRUCTION_NAME}' instruction for '{t.pakkage_version.id}'..."
+                        )
                         envs = os.environ.copy()
                         temp_env_vars = Process.get_temp_env_vars(t.pakkage_version)
                         envs.update(temp_env_vars)
@@ -286,17 +298,23 @@ class TypeSetup(TypeBase):
                         cmd = parser.get_cmd()
                         Module.run_commands(cmd, cwd=t.pakkage_version.local_path, print_output=True, env=envs)
 
-
     def uninstall(self) -> None:
         pass
 
 
 class InitHelper(InitHelperBase):
     @staticmethod
-    def help() -> list[ConfigSection]:
-        return [ConfigSection("Setup", [
-            ConfigOption("# apt", "space separated list of apt packages to install"),
-            ConfigOption("# pip", '"-r requirements.txt" and/or space separated list of pip packages to install'),
-            ConfigOption("# git", "space separated list of git urls to clone"),
-            ConfigOption("# script", "Script to execute for setup"),
-        ])]
+    def help() -> list[InitConfigSection]:
+        return [
+            InitConfigSection(
+                "Setup",
+                [
+                    InitConfigOption("# apt", "space separated list of apt packages to install"),
+                    InitConfigOption(
+                        "# pip", '"-r requirements.txt" and/or space separated list of pip packages to install'
+                    ),
+                    InitConfigOption("# git", "space separated list of git urls to clone"),
+                    InitConfigOption("# script", "Script to execute for setup"),
+                ],
+            )
+        ]

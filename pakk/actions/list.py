@@ -51,6 +51,11 @@ def list(**kwargs: str):
         TypeBase.initialize()
 
     pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
+    
+    # To avoid problems in the type initialization... Maybe there is a better way
+    for pakkage in pakkages_discovered.discovered_packages.values():
+        for version in pakkage.versions.available.values():
+            version.local_path = version.local_path or ""
 
     x = kwargs.get("extended", False)
 

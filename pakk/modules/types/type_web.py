@@ -2,17 +2,32 @@ from __future__ import annotations
 
 import logging
 import os
-from pakk.helper.file_util import remove_dir
 
+from extended_configparser.configuration.entries.section import ConfigSection
+
+from pakk.config.base import TypeConfiguration
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
-from pakk.modules.environments.parts.ros2 import EnvPartROS2
 from pakk.modules.types.base import TypeBase
-from pakk.modules.types.base_instruction_parser import InstructionParser, RunInstructionParser
+from pakk.modules.types.base_instruction_parser import InstructionParser
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import ConfigOption, ConfigSection, InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
 
 logger = logging.getLogger(__name__)
+
+
+class WebTypeConfiguration(TypeConfiguration):
+    def __init__(self):
+        super().__init__()
+
+        self.python_section = ConfigSection("Web")
+        self.location_definition_directory = self.python_section.Option(
+            "location_definition_directory",
+            r"${Pakk.Subdirs:enviroment_dir}/nginx/locations",
+            "Location where the nginx location files are stored",
+            inquire=False,
+            is_dir=True,
+        )
 
 
 class StaticRootParser(InstructionParser):
@@ -70,7 +85,7 @@ class BuildParser(InstructionParser):
 
     def has_cmd(self):
         return self.build_system is not None
-    
+
     def get_cmd(self):
 
         if self.public_path is not None:
@@ -82,8 +97,12 @@ class BuildParser(InstructionParser):
         cmds = [
             f"cd {self.build_dir}" if self.build_dir is not None else None,
             self.get_cmd_env_vars(self.build_envs) if len(self.build_envs) > 0 else None,
-            self.install_cmd, 
-            (self.build_cmd + " " + " ".join([f"{k} {v}" for k, v in self.build_options.items()])) if self.build_cmd is not None else None
+            self.install_cmd,
+            (
+                (self.build_cmd + " " + " ".join([f"{k} {v}" for k, v in self.build_options.items()]))
+                if self.build_cmd is not None
+                else None
+            ),
         ]
         return " && ".join([c for c in cmds if c is not None])
 
@@ -103,11 +122,9 @@ class BuildParser(InstructionParser):
 
     def parse_public_path_env_var(self, instruction_content: str):
         self.public_path_env_var = instruction_content.strip(' "')
-    
+
     def parse_public_path_build_option(self, instruction_content: str):
         self.public_path_build_option = instruction_content.strip(' "')
-
-
 
 
 class TypeWeb(TypeBase):
@@ -130,34 +147,38 @@ class TypeWeb(TypeBase):
         BuildParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase | None = None):
-        env = env or pakkage_version.get_environment(LinuxEnvironment)
+    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
         super().__init__(pakkage_version, env)
+
+        self.config = WebTypeConfiguration().get_config()
 
         self.install_type.is_combinable_with_children = False
 
-        self.path_locations = self.env.path_locations
-        self.pakkage_locations_path = os.path.join(self.path_locations, f"{pakkage_version.basename}.conf")
+        self.dir_locations = self.config.location_definition_directory.value
+        self.pakkage_locations_path = os.path.join(self.dir_locations, f"{pakkage_version.basename}.conf")
 
-        self.create_dirs(self.path_locations)
-
-        v = self.pakkage_version        
+        v = self.pakkage_version
         self.build_parser = self.get_instruction_parser_by_cls(BuildParser)
         self.public_path = self.get_instruction_parser_by_cls(PublicPathParser).public_path or v.id
         # Remove trailing slash
         if self.public_path.endswith("/"):
             self.public_path = self.public_path[:-1]
-            
+
         self.build_parser.public_path = self.public_path
 
+        # TODO: Handle if no build_dir is set
         self.dist_dir_parser = self.get_instruction_parser_by_cls(StaticRootParser)
-        self.dist_dir = self.dist_dir_parser.static_root or self.dist_dir_parser.get_default_for_build_dir(self.build_parser.build_dir)
+        self.dist_dir = self.dist_dir_parser.static_root or self.dist_dir_parser.get_default_for_build_dir(
+            self.build_parser.build_dir
+        )
+
+        if v.local_path is None:
+            raise ValueError("Local path is not set.")
 
         self.abs_dist_dir = os.path.join(v.local_path, self.dist_dir)
 
-
     def get_location_entry(self, root: str, prefix: str, index: str = "index.html"):
-        
+
         if prefix.endswith("/"):
             prefix = prefix[:-1]
 
@@ -185,34 +206,35 @@ location {prefix} {{
 
         logger.info(f"Static root: {self.dist_dir}")
         logger.info(f"Public path: {self.public_path}")
-        
+
         if self.build_parser.has_cmd():
             # public_path_string = f'\\"{self.public_path}\\"'
-            public_path_string = f'{self.public_path}'
-            env_var_cmd = self.build_parser.get_cmd_env_vars({
-                "BASE": public_path_string,
-                "BASE_URL": public_path_string,
-                "PUBLIC_URL": public_path_string,
-                "PUBLIC_PATH": public_path_string,
-            })
-            
+            public_path_string = f"{self.public_path}"
+            env_var_cmd = self.build_parser.get_cmd_env_vars(
+                {
+                    "BASE": public_path_string,
+                    "BASE_URL": public_path_string,
+                    "PUBLIC_URL": public_path_string,
+                    "PUBLIC_PATH": public_path_string,
+                }
+            )
+
             cmd = env_var_cmd + " && " + self.build_parser.get_cmd()
             logger.info(f"Installing and building web app: '{cmd}'")
             self.run_commands([cmd], cwd=v.local_path, print_output=True)
-        
+
         # Link into pakkages_dir
-        self.symlink_pakkage_in_pakkages_dir(v)        
-        
+        self.symlink_pakkage_in_pakkages_dir(v)
 
         logger.info(f"Setup nginx location @ '{self.abs_dist_dir}")
 
         # Check if there are old nginx location files, that were not removed successfully
         # If so, remove them
-        for f in os.listdir(self.path_locations):
-            if f.startswith(f"{v.id}@") and f.endswith(".conf") :
-                logger.info(f"Removing old nginx location file @ '{os.path.join(self.path_locations, f)}'")
-                os.remove(os.path.join(self.path_locations, f))
-        
+        for f in os.listdir(self.dir_locations):
+            if f.startswith(f"{v.id}@") and f.endswith(".conf"):
+                logger.info(f"Removing old nginx location file @ '{os.path.join(self.dir_locations, f)}'")
+                os.remove(os.path.join(self.dir_locations, f))
+
         location_entry = self.get_location_entry(self.abs_dist_dir, self.public_path)
         with open(self.pakkage_locations_path, "w") as f:
             f.write(location_entry)
@@ -240,7 +262,7 @@ location {prefix} {{
 
     def uninstall(self) -> None:
         TypeWeb.unlink_pakkage_in_pakkages_dir(self.pakkage_version)
-        
+
         # Remove nginx location file from self.pakkage_locations_path
         if os.path.exists(self.pakkage_locations_path):
             logger.info(f"Removing nginx location file @ '{self.pakkage_locations_path}'")
@@ -291,10 +313,11 @@ location {prefix} {{
 
 class InitHelper(InitHelperBase):
     @staticmethod
-    def help() -> list[ConfigSection]:
+    def help() -> list[InitConfigSection]:
         from InquirerPy import inquirer
-        sections: list[ConfigSection] = []
-        ros_options: list[ConfigOption] = []
+
+        sections: list[InitConfigSection] = []
+        ros_options: list[InitConfigOption] = []
 
         launchable = inquirer.confirm("Is the ROS2 pakkage startable?", default=False).execute()
 
@@ -302,8 +325,8 @@ class InitHelper(InitHelperBase):
             package_name = inquirer.text("Name of the launchable ROS2 pakkage:").execute()
             launch_script = inquirer.text("Which launch script:").execute()
 
-            ros_options.append(ConfigOption("start", f"{package_name} {launch_script}"))
+            ros_options.append(InitConfigOption("start", f"{package_name} {launch_script}"))
 
-        sections.append(ConfigSection("ROS2", ros_options))
+        sections.append(InitConfigSection("ROS2", ros_options))
 
         return sections
