@@ -26,7 +26,7 @@ class PythonTypeConfiguration(TypeConfiguration):
             long_instruction="If 'default' use the default path for python packages, otherwise override this value with a specific path.",
             inquire=False,
             is_dir=True,
-            value_transformer=lambda x: x if x != "default" else None,
+            value_getter=lambda x: x if x != "default" else None,
         )
 
     # @staticmethod

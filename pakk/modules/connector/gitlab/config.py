@@ -43,6 +43,7 @@ class GitlabConfig(ConnectorConfiguration):
             "4",
             "Number of workers for the discoverer",
             inquire=self.is_enabled,
+            value_getter=int,
             long_instruction="If num_workers is > 1, the discoverer will use multithreading",
         )
         self.num_fetcher_workers = section_connector.Option(
@@ -50,6 +51,7 @@ class GitlabConfig(ConnectorConfiguration):
             "4",
             "Number of workers for the fetcher",
             inquire=self.is_enabled,
+            value_getter=int,
             long_instruction="If num_workers is > 1, the fetcher will use multithreading",
         )
 

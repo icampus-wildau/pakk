@@ -64,7 +64,7 @@ class PakkLoader:
         return classes
 
     @staticmethod
-    def get_connector_classes() -> list[type[Connector]]:
+    def get_connector_classes(skip_disabled: bool = True) -> list[type[Connector]]:
 
         connector_modules = PakkLoader.__get_pakk_sub_modules(PakkLoader.__connector_sub_paths)
         logger.debug(f"Found connector modules: {connector_modules}")
@@ -76,11 +76,11 @@ class PakkLoader:
         valid_connectors: list[type[Connector]] = []
         # Check if connectors require configuration
         for connector in connectors:
-            if not connector.is_enabled():
+            if skip_disabled and not connector.is_enabled():
                 logger.info(f"Skipping disabled connector '{connector.__name__}'.")
                 continue
 
-            if not connector.is_configured():
+            if skip_disabled and not connector.is_configured():
                 logger.error(
                     f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`."
                 )

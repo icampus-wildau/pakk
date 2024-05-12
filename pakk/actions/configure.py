@@ -34,7 +34,7 @@ def configure(**kwargs):
     configs_cls: dict[str, Type[PakkConfigBase]] = dict()
     configs_cls["main"] = MainConfig
 
-    connectors = PakkLoader.get_connector_classes()
+    connectors = PakkLoader.get_connector_classes(False)
     for connector in connectors:
         if connector.CONFIG_CLS is not None:
             configs_cls[connector.__name__] = connector.CONFIG_CLS

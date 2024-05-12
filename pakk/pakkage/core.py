@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import configparser
 import enum
+import io
 import json
 import logging
 import os
@@ -527,7 +528,17 @@ class PakkageConfig:
         return f"{self.id}@{self.version} ({len(self.dependencies)} deps)"
 
     @staticmethod
-    def from_json(jsond: dict) -> "PakkageConfig":
+    def from_string(cfg_string: str) -> PakkageConfig:
+        """
+        Create a PakkageConfig object from a string.
+        This method assumes a cfg format.
+        """
+
+        io_file = io.StringIO(cfg_string)
+        return PakkageConfig.from_cfg_file(io_file)
+
+    @staticmethod
+    def from_json(jsond: dict) -> PakkageConfig:
         """
         Create a PakkageConfig object from a json object.
         This method try to maintain compatibility with the old module.rose.json format.
@@ -610,13 +621,16 @@ class PakkageConfig:
         return pc
 
     @staticmethod
-    def from_cfg_file(cfg_path: str) -> "PakkageConfig":
+    def from_cfg_file(cfg_path: str | io.StringIO) -> "PakkageConfig":
         """
         Create a PakkageConfig object from a configparser object.
         """
 
         pc = PakkageConfig()
-        pc.cfg.read(cfg_path)
+        if isinstance(cfg_path, io.StringIO):
+            pc.cfg.read_file(cfg_path)
+        else:
+            pc.cfg.read(cfg_path)
         pc.cfg_sections = pc.cfg.sections()
 
         cfg = pc.cfg

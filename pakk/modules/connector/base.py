@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+from typing import Generic
 from typing import Type
+from typing import TypeVar
 
 from pakk.config.base import ConnectorConfiguration
 from pakk.modules.module import Module
@@ -123,19 +125,24 @@ class FetchedPakkages:
         return pakkages
 
 
-class Connector(Module):
+C = TypeVar("C", bound=ConnectorConfiguration)
+
+
+class Connector(Module, Generic[C]):
 
     PRIORITY = 100
     """The priority of the connector. The lower the number, the higher the priority."""
 
-    CONFIG_CLS: Type[ConnectorConfiguration] | None = None
+    CONFIG_CLS: Type[C] | None = None
     """
     The configuration class used for the connector.
     If None, this connector does not require a configuration.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        """Create a new connector."""
         super().__init__()
+        # self.config = self.CONFIG_CLS.get_config() if self.CONFIG_CLS else None
 
     @classmethod
     def is_configured(cls):

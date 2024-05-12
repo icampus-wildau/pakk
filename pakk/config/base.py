@@ -87,6 +87,8 @@ class PakkConfigBase(Configuration):
 
 
 class ConnectorConfiguration(PakkConfigBase):
+    CFG_BASE = ["main.cfg"]
+
     def is_enabled(self) -> bool:
         raise NotImplementedError(f"is_enabled() must be implemented in the subclass of {self.__class__.__name__}")
 
