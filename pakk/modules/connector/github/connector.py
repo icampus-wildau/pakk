@@ -59,6 +59,12 @@ class CachedRepository:
             "tags": [tag.to_json_dict() for tag in self.tags.values()],
         }
 
+    def __str__(self):
+        return f"Repo {self.id} ({len(self.tags)} tags)"
+    
+    def __repr__(self):
+        return self.__str__()
+
     def to_json(self):
         return json.dumps(self.to_json_dict())
 
@@ -66,7 +72,10 @@ class CachedRepository:
     def from_json_dict(d: dict):
         repo = CachedRepository()
         repo.id = d["id"]
-        repo.last_activity = pytz.utc.localize(datetime.fromisoformat(d["last_activity"]))
+        dt = datetime.fromisoformat(d["last_activity"])
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+        repo.last_activity = dt
         repo.tags = {tag["tag"]: CachedTag.from_json_dict(tag) for tag in d["tags"]}
         return repo
 
@@ -123,7 +132,10 @@ class CachedTag:
         tag = CachedTag()
         tag.tag = d["tag"]
         tag.commit = d["commit"]
-        tag.last_activity = datetime.fromisoformat(d["last_activity"])
+        dt = datetime.fromisoformat(d["last_activity"])
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+        tag.last_activity = dt
         tag.pakk_config_str = d["pakk_config_str"]
         tag.is_pakk_version = d["is_pakk_version"]
         return tag
@@ -174,6 +186,9 @@ class GithubConnector(Connector):
 
         existing_cache_file = existing_cache_file or CachedRepository()
         pakk_cfg_file_name = MainConfig.get_config().pakk_cfg_files[0]
+
+        existing_cache_file.id = repo.full_name
+        existing_cache_file.last_activity = repo.pushed_at
 
         # Get all tags, skip if the tag is already in the cache
         for tag in repo.get_tags():
@@ -263,6 +278,9 @@ class GithubConnector(Connector):
 
                 n_pakk += 1
                 pakkage_versions.available[tag.version] = tag.pakk_config
+
+            if len(pakkage_versions.available) == 0:
+                continue
 
             pakkage = Pakkage(pakkage_versions)
             discovered_pakkages[pakkage.id] = pakkage

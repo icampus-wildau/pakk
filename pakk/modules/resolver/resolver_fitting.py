@@ -10,8 +10,8 @@ from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.module import Module
 from pakk.modules.resolver.base import Resolver
 from pakk.modules.resolver.base import ResolverException
-from pakk.pakk.args.install_config import InstallConfig
-from pakk.pakk.args.install_config import UpdateStrategy
+from pakk.args.install_args import InstallArgs
+from pakk.args.install_args import UpdateStrategy
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class ResolverFitting(Resolver):
 
         self.deptree = DependencyTree(pakkages)
         self.pakkage_to_be_installed = pakkage_to_be_installed
-        self.install_config = InstallConfig.get()
+        self.install_config = InstallArgs.get()
 
     #############################################################
     ### Properties

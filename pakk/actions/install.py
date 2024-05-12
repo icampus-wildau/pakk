@@ -12,11 +12,8 @@ from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.connector.base import DiscoveredPakkages
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-from pakk.modules.fetcher.fetcher_gitlab import FetcherGitlab
-from pakk.modules.installer.combining_installer import InstallerCombining
+# from pakk.modules.fetcher.fetcher_gitlab import FetcherGitlab
+# from pakk.modules.installer.combining_installer import InstallerCombining
 from pakk.modules.module import Module
 from pakk.modules.resolver.base import ResolverException
 from pakk.modules.resolver.resolver_fitting import ResolverFitting
@@ -43,6 +40,14 @@ class PakkageNotFoundException(Exception):
         s += f"  {', '.join(PakkageNotFoundException.get_most_similar(package_name, available_packages))}"
 
         super().__init__(s)
+
+class AmbivalentIdsException(Exception):
+    def __init__(self, package_name: str, available_packages: list[str]):
+        s = f"\nAmbivalent package name {package_name}... Did you mean one of these?\n"
+        s += f"  {', '.join(available_packages)}"
+
+        super().__init__(s)
+
 
 
 class VersionNotFoundException(Exception):
@@ -88,7 +93,9 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # pakkages_discovered = discoverer.merge()
 
     connectors = PakkLoader.get_connector_instances(**kwargs)
-    pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
+    pakkages_discovered = DiscoveredPakkages.discover(connectors)
+
+    # TODO: Handle undiscovered pakkages
 
     installing_pakkage_ids = []
 
@@ -96,9 +103,11 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
         name, version = split_name_version(n)
         installing_pakkage_ids.append(name)
 
-        p = pakkages_discovered.get(name, None)
+        p = pakkages_discovered[name]
         if p is None:
-            raise PakkageNotFoundException(name, list(pakkages_discovered.keys()))
+            if name in pakkages_discovered.shortened_ids and len(pakkages_discovered.shortened_ids[name]) > 1:
+                raise AmbivalentIdsException(name, pakkages_discovered.shortened_ids[name])
+            raise PakkageNotFoundException(name, list(pakkages_discovered._discovered_packages.keys()))
 
         p.versions.target_explicitly_given = version is not None
 
@@ -137,6 +146,9 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     if len(installing_pakkage_ids) == 0:
         logger.info("Nothing to install.")
         return
+
+    print(installing_pakkage_ids)
+    return 
 
     resolver = ResolverFitting(pakkages_discovered, pakkages_discovered[installing_pakkage_ids[0]])
     try:

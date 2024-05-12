@@ -634,17 +634,17 @@ class PakkageConfig:
         pc.cfg_sections = pc.cfg.sections()
 
         cfg = pc.cfg
-        pc.id = cfg.get("info", "id", fallback=None)
-        pc.version = cfg.get("info", "version", fallback=None)
+        pc.id = cfg.get("info", "id", fallback="")
+        pc.version = cfg.get("info", "version", fallback="")
 
-        pc.name = cfg.get("info", "name", fallback=None)
+        pc.name = cfg.get("info", "name", fallback="")
         if pc.name is None:
             pc.name = cfg.get("info", "title", fallback=pc.id)
 
-        pc.description = cfg.get("info", "description", fallback=None)
-        pc.author = cfg.get("info", "author", fallback=None)
-        pc.license = cfg.get("info", "license", fallback=None)
-        pc.keywords = ExtendedConfigParser.split_to_list(cfg.get("info", "keywords", fallback=None))
+        pc.description = cfg.get("info", "description", fallback="")
+        pc.author = cfg.get("info", "author", fallback="")
+        pc.license = cfg.get("info", "license", fallback="")
+        pc.keywords = ExtendedConfigParser.split_to_list(cfg.get("info", "keywords", fallback=""))
 
         if cfg.has_section("dependencies"):
             pc.dependencies = dict()

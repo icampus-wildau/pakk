@@ -83,34 +83,36 @@ def install(ctx: Context, **kwargs):
 
     from pakk.actions.install import PakkageNotFoundException
     from pakk.actions.install import install
-    from pakk.config.pakk_config import MissingConfigSectionOptionException
-    from pakk.config.pakk_config import get_cfg_paths
+    # from pakk.config.pakk_config import MissingConfigSectionOptionException
+    # from pakk.config.pakk_config import get_cfg_paths
+    from pakk.config.main_cfg import MainConfig
     from pakk.helper.module_importer import PakkModuleNotFoundException
     from pakk.modules.resolver.base import ResolverException
 
     try:
         install(builtins.list(kwargs["pakkage"]), **kwargs)
-    except MissingConfigSectionOptionException as e:
-        from pakk.logger import Logger
+    # except MissingConfigSectionOptionException as e:
+    #     from pakk.logger import Logger
 
-        if kwargs["verbose"]:
-            Logger.get_console().print_exception()
+    #     if kwargs["verbose"]:
+    #         Logger.get_console().print_exception()
 
-        p = get_cfg_paths()
-        Logger.get_console().print(e.message)
+    #     p = get_cfg_paths()
+    #     Logger.get_console().print(e.message)
 
-        fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += f"  - adapt the config files at [b]{p}[/b]\n"
-        fix_msg += f"  - run [b]pakk setup[/b] to create a new fixed config file\n"
+    #     fix_msg = "To fix this, do one of the following:\n"
+    #     fix_msg += f"  - adapt the config files at [b]{p}[/b]\n"
+    #     fix_msg += f"  - run [b]pakk setup[/b] to create a new fixed config file\n"
 
-        Logger.get_console().print(fix_msg)
+    #     Logger.get_console().print(fix_msg)
     except InterpolationMissingOptionError as e:
         from pakk.logger import Logger
 
         if kwargs["verbose"]:
             Logger.get_console().print_exception()
 
-        p = get_cfg_paths()
+        # p = get_cfg_paths()
+        p = MainConfig.get_configs_dir()
         Logger.get_console().print("[bold red]" + e.message)
 
         fix_msg = "To fix this, do one of the following:\n"
@@ -121,26 +123,26 @@ def install(ctx: Context, **kwargs):
 
         Logger.get_console().print(fix_msg)
 
-    except PakkModuleNotFoundException as e:
-        from pakk.logger import Logger
+    # except PakkModuleNotFoundException as e:
+    #     from pakk.logger import Logger
 
-        if kwargs["verbose"]:
-            Logger.get_console().print_exception()
+    #     if kwargs["verbose"]:
+    #         Logger.get_console().print_exception()
 
-        Logger.print_exception_message(e)
-        p = get_cfg_paths()
+    #     Logger.print_exception_message(e)
+    #     p = get_cfg_paths()
 
-        fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += (
-            f"  - adapt the entry '{e.module_name}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
-        )
+    #     fix_msg = "To fix this, do one of the following:\n"
+    #     fix_msg += (
+    #         f"  - adapt the entry '{e.module_name}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
+    #     )
 
-        if e.class_name is None:
-            fix_msg += f"  - check if '{e.module_name}' is an importable module from an installed python package\n"
-        else:
-            fix_msg += f"  - check if '{e.class_name}' is a class in the module '{e.module_name}'\n"
+    #     if e.class_name is None:
+    #         fix_msg += f"  - check if '{e.module_name}' is an importable module from an installed python package\n"
+    #     else:
+    #         fix_msg += f"  - check if '{e.class_name}' is a class in the module '{e.module_name}'\n"
 
-        Logger.get_console().print(fix_msg)
+    #     Logger.get_console().print(fix_msg)
     except PakkageNotFoundException as e:
         from pakk.logger import Logger
 

@@ -33,7 +33,7 @@ class PakkConfigBase(Configuration):
     def __init__(self, name: str):
         path = os.path.abspath(os.path.join(self.get_configs_dir(), name))
         base_paths = [os.path.join(self.get_configs_dir(), cfg) for cfg in self.CFG_BASE]
-        super().__init__(path, base_paths=base_paths)
+        super().__init__(path, base_paths=base_paths, auto_save=True)
 
         # if is_required and not os.path.exists(path):
         #     raise FileNotFoundError(f"Configuration file {path} not found. Please configure it using `pakk configure {name}`.")
@@ -65,9 +65,9 @@ class PakkConfigBase(Configuration):
         return self.get_configs_dir()
 
     @classmethod
-    def get_config(cls: Type[C]) -> C:
+    def __load_config__(cls: Type[C], **args) -> C:
         """
-        Get the instance of this configuration.
+        Load the instance of this configuration with the given arguments.
         """
         if cls._instance is None:
             if cls.NAME is None:
@@ -75,15 +75,28 @@ class PakkConfigBase(Configuration):
                     f"NAME of the Configuration must be set. Override the static variable NAME in your {cls.__name__} subclass."
                 )
 
-            cls._instance = cls(name=cls.NAME)
+            cls._instance = cls(**args)
             if not cls._instance.exists():
                 logger.warning(
                     f"Configuration file {cls._instance.config_path} for configuration {cls.__name__} not found."
                 )
 
-            cls._instance.load()
-
+            cls._instance.load(quiet=True)
+            if cls._instance.auto_save:
+                if not cls._instance.exists():
+                    logger.info(f"Creating configuration file {cls._instance.config_path}")
+                cls._instance.write()
+                
         return cls._instance
+    
+
+    @classmethod
+    def get_config(cls: Type[C]) -> C:
+        """
+        Get the instance of this configuration.
+        """
+        
+        return cls.__load_config__(name=cls.NAME)
 
 
 class ConnectorConfiguration(PakkConfigBase):
@@ -105,21 +118,9 @@ class TypeConfiguration(PakkConfigBase):
         super().__init__(TypeConfiguration.NAME or "types.cfg")
 
     @classmethod
-    def get_config(cls: Type[T]) -> T:
+    def get_config(cls: Type[T]) -> T:    
         """
         Get the instance of this configuration.
         """
-        if cls._instance is None:
-            if cls.NAME is None:
-                raise ValueError(
-                    f"NAME of the Configuration must be set. Override the static variable NAME in your {cls.__name__} subclass."
-                )
-
-            cls._instance = cls()
-            if not cls._instance.exists():
-                logger.warning(
-                    f"Configuration file {cls._instance.config_path} for configuration {cls.__name__} not found."
-                )
-            cls._instance.load()
-
-        return cls._instance
+        
+        return cls.__load_config__()

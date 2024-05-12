@@ -52,7 +52,7 @@ def list(**kwargs: str):
     pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
 
     # To avoid problems in the type initialization... Maybe there is a better way
-    for pakkage in pakkages_discovered.discovered_packages.values():
+    for pakkage in pakkages_discovered.values():
         for version in pakkage.versions.available.values():
             version.local_path = version.local_path or ""
 
@@ -79,7 +79,7 @@ def list(**kwargs: str):
         if visible:
             table.add_column(key, justify="left")
 
-    pakkages = builtins.list(pakkages_discovered.discovered_packages.values())
+    pakkages = builtins.list(pakkages_discovered.values())
     pakkages.sort(key=lambda p: p.id)
 
     if regex is not None:

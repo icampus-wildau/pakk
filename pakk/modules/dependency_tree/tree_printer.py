@@ -3,14 +3,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from rich import print
 from rich.tree import Tree
 
-from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-from pakk.pakk.args.install_config import InstallConfig
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)

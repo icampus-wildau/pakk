@@ -118,7 +118,7 @@ class GitlabConnector(Connector):
         return f"https://oauth2:{token}@{http}"
 
     def retrieve_discovered_pakkages(self) -> DiscoveredPakkages:
-        self.discovered_pakkages.discovered_packages.clear()
+        self.discovered_pakkages.clear()
 
         for cp in self.cached_projects:
             if len(cp.versions) == 0:
@@ -220,10 +220,10 @@ class GitlabConnector(Connector):
 
         dps = self.retrieve_discovered_pakkages()
         n_versions = 0
-        for p_id, pakkage in dps.discovered_packages.items():
+        for p_id, pakkage in dps._discovered_packages.items():
             n_versions += len(pakkage.versions.available)
 
-        logger.info(f"Discovered {len(dps.discovered_packages)} pakk packages with {n_versions} versions")
+        logger.info(f"Discovered {len(dps._discovered_packages)} pakk packages with {n_versions} versions")
 
         return dps
 

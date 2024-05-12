@@ -16,29 +16,78 @@ class DiscoveredPakkages:
     def __init__(self):
         # self.quiet = quiet
 
-        self.discovered_packages: dict[str, Pakkage] = dict()
-        self.undiscovered_packages: set[str] = set()
+        self._discovered_packages: dict[str, Pakkage] = dict()
+        self.shortened_ids: dict[str, list[str]] = dict()
+        self._undiscovered_packages: set[str] = set()
 
-    def __getitem__(self, key: str) -> Pakkage:
-        return self.discovered_packages[key]
+    def clear(self):
+        self._discovered_packages.clear()
+        self.shortened_ids.clear()
+        self._undiscovered_packages.clear()
+
+    def add_discovered_pakkage(self, pakkage: Pakkage):
+        self._discovered_packages[pakkage.id] = pakkage
+
+    def __getitem__(self, key: str) -> Pakkage | None:
+        if key in self._discovered_packages:
+            return self._discovered_packages[key]
+        
+        if key in self.shortened_ids:
+            if len(self.shortened_ids[key]) == 1:
+                return self._discovered_packages[self.shortened_ids[key][0]]
+            
+        return None
+    
+    def __len__(self):
+        return len(self._discovered_packages)
+    
+    def __iter__(self):
+        return iter(self._discovered_packages)
+    
+    def values(self):
+        return self._discovered_packages.values()
+    
+    def items(self):
+        return self._discovered_packages.items()
+    
+    def keys(self):
+        return self._discovered_packages.keys()
 
     def __setitem__(self, key: str, value: Pakkage):
-        self.discovered_packages[key] = value
+        self._discovered_packages[key] = value
+        self._undiscovered_packages.discard(key)
+
+        splits = key.split("/")
+        if len(splits) == 2:
+            group = splits[0]
+            id = splits[1]
+            
+            if id not in self.shortened_ids:
+                self.shortened_ids[id] = []
+
+            self.shortened_ids[id].append(key)
+            
 
     def merge(self, new_pakkages: DiscoveredPakkages) -> DiscoveredPakkages:
         """Merge the discovered pakkages."""
 
-        self.undiscovered_packages.update(new_pakkages.undiscovered_packages)
+        self._undiscovered_packages.update(new_pakkages._undiscovered_packages)
 
-        for id, pakkage in new_pakkages.discovered_packages.items():
-            if id in self.discovered_packages:
-                versions = self.discovered_packages[id].versions
+        for id, pakkage in new_pakkages._discovered_packages.items():
+            if id in self._discovered_packages:
+                versions = self._discovered_packages[id].versions
                 versions.available.update(pakkage.versions.available)
                 versions.installed = pakkage.versions.installed
             else:
-                self.discovered_packages[id] = pakkage
+                self._discovered_packages[id] = pakkage
 
-            self.undiscovered_packages.discard(id)
+            self._undiscovered_packages.discard(id)
+        
+        for id, shortened_ids in new_pakkages.shortened_ids.items():
+            if id not in self.shortened_ids:
+                self.shortened_ids[id] = []
+            
+            self.shortened_ids[id].extend(shortened_ids)
 
         return self
 
@@ -54,7 +103,7 @@ class DiscoveredPakkages:
             pakkages.merge(discovered_pakkages)
 
         # Check if all installed versions are also available, otherwise there are problems with reinstalling
-        for pakkage in pakkages.discovered_packages.values():
+        for pakkage in pakkages._discovered_packages.values():
             if (
                 pakkage.versions.installed
                 and len(pakkage.versions.available) > 0
