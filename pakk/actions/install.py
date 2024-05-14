@@ -11,9 +11,9 @@ from pakk.helper.cli_util import split_name_version
 from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
-from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.modules.connector.base import PakkageCollection
 # from pakk.modules.fetcher.fetcher_gitlab import FetcherGitlab
-# from pakk.modules.installer.combining_installer import InstallerCombining
+from pakk.modules.installer.combining_installer import InstallerCombining
 from pakk.modules.module import Module
 from pakk.modules.resolver.base import ResolverException
 from pakk.modules.resolver.resolver_fitting import ResolverFitting
@@ -92,22 +92,23 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # ])
     # pakkages_discovered = discoverer.merge()
 
-    connectors = PakkLoader.get_connector_instances(**kwargs)
-    pakkages_discovered = DiscoveredPakkages.discover(connectors)
+    pakkages = PakkageCollection()
+    connectors = PakkLoader.get_connector_instances(pakkages, **kwargs)
+    pakkages.discover(connectors)
 
     # TODO: Handle undiscovered pakkages
 
-    installing_pakkage_ids = []
-
     for n in pakkage_names:
         name, version = split_name_version(n)
-        installing_pakkage_ids.append(name)
 
-        p = pakkages_discovered[name]
+        p = pakkages[name]
         if p is None:
-            if name in pakkages_discovered.shortened_ids and len(pakkages_discovered.shortened_ids[name]) > 1:
-                raise AmbivalentIdsException(name, pakkages_discovered.shortened_ids[name])
-            raise PakkageNotFoundException(name, list(pakkages_discovered._discovered_packages.keys()))
+            if name in pakkages.id_abbreviations and len(pakkages.id_abbreviations[name]) > 1:
+                raise AmbivalentIdsException(name, pakkages.id_abbreviations[name])
+            raise PakkageNotFoundException(name, list(pakkages.keys()))
+
+        pakkages.ids_to_be_installed.add(p.id)
+        # installing_pakkage_ids.append(p.id)
 
         p.versions.target_explicitly_given = version is not None
 
@@ -143,42 +144,41 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
         if version is not None and p.versions.target is None:
             raise VersionNotFoundException(p, version)
 
-    if len(installing_pakkage_ids) == 0:
+    if len(pakkages.ids_to_be_installed) == 0:
         logger.info("Nothing to install.")
         return
 
-    print(installing_pakkage_ids)
-    return 
+    print(pakkages.ids_to_be_installed)
 
-    resolver = ResolverFitting(pakkages_discovered, pakkages_discovered[installing_pakkage_ids[0]])
+    resolver = ResolverFitting(pakkages)
     try:
-        if install_config.no_deps:
-            pakkages_resolved = pakkages_discovered
-        else:
-            pakkages_resolved = resolver.resolve()
+        if not install_config.no_deps:
+            resolver.resolve()
     except ResolverException as e:
         x = e.print_msg()
         return
 
     # Filter repairing installations
     if not install_config.repair:
-        for pakkage in pakkages_resolved.values():
+        for pakkage in pakkages.pakkages.values():
             if pakkage.versions.target is not None and pakkage.versions.is_repairing_install:
                 pakkage.versions.target = None
 
     # TODO
     # Abfrage, ob Pakete geupdated werden sollen
 
-    installer = InstallerCombining(pakkages_resolved, resolver.deptree)
+    installer = InstallerCombining(pakkages, resolver.deptree)
     if install_config.dry_run:
         return
 
     installer.uninstall()
 
-    fetcher = FetcherGitlab(pakkages_resolved)
-    fetcher.fetch()
+    pakkages.fetch(connectors=connectors)
 
-    Process.set_from_pakkages(pakkages_resolved)
+    # fetcher = FetcherGitlab(pakkages_resolved)
+    # fetcher.fetch()
+
+    Process.set_from_pakkages(pakkages)
     pakkages_installed = installer.install()
 
     return pakkages_installed

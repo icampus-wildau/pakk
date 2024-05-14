@@ -13,7 +13,7 @@ from typing import Any
 from pakk.config.main_cfg import MainConfig
 
 if TYPE_CHECKING:
-    from pakk.modules.connector.gitlab.gitlab import GitlabConnector
+    from pakk.modules.connector.gitlab.connector import GitlabConnector
 
 # import jsons
 import jsonpickle

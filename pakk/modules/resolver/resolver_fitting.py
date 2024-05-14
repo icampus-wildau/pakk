@@ -5,6 +5,7 @@ import logging
 import nodesemver
 
 from pakk.logger import Logger
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.module import Module
@@ -20,11 +21,14 @@ logger = logging.getLogger(__name__)
 class ResolverFitting(Resolver):
     """Resolver that tries to select fitting version of unresolved dependency packages"""
 
-    def __init__(self, pakkages: dict[str, Pakkage], pakkage_to_be_installed: Pakkage):
+    def __init__(self, pakkages: PakkageCollection):
         super().__init__(pakkages)
 
-        self.deptree = DependencyTree(pakkages)
-        self.pakkage_to_be_installed = pakkage_to_be_installed
+        self.pakkage_collection = pakkages
+        self.deptree = DependencyTree(self.resolver_pakkages.pakkages)
+        self.pakkages = self.resolver_pakkages.pakkages
+        self.ids_to_be_installed = self.resolver_pakkages.ids_to_be_installed
+        self.pakkage_to_be_installed = self.resolver_pakkages.pakkages[next(iter(self.ids_to_be_installed))]
         self.install_config = InstallArgs.get()
 
     #############################################################
@@ -86,7 +90,7 @@ class ResolverFitting(Resolver):
         installed_version = pakkage.versions.installed
 
         if pakkage_has_target and pakkage_has_fixed_target:
-            versions = [pakkage.versions.target.version] if pakkage.versions.target.version in versions else []
+            versions = [pakkage.versions.target.version] if pakkage.versions.target.version in versions else [] # type: ignore
             return versions
 
         # Filter versions by install config
@@ -111,7 +115,7 @@ class ResolverFitting(Resolver):
     ### Main methods
     #############################################################
 
-    def resolve(self, quiet=False) -> dict[str, Pakkage]:
+    def resolve(self, quiet=False) -> PakkageCollection:
         """Resolve the given packages"""
 
         if not quiet:
@@ -160,7 +164,9 @@ class ResolverFitting(Resolver):
                 sorted_pakkages[id] = self.pakkages[id]
 
         self.pakkages = sorted_pakkages
-        return self.pakkages
+        self.resolver_pakkages.pakkages = sorted_pakkages
+        return self.resolver_pakkages
+        # return self.pakkages
 
     def _resolve_node(self, pakkage: Pakkage):
         # print(f"\nResolving {pakkage.id}")

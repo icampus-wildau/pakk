@@ -23,7 +23,7 @@ from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.logger import console
 from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.base import FetchedPakkages
 from pakk.modules.connector.gitlab.cache import CachedProject
 from pakk.modules.connector.gitlab.config import GitlabConfig
@@ -47,8 +47,8 @@ class GitlabConnector(Connector):
 
     gl_instance: gitlab.Gitlab | None = None
 
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, pakkages: PakkageCollection, **kwargs):
+        super().__init__(pakkages)
 
         logger.info("Initilizing GitLab connector...")
         self.config = GitlabConfig.get_config()
@@ -63,7 +63,7 @@ class GitlabConnector(Connector):
             pass
 
         self.cached_projects: list[CachedProject] = list()
-        self.discovered_pakkages: DiscoveredPakkages = DiscoveredPakkages()
+        self.discovered_pakkages: PakkageCollection = PakkageCollection()
 
         # Progress object for pbars
         self._pbar_progress = None

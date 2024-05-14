@@ -8,7 +8,7 @@ import pkgutil
 from typing import Type
 from typing import TypeVar
 
-from pakk.modules.connector.base import Connector
+from pakk.modules.connector.base import Connector, PakkageCollection
 from pakk.modules.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class PakkLoader:
         pakk_modules: list[tuple[str, str]] = []
         for module_path, module_name, _ in pkgutil.iter_modules():
             if module_name.startswith("pakk"):
-                pakk_modules.append((module_path.path, module_name))
+                pakk_modules.append((module_path.path, module_name)) # type: ignore
 
         PakkLoader.__pakk_modules = pakk_modules
         return pakk_modules
@@ -96,11 +96,11 @@ class PakkLoader:
         return valid_connectors
 
     @staticmethod
-    def get_connector_instances(**kwargs):
+    def get_connector_instances(pakkages: PakkageCollection , **kwargs):
         connectors = PakkLoader.get_connector_classes()
         instances = []
         for connector_cls in connectors:
-            connector = connector_cls(**kwargs)
+            connector = connector_cls(pakkages, **kwargs)
             instances.append(connector)
         return instances
 

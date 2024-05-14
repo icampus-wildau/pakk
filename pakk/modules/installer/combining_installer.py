@@ -5,12 +5,13 @@ from typing import Callable
 
 import networkx as nx
 
-from pakk.config.pakk_config import Sections as CfgSections
+from pakk.config.main_cfg import MainConfig
 from pakk.logger import Logger
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.pakk.args.install_config import InstallConfig
+from pakk.args.install_args import InstallArgs
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
@@ -155,34 +156,32 @@ class InstallerCombining(Module):
     Installer that combines all defined setup and install classes to install the pakkages.
     """
 
-    SECTION_NAME = "Installer"
-
-    CONFIG_REQUIREMENTS = {CfgSections.SUBDIRS: ["fetched_dir", "all_pakkges_dir"]}
-
-    def __init__(self, pakkages: dict[str, Pakkage], dependency_tree: DependencyTree):
+    def __init__(self, pakkages: PakkageCollection, dependency_tree: DependencyTree):
         """
         Initialize the installer.
         The dependency tree is used to determine the order in which the pakkages are installed.
 
         Parameters
         ----------
-        pakkages: dict[str, Pakkage]
-            The pakkages to install.
+        pakkages: PakkageCollection
+            The pakkages collection containing pakkages with target versions to be installed.
         dependency_tree: DependencyTree
             The dependency tree of the pakkages from the Resolver Step.
         """
         super().__init__()
 
-        self.pakkages = pakkages
+        self.pakkage_collection = pakkages
+        self.pakkages = pakkages.pakkages
         self.deptree = dependency_tree
 
-        self.fetched_dir: str = self.config.get_abs_path("fetched_dir")  # type: ignore
-        self.all_pakkges_dir: str = self.config.get_abs_path("all_pakkges_dir")  # type: ignore
+        self.config = MainConfig.get_config()
+        self.fetched_dir: str = self.config.paths.fetch_dir.value
+        self.all_pakkges_dir: str = self.config.paths.all_pakkages_dir.value
 
         self.status_callback: Callable[[str], None] | None = None
         self.tasks = None
 
-        self.install_config = InstallConfig.get()
+        self.install_args = InstallArgs.get()
 
         self.pakkages_to_uninstall: list[Pakkage] = []
         self.pakkages_to_install: list[Pakkage] = []
@@ -240,7 +239,7 @@ class InstallerCombining(Module):
                 v.save_state()
 
                 # Move to fetched dir
-                if not self.install_config.refetch:
+                if not self.install_args.refetch:
                     new_dir = self.fetched_dir
                     v.move_to(new_dir)
                 else:
@@ -361,6 +360,9 @@ class InstallerCombining(Module):
 
             # Finish the installation by saving the install state
             for pakkage in self.pakkages_to_install:
+                if pakkage.versions.target is None:
+                    logger.error("This should not happen")
+                    continue
                 pakkage.versions.installed = pakkage.versions.target
                 pakkage.versions.installed.save_state()
 

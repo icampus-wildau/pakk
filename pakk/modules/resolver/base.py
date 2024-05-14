@@ -3,6 +3,7 @@ from __future__ import annotations
 import nodesemver
 
 from pakk.logger import Logger
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.module import Module
@@ -10,9 +11,9 @@ from pakk.pakkage.core import Pakkage
 
 
 class Resolver(Module):
-    def __init__(self, pakkages: dict[str, Pakkage], config_requirements: dict[str, list[str]] | None = None):
-        super().__init__(config_requirements)
-        self.pakkages = pakkages
+    def __init__(self, pakkages: PakkageCollection):
+        super().__init__()
+        self.resolver_pakkages = pakkages
 
     def resolve(self) -> dict[str, Pakkage]:
         """Resolve all the packages with the implemented resolver."""
@@ -28,7 +29,7 @@ class Resolver(Module):
 
 
 class ResolverException(Exception):
-    def __init__(self, pakkage: Pakkage, parent_pakkages: list[Pakkage], pakkages: dict[str, Pakkage] = None):
+    def __init__(self, pakkage: Pakkage, parent_pakkages: list[Pakkage], pakkages: dict[str, Pakkage] | None = None):
         self.pakkage = pakkage
         self.parent_pakkages = parent_pakkages
         self.versions_available = list(pakkage.versions.available.keys())

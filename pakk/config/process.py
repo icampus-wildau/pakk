@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
-    from pakk.pakkage.core import Pakkage
+    from pakk.modules.connector.base import PakkageCollection
     from pakk.pakkage.core import PakkageConfig
 
 
@@ -16,7 +17,7 @@ class Process:
         self.temp_env_vars_map: dict[PakkageConfig, dict[str, str]] = dict()
 
     @classmethod
-    def set_from_pakkages(cls, pakkages: dict[str, Pakkage]) -> None:
+    def set_from_pakkages(cls, pakkages: PakkageCollection) -> None:
         process = Process.get()
 
         for p in pakkages.values():
