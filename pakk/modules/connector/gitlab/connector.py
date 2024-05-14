@@ -24,7 +24,6 @@ from pakk.helper.file_util import remove_dir
 from pakk.logger import console
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.base import FetchedPakkages
 from pakk.modules.connector.gitlab.cache import CachedProject
 from pakk.modules.connector.gitlab.config import GitlabConfig
 from pakk.modules.module import Module
@@ -63,7 +62,7 @@ class GitlabConnector(Connector):
             pass
 
         self.cached_projects: list[CachedProject] = list()
-        self.discovered_pakkages: PakkageCollection = PakkageCollection()
+        self.gitlab_pakkages: PakkageCollection = PakkageCollection()
 
         # Progress object for pbars
         self._pbar_progress = None
@@ -117,8 +116,8 @@ class GitlabConnector(Connector):
         http = re.sub(r"https+://", "", http_url_to_repo)
         return f"https://oauth2:{token}@{http}"
 
-    def retrieve_discovered_pakkages(self) -> DiscoveredPakkages:
-        self.discovered_pakkages.clear()
+    def retrieve_discovered_pakkages(self) -> PakkageCollection:
+        # self.discovered_pakkages.clear()
 
         for cp in self.cached_projects:
             if len(cp.versions) == 0:
@@ -132,17 +131,17 @@ class GitlabConnector(Connector):
             versions = PakkageVersions(available_versions)
             p = Pakkage(versions)
 
-            self.discovered_pakkages[p.id] = p
+            self.gitlab_pakkages[p.id] = p
 
-        return self.discovered_pakkages
+        return self.gitlab_pakkages
 
-    def discover(self) -> DiscoveredPakkages:
+    def discover(self) -> PakkageCollection:
         num_workers = int(self.config.num_discover_workers.value)
         main_group_id = int(self.config.group_id.value)
 
         if not self.connected:
             logger.warning("Failed to connect to gitlab. Skipping discovery")
-            return self.discovered_pakkages
+            return self.gitlab_pakkages
 
         logger.info("Discovering projects from GitLab")
         logger.debug(f"Main group id: {main_group_id}")
@@ -207,7 +206,7 @@ class GitlabConnector(Connector):
                 pool.join()
             else:
                 for gp in filtered_group_projects:
-                    append_result(*CachedProject.from_project(self, gp))
+                    append_result(*CachedProject.from_project(self, gp))  # type: ignore
 
         logger.debug(f"Finished loading {len(projects)} projects:")
         logger.debug(f"  {results['not cached']} loaded from gitlab api")
@@ -220,16 +219,14 @@ class GitlabConnector(Connector):
 
         dps = self.retrieve_discovered_pakkages()
         n_versions = 0
-        for p_id, pakkage in dps._discovered_packages.items():
+        for p_id, pakkage in dps.pakkages.items():
             n_versions += len(pakkage.versions.available)
 
-        logger.info(f"Discovered {len(dps._discovered_packages)} pakk packages with {n_versions} versions")
+        logger.info(f"Discovered {len(dps.pakkages)} pakk packages with {n_versions} versions")
 
-        return dps
+        return self.pakkages.merge(new_pakkages=dps)
 
-    def checkout_target_version(self, pakkage: Pakkage) -> Pakkage | None:
-        if not pakkage.versions.is_update_candidate():
-            return None
+    def checkout_version(self, target_version: PakkageConfig) -> PakkageConfig:
 
         # Get the next free pbar
         pbar_index = self._free_pbars.index(True)
@@ -238,103 +235,111 @@ class GitlabConnector(Connector):
         # Get the related pbar
         pbar = self._pbars[pbar_index]
 
+        attr = target_version.get_attributes(self)
+
+        if attr is None:
+            logger.error(f"Connector {self.__class__} not in target_version.connector_attributes")
+            return target_version
+
+        url = attr.url
+        tag = attr.branch
         fetched_dir = MainConfig.get_config().paths.fetch_dir.value
 
+        if url is None or tag is None:
+            logger.error(f"URL or tag is None for {target_version.id}: {url}@{tag}")
+            return target_version
+
+        url_with_token = self.get_gitlab_http_with_token(url)
+
+        name = target_version.basename
+        path = os.path.join(fetched_dir, name)
+
+        fetch = True
+        if os.path.exists(path):
+            if self.install_args.refetch or self.install_args.clear_cache:
+                logger.debug(f"Directory {path} already exists. Refetching it.")
+
+                # delete existing directory
+                remove_dir(path)
+            else:
+                # Check if the directory is empty
+                with os.scandir(path) as it:
+                    if not any(it):
+                        fetch = True
+                        logger.debug(f"Directory {path} already exists but is empty. Refetching it.")
+                        remove_dir(path)
+                    else:
+                        fetch = False
+                        logger.debug(f"Directory {path} already exists. Skipping fetch and using local version.")
+
+        if fetch:
+            os.makedirs(path, exist_ok=True)
+
+            # Clone the repository
+            # -c advice.detachedHead=false is for ignoring the warning about detached HEAD
+            # We don't need git history, so we use --depth=1
+            # The --progress option is required to get the continuous progress output
+            cmd = f"git clone -c advice.detachedHead=false --depth=1 --branch {tag} {url_with_token} {name} --progress"
+            retry_count = 2
+            tries = 0
+
+            while tries < retry_count:
+                with subprocess.Popen(
+                    cmd,
+                    cwd=fetched_dir,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    bufsize=1,
+                    universal_newlines=True,
+                ) as p:
+
+                    # Capture the output of the subprocess to print the info in the pbar
+                    for line in p.stdout:
+                        self._pbar_progress.update(pbar, pakkage=target_version.id, info=line.strip().replace("\r", ""))
+
+                if PakkageConfig.from_directory(path):
+                    break
+
+                tries += 1
+                if tries < retry_count:
+                    logger.warning(f"Fetch of {target_version.id} failed. Retrying...")
+
+        # Load the PakkageConfig from the fetched directory
+        if PakkageConfig.from_directory(path) is None:
+            raise Exception(f"Could not load PakkageConfig from {path}")
+
+        # Set the state to fetched and the local_path
+        target_version.state.install_state = PakkageInstallState.FETCHED
+        target_version.local_path = path
+
+        self._free_pbars[pbar_index] = True
+        self._pbar_progress.update(pbar, pakkage="Done", info="")
+        return target_version
+
+    def checkout_target_version(self, pakkage: Pakkage) -> Pakkage | None:
         target_version = pakkage.versions.target
         if target_version is None:
             raise Exception(f"Target version of {pakkage.name} is None.")
 
-        if ATTR_GITLAB_HTTP_SOURCE in target_version.attributes and ATTR_GITLAB_SOURCE_TAG in target_version.attributes:
-            url = target_version.attributes[ATTR_GITLAB_HTTP_SOURCE]
-            url_with_token = self.get_gitlab_http_with_token(url)
-            tag = target_version.attributes[ATTR_GITLAB_SOURCE_TAG]
-
-            name = target_version.basename
-            path = os.path.join(fetched_dir, name)
-
-            fetch = True
-            if os.path.exists(path):
-                if self.install_args.refetch or self.install_args.clear_cache:
-                    logger.debug(f"Directory {path} already exists. Refetching it.")
-
-                    # delete existing directory
-                    remove_dir(path)
-                else:
-                    # Check if the directory is empty
-                    with os.scandir(path) as it:
-                        if not any(it):
-                            fetch = True
-                            logger.debug(f"Directory {path} already exists but is empty. Refetching it.")
-                            remove_dir(path)
-                        else:
-                            fetch = False
-                            logger.debug(f"Directory {path} already exists. Skipping fetch and using local version.")
-
-            if fetch:
-                os.makedirs(path, exist_ok=True)
-
-                # Clone the repository
-                # -c advice.detachedHead=false is for ignoring the warning about detached HEAD
-                # We don't need git history, so we use --depth=1
-                # The --progress option is required to get the continuous progress output
-                cmd = f"git clone -c advice.detachedHead=false --depth=1 --branch {tag} {url_with_token} {name} --progress"
-                retry_count = 2
-                tries = 0
-
-                while tries < retry_count:
-                    with subprocess.Popen(
-                        cmd,
-                        cwd=fetched_dir,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        bufsize=1,
-                        universal_newlines=True,
-                    ) as p:
-
-                        # Capture the output of the subprocess to print the info in the pbar
-                        for line in p.stdout:
-                            self._pbar_progress.update(pbar, pakkage=pakkage.id, info=line.strip().replace("\r", ""))
-
-                    if PakkageConfig.from_directory(path):
-                        break
-
-                    tries += 1
-                    if tries < retry_count:
-                        logger.warning(f"Fetch of {pakkage.id} failed. Retrying...")
-
-            # Load the PakkageConfig from the fetched directory
-            target_version = PakkageConfig.from_directory(path)
-            if target_version is None:
-                raise Exception(f"Could not load PakkageConfig from {path}")
-
-            # If there was an installed version, copy the state
-            target_version.state.copy_from(pakkage.versions.installed)
-            target_version.state.install_state = PakkageInstallState.FETCHED
-            target_version.local_path = path
-
-            # Create the .pakk directory and store the state
-            target_version.save_state(path)
-            pakkage.versions.target = target_version
-
-        self._free_pbars[pbar_index] = True
-        self._pbar_progress.update(pbar, pakkage="Done", info="")
+        self.checkout_version(target_version)
         return pakkage
 
-    def fetch(self, pakkages: FetchedPakkages) -> FetchedPakkages:
-        Module.print_rule(f"Fetching pakkages")
+    def fetch(self, pakkages_to_fetch: list[PakkageConfig]):
+        Module.print_rule(f"Fetching pakkages from GitLab")
 
         self.install_args = InstallArgs.get()
 
         num_workers = int(self.config.num_fetcher_workers.value)
 
         # packages_to_fetch = [pakkage for pakkage in self.pakkages.values() if pakkage.versions.is_update_candidate()]
-        packages_to_fetch = pakkages.pakkages_to_fetch.values()
+        # packages_to_fetch = pakkages.pakkages_to_fetch.values()
 
         # try:
-        if len(packages_to_fetch) == 0:
+        if len(pakkages_to_fetch) == 0:
             logger.info("No pakkages to fetch.")
-            return pakkages
+            # return pakkages
+            return
 
         with Progress(
             SpinnerColumn(),
@@ -351,10 +356,10 @@ class GitlabConnector(Connector):
         ) as progress:
             self._pbar_progress = progress
 
-            pbar = progress.add_task("[blue]Fetching Total:", total=len(packages_to_fetch), pakkage="", info="")
+            pbar = progress.add_task("[blue]Fetching Total:", total=len(pakkages_to_fetch), pakkage="", info="")
 
             if num_workers > 1:
-                num_workers = min(num_workers, len(packages_to_fetch))
+                num_workers = min(num_workers, len(pakkages_to_fetch))
                 for i in range(num_workers):
                     self._pbars.append(progress.add_task(f"[cyan]Worker{i + 1}:", total=None, pakkage="", info=""))
                     self._free_pbars.append(True)
@@ -366,21 +371,22 @@ class GitlabConnector(Connector):
                 # https://stackoverflow.com/questions/52486811/how-to-properly-reference-to-instances-of-a-class-in-multiprocessing-pool-map
                 # https://towardsdatascience.com/demystifying-python-multiprocessing-and-multithreading-9b62f9875a27
                 with ThreadPool(num_workers) as pool:
-                    for res in pool.imap_unordered(self.checkout_target_version, packages_to_fetch):
+                    for res in pool.imap_unordered(self.checkout_version, pakkages_to_fetch):
                         progress.update(pbar, advance=1, info="")
                         if res is not None:
                             logger.info(f"Fetched {res.name}.")
-                            pakkages.fetched(res)
+                            # pakkages.fetched(res)
                 pool.join()
             else:
                 self._pbars.append(progress.add_task(f"[cyan]Worker{1}:", total=None, pakkage="", info=""))
                 self._free_pbars.append(True)
 
-                for pakkage in packages_to_fetch:
-                    self.checkout_target_version(pakkage)
+                for pakkage in pakkages_to_fetch:
+                    self.checkout_version(pakkage)
                     progress.update(pbar, advance=1, info=f"Fetching: {pakkage.name}")
                     logger.info(f"Fetched {pakkage.name}.")
-                    pakkages.fetched(pakkage)
+                    # pakkages.fetched(pakkage)
 
-        logger.info("Done fetching")
-        return pakkages
+        logger.info("Done fetching from GitLab")
+        # return pakkages
+        return

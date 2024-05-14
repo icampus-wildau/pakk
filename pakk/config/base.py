@@ -86,16 +86,15 @@ class PakkConfigBase(Configuration):
                 if not cls._instance.exists():
                     logger.info(f"Creating configuration file {cls._instance.config_path}")
                 cls._instance.write()
-                
+
         return cls._instance
-    
 
     @classmethod
     def get_config(cls: Type[C]) -> C:
         """
         Get the instance of this configuration.
         """
-        
+
         return cls.__load_config__(name=cls.NAME)
 
 
@@ -118,9 +117,9 @@ class TypeConfiguration(PakkConfigBase):
         super().__init__(TypeConfiguration.NAME or "types.cfg")
 
     @classmethod
-    def get_config(cls: Type[T]) -> T:    
+    def get_config(cls: Type[T]) -> T:
         """
         Get the instance of this configuration.
         """
-        
+
         return cls.__load_config__()

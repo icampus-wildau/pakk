@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 
 from extended_configparser.configuration import ConfigSection
-
 from extended_configparser.parser import ExtendedConfigParser
+
 from pakk.config.base import ConnectorConfiguration
 
 logger = logging.getLogger(__name__)

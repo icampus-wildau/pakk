@@ -10,7 +10,7 @@ from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.local import LocalConnector
 
 logger = logging.getLogger(__name__)
@@ -28,18 +28,14 @@ def list(**kwargs: str):
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the list could be wrong.")
 
-    local_connector: builtins.list[Connector] = [LocalConnector(**kwargs)]
+    pakkages = PakkageCollection()
+
+    local_connector: builtins.list[Connector] = [LocalConnector(pakkages, **kwargs)]
     discoverer_list: builtins.list[Connector] = []
 
     if flag_all or flag_available:
-        connectors = PakkLoader.get_connector_classes()
-        discoverer_list = [c(**kwargs) for c in connectors]
-
-        # from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
-        # # TODO Used discoverers should be configurable
-        # available_discoverers = [DiscovererGitlabCached()]
-
-        # discoverer_list = available_discoverers + local_connector
+        connectors = PakkLoader.get_connector_instances(pakkages)
+        discoverer_list = connectors
     else:
         discoverer_list = local_connector
 
@@ -49,7 +45,7 @@ def list(**kwargs: str):
 
         TypeBase.initialize()
 
-    pakkages_discovered = DiscoveredPakkages.discover(discoverer_list)
+    pakkages_discovered = pakkages.discover(discoverer_list)
 
     # To avoid problems in the type initialization... Maybe there is a better way
     for pakkage in pakkages_discovered.values():

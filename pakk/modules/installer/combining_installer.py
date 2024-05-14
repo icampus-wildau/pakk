@@ -5,13 +5,13 @@ from typing import Callable
 
 import networkx as nx
 
+from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.logger import Logger
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.args.install_args import InstallArgs
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState

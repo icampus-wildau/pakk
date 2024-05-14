@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 from typing import Generic
+from typing import Tuple
 from typing import Type
 from typing import TypeVar
 
 from pakk.config.base import ConnectorConfiguration
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,7 @@ class PakkageCollection:
         Add a pakkage to the collection.
         Takes care of pakkage id abbreviations.
         """
+
         self.pakkages[pakkage.id] = pakkage
         self.undiscovered_packages.discard(pakkage.id)
 
@@ -87,6 +91,14 @@ class PakkageCollection:
     @property
     def pakkages_to_fetch(self) -> dict[str, Pakkage]:
         return {pakkage.id: pakkage for pakkage in self.pakkages.values() if pakkage.versions.is_update_candidate()}
+
+    @property
+    # def pakkage_configs_to_fetch(self) -> list[Tuple[Pakkage, PakkageConfig]]:
+    def pakkage_configs_to_fetch(self) -> list[PakkageConfig]:
+        pakkages = self.pakkages_to_fetch
+        versions = [p.versions.target for p in pakkages.values() if p.versions.target is not None]
+        # versions = [(p, p.versions.target) for p in pakkages.values() if p.versions.target is not None]
+        return versions
 
     def merge(self, new_pakkages: PakkageCollection) -> PakkageCollection:
         """Merge PakkageCollection objects."""
@@ -171,172 +183,24 @@ class PakkageCollection:
         if not quiet:
             Module.print_rule(f"Fetching pakkages")
 
+        pakkages_to_fetch = self.pakkages_to_fetch
+        configs_to_fetch = self.pakkage_configs_to_fetch
+
         for connector in connectors:
-            connector.fetch(self.pakkages_to_fetch)
+
+            configs = [p for p in configs_to_fetch if connector.is_fetchable(p)]
+            # pakkages, configs = zip(*pakkage_tuples)
+            if len(configs) > 0:
+                connector.fetch(configs)
+
+        for pakkage in pakkages_to_fetch.values():
+            # If there was an installed version, copy the state
+            if pakkage.versions.target is not None:
+                # TODO: Handle pakkages that do not have the FETCHED state
+                pakkage.versions.target.state.copy_from(pakkage.versions.installed)
+                pakkage.versions.target.save_state()
 
         return self
-
-
-# class DiscoveredPakkages:
-#     def __init__(self):
-#         # self.quiet = quiet
-
-#         self._discovered_packages: dict[str, Pakkage] = dict()
-#         self.shortened_ids: dict[str, list[str]] = dict()
-#         self._undiscovered_packages: set[str] = set()
-
-#     def clear(self):
-#         self._discovered_packages.clear()
-#         self.shortened_ids.clear()
-#         self._undiscovered_packages.clear()
-
-#     def add_discovered_pakkage(self, pakkage: Pakkage):
-#         self._discovered_packages[pakkage.id] = pakkage
-
-#     def __getitem__(self, key: str) -> Pakkage | None:
-#         if key in self._discovered_packages:
-#             return self._discovered_packages[key]
-
-#         if key in self.shortened_ids:
-#             if len(self.shortened_ids[key]) == 1:
-#                 return self._discovered_packages[self.shortened_ids[key][0]]
-
-#         return None
-
-#     def __len__(self):
-#         return len(self._discovered_packages)
-
-#     def __iter__(self):
-#         return iter(self._discovered_packages)
-
-#     def values(self):
-#         return self._discovered_packages.values()
-
-#     def items(self):
-#         return self._discovered_packages.items()
-
-#     def keys(self):
-#         return self._discovered_packages.keys()
-
-#     def __setitem__(self, key: str, value: Pakkage):
-#         self._discovered_packages[key] = value
-#         self._undiscovered_packages.discard(key)
-
-#         splits = key.split("/")
-#         if len(splits) == 2:
-#             group = splits[0]
-#             id = splits[1]
-
-#             if id not in self.shortened_ids:
-#                 self.shortened_ids[id] = []
-
-#             self.shortened_ids[id].append(key)
-
-
-#     def merge(self, new_pakkages: DiscoveredPakkages) -> DiscoveredPakkages:
-#         """Merge the discovered pakkages."""
-
-#         self._undiscovered_packages.update(new_pakkages._undiscovered_packages)
-
-#         for id, pakkage in new_pakkages._discovered_packages.items():
-#             if id in self._discovered_packages:
-#                 versions = self._discovered_packages[id].versions
-#                 versions.available.update(pakkage.versions.available)
-#                 versions.installed = pakkage.versions.installed
-#             else:
-#                 self._discovered_packages[id] = pakkage
-
-#             self._undiscovered_packages.discard(id)
-
-#         for id, shortened_ids in new_pakkages.shortened_ids.items():
-#             if id not in self.shortened_ids:
-#                 self.shortened_ids[id] = []
-
-#             self.shortened_ids[id].extend(shortened_ids)
-
-#         return self
-
-#     @staticmethod
-#     def discover(connectors: list[Connector], quiet: bool = False) -> DiscoveredPakkages:
-
-#         if not quiet:
-#             Module.print_rule(f"Discovering pakkages")
-
-#         pakkages = DiscoveredPakkages()
-#         for connector in connectors:
-#             discovered_pakkages = connector.discover()
-#             pakkages.merge(discovered_pakkages)
-
-#         # Check if all installed versions are also available, otherwise there are problems with reinstalling
-#         for pakkage in pakkages._discovered_packages.values():
-#             if (
-#                 pakkage.versions.installed
-#                 and len(pakkage.versions.available) > 0
-#                 and pakkage.versions.installed.version not in pakkage.versions.available
-#             ):
-#                 logger.warn(
-#                     f"Inconsistency detected for pakkage {pakkage.id}: installed version {pakkage.versions.installed.version} is not available in the discovered versions {pakkage.versions.available}"
-#                 )
-
-#         return pakkages
-
-
-# class FetchedPakkages:
-#     def __init__(self):
-#         # self.quiet = quiet
-
-#         self.pakkages_to_fetch: dict[str, Pakkage] = dict()
-#         self.fetched_packages: dict[str, Pakkage] = dict()
-
-#     def __getitem__(self, key: str) -> Pakkage:
-#         return self.fetched_packages[key]
-
-#     def __setitem__(self, key: str, value: Pakkage):
-#         self.fetched_packages[key] = value
-
-#     def merge(self, new_pakkages: FetchedPakkages) -> FetchedPakkages:
-#         """Merge the fetched pakkages."""
-
-#         self.undiscovered_packages.update(new_pakkages.undiscovered_packages)
-
-#         for id, pakkage in new_pakkages.discovered_packages.items():
-#             if id in self.fetched_packages:
-#                 versions = self.fetched_packages[id].versions
-#                 versions.available.update(pakkage.versions.available)
-#                 versions.installed = pakkage.versions.installed
-#             else:
-#                 self.fetched_packages[id] = pakkage
-
-#             self.undiscovered_packages.discard(id)
-
-#         return self
-
-#     def fetched(self, pakkage: Pakkage):
-#         self.fetched_packages[pakkage.id] = pakkage
-#         self.pakkages_to_fetch.pop(pakkage.id, None)
-
-#     def fetch(self, connectors: list[Connector], quiet: bool = False) -> FetchedPakkages:
-
-#         if not quiet:
-#             Module.print_rule(f"Discovering pakkages")
-
-#         pakkages = DiscoveredPakkages()
-#         for connector in connectors:
-#             discovered_pakkages = connector.discover()
-#             pakkages.merge(discovered_pakkages)
-
-#         # Check if all installed versions are also available, otherwise there are problems with reinstalling
-#         for pakkage in pakkages.discovered_packages.values():
-#             if (
-#                 pakkage.versions.installed
-#                 and len(pakkage.versions.available) > 0
-#                 and pakkage.versions.installed.version not in pakkage.versions.available
-#             ):
-#                 logger.warn(
-#                     f"Inconsistency detected for pakkage {pakkage.id}: installed version {pakkage.versions.installed.version} is not available in the discovered versions {pakkage.versions.available}"
-#                 )
-
-#         return pakkages
 
 
 C = TypeVar("C", bound=ConnectorConfiguration)
@@ -362,6 +226,10 @@ class Connector(Module):
 
         # self.config = self.CONFIG_CLS.get_config() if self.CONFIG_CLS else None
 
+    @property
+    def connector_attributes_key(self):
+        return self.__class__.__module__ + "." + self.__class__.__name__
+
     @classmethod
     def is_configured(cls):
         """Check if the connector is configured."""
@@ -379,8 +247,20 @@ class Connector(Module):
 
     def discover(self) -> PakkageCollection:
         """Discover all the packages with the implemented discoverer."""
+        logger.error("Discover method not implemented for %s", self.__class__.__name__)
         raise NotImplementedError()
 
-    def fetch(self, pakkages_to_fetch: dict[str, Pakkage]) -> FetchedPakkages:
-        """Fetch all the packages with the implemented fetcher."""
+    def is_fetchable(self, pakkage_config: PakkageConfig) -> bool:
+        """
+        Check if a pakkage can be fetched by the connector.
+        By default it checks, if the pakkage config has a fitting connector attribute.
+        """
+        return self.connector_attributes_key in pakkage_config.connector_attributes
+
+    def fetch(self, pakkages_to_fetch: list[PakkageConfig]) -> None:
+        """
+        Fetch all the packages with the implemented fetcher.
+        The fetch method should set the local_path attribute and the state to FETCHED.
+        """
+        logger.error("Fetch method not implemented for %s", self.__class__.__name__)
         raise NotImplementedError()

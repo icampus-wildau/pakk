@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 from typing import Type
 
 from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
 from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import DiscoveredPakkages
+from pakk.modules.connector.base import PakkageCollection
+from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
@@ -22,8 +24,8 @@ class LocalConnector(Connector):
     PRIORITY = 20
     CONFIG_CLS = None
 
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, pakkages: PakkageCollection, **kwargs):
+        super().__init__(pakkages, **kwargs)
 
         self.all_pakkges_dir = MainConfig.get_config().paths.all_pakkages_dir.value
 
@@ -55,11 +57,13 @@ class LocalConnector(Connector):
         # If location is not a file path
         return None
 
-    def discover_installed(self) -> DiscoveredPakkages:
+    def discover_installed(self) -> PakkageCollection:
         """Discover all local installed pakkages."""
 
+        logger.info("Discovering installed pakkages...")
+
         all_pakkges_dir = self.all_pakkges_dir
-        pakkages = DiscoveredPakkages()
+        pakkages = PakkageCollection()
 
         # Go over each pakkage in the all directory and add it to the list
         for subdir, dirs, _ in os.walk(all_pakkges_dir):
@@ -93,7 +97,9 @@ class LocalConnector(Connector):
 
         return pakkages
 
-    def discover_in_path(self, pakkages: DiscoveredPakkages, path: str, recursive: bool = True):
+    def discover_in_path(self, pakkages: PakkageCollection, path: str, recursive: bool = True):
+
+        logger.info("Discovering available local pakkages @ %s", path)
 
         # Check if the directory contains a pakkage file
         pakkage_config = PakkageConfig.from_directory(path)
@@ -116,6 +122,10 @@ class LocalConnector(Connector):
             # else:
             #     logger.debug(f"Unknown install state: {pakkage_config.state.install_state}")
 
+            attr = ConnectorAttributes()
+            attr.url = path
+            pakkage_config.set_attributes(self, attr)
+
             pakkage = Pakkage(versions)
             pakkages[pakkage.id] = pakkage
         else:
@@ -126,10 +136,10 @@ class LocalConnector(Connector):
                         abs_path = os.path.join(subdir, d)
                         self.discover_in_path(pakkages, abs_path, recursive)
 
-    def discover_available(self) -> DiscoveredPakkages:
+    def discover_available(self) -> PakkageCollection:
         """Discover all local available pakkages in provided local directories."""
 
-        pakkages = DiscoveredPakkages()
+        pakkages = PakkageCollection()
 
         for location_path in self.additional_locations:
             self.discover_in_path(pakkages, location_path, True)
@@ -140,3 +150,35 @@ class LocalConnector(Connector):
         installed_pakkages = self.discover_installed()
         available_pakkages = self.discover_available()
         return installed_pakkages.merge(available_pakkages)
+
+    def fetch(self, pakkages_to_fetch: list[PakkageConfig]) -> None:
+
+        fetched_dir = MainConfig.get_config().paths.fetch_dir.value
+        # Fetching of local pakkages means copying the repository
+        for pakkage in pakkages_to_fetch:
+
+            attr = pakkage.get_attributes(self)
+            if attr is None:
+                logger.error(f"No attributes found for {pakkage.id} to fetch from local path.")
+                continue
+
+            path = attr.url
+            if path is None:
+                logger.error(f"No path found for {pakkage.id} to fetch from local path.")
+                continue
+
+            # Copy the directory to the fetch directory
+            fetch_dir = os.path.join(fetched_dir, pakkage.id)
+            name = pakkage.basename
+            fetch_path = os.path.join(fetch_dir, name)
+
+            if os.path.exists(fetch_path):
+                logger.debug(f"Path already exists: {fetch_path}")
+                continue
+
+            logger.info(f"Fetching {pakkage.id} by copying {path} to {fetch_path}")
+            os.makedirs(fetch_dir, exist_ok=True)
+            shutil.copytree(path, fetch_path)
+
+            pakkage.state.install_state = PakkageInstallState.FETCHED
+            pakkage.local_path = fetch_path

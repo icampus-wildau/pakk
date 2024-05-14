@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from pakk.modules.connector.base import PakkageCollection
     from pakk.pakkage.core import PakkageConfig

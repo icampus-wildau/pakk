@@ -10,35 +10,38 @@ from datetime import datetime
 from datetime import timezone
 from multiprocessing.pool import ThreadPool
 from threading import Lock
+
 import pytz
 from github import Github
 from github.ContentFile import ContentFile
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 from github.Repository import Repository
-import pakk
 from pkg_resources import parse_version
 from requests import ConnectTimeout
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
+from rich.progress import Progress
+from rich.progress import SpinnerColumn
+from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
+from rich.progress import TimeRemainingColumn
 
+import pakk
 from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.logger import console
-from pakk.modules.connector.base import Connector, DiscoveredPakkages, FetchedPakkages
+from pakk.modules.connector.base import Connector
+from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.github.config import GithubConfig
 from pakk.modules.connector.gitlab.cache import CachedProject
 from pakk.modules.connector.gitlab.config import GitlabConfig
 from pakk.modules.module import Module
-from pakk.pakkage.core import Pakkage, PakkageConfig, PakkageInstallState, PakkageVersions
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ class CachedRepository:
 
     def __str__(self):
         return f"Repo {self.id} ({len(self.tags)} tags)"
-    
+
     def __repr__(self):
         return self.__str__()
 
@@ -155,8 +158,8 @@ class CachedTag:
 class GithubConnector(Connector):
     CONFIG_CLS = GithubConfig
 
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, pakkages: PakkageCollection, **kwargs):
+        super().__init__(pakkages, **kwargs)
         self.config = GithubConfig.get_config()
 
         self._token = self.config.private_token.value
@@ -257,8 +260,8 @@ class GithubConnector(Connector):
                 cache_file = self._get_cached_repo(repo, cache_file)
                 cache_file.write(cache_file_path)
 
-    def discover(self) -> DiscoveredPakkages:
-        discovered_pakkages = DiscoveredPakkages()
+    def discover(self) -> PakkageCollection:
+        discovered_pakkages = PakkageCollection()
         num_workers = int(self.config.num_discover_workers.value)
 
         logger.info("Discovering projects from GitHub")

@@ -12,6 +12,7 @@ from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.connector.base import PakkageCollection
+
 # from pakk.modules.fetcher.fetcher_gitlab import FetcherGitlab
 from pakk.modules.installer.combining_installer import InstallerCombining
 from pakk.modules.module import Module
@@ -41,13 +42,13 @@ class PakkageNotFoundException(Exception):
 
         super().__init__(s)
 
+
 class AmbivalentIdsException(Exception):
     def __init__(self, package_name: str, available_packages: list[str]):
         s = f"\nAmbivalent package name {package_name}... Did you mean one of these?\n"
         s += f"  {', '.join(available_packages)}"
 
         super().__init__(s)
-
 
 
 class VersionNotFoundException(Exception):

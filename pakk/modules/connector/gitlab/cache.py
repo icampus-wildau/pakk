@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 from pakk.config.main_cfg import MainConfig
+from pakk.modules.connector.gitlab.config import GitlabConfig
 
 if TYPE_CHECKING:
     from pakk.modules.connector.gitlab.connector import GitlabConnector
@@ -22,6 +23,7 @@ from semver.version import Version
 
 from pakk.args.install_args import InstallArgs
 from pakk.pakkage.core import CompactPakkageConfig
+from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
@@ -90,7 +92,7 @@ class CachedProjectTag:
                 for item in repo_tree:
                     if item["name"] in pakk_files:
                         file_info = gl_project.repository_blob(item["id"])
-                        file_content = base64.b64decode(file_info["content"])
+                        file_content = base64.b64decode(file_info["content"])  # type: ignore
                         pakk_content_str = file_content.decode("utf-8")
 
                         temp_file = tempfile.NamedTemporaryFile(
@@ -104,11 +106,16 @@ class CachedProjectTag:
                         os.remove(temp_file.name)
 
                         if pakk_cfg is not None:
+                            attr = ConnectorAttributes()
+                            attr.url = cached_project.http_url_to_repo
+                            attr.branch = pt.tag
+
+                            pakk_cfg.set_attributes(connector, attr)
+
                             pakk_cfg = CompactPakkageConfig.from_pakkage_config(pakk_cfg)
                             pt.c_pakk_config = pakk_cfg
-
-                            pt.c_pakk_config.attributes[ATTR_GITLAB_HTTP_SOURCE] = cached_project.http_url_to_repo
-                            pt.c_pakk_config.attributes[ATTR_GITLAB_SOURCE_TAG] = pt.tag
+                            # pt.c_pakk_config.attributes[ATTR_GITLAB_HTTP_SOURCE] = cached_project.http_url_to_repo
+                            # pt.c_pakk_config.attributes[ATTR_GITLAB_SOURCE_TAG] = pt.tag
 
                             pt.is_pakk_version = True
                         else:
@@ -165,7 +172,7 @@ class CachedProject:
 
     @property
     def file_dir(self) -> str:
-        return MainConfig.get_config().paths.cache_dir.value
+        return GitlabConfig.get_config().cache_dir.value
 
     @property
     def file_path(self):

@@ -4,6 +4,8 @@ import logging
 
 import nodesemver
 
+from pakk.args.install_args import InstallArgs
+from pakk.args.install_args import UpdateStrategy
 from pakk.logger import Logger
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.dependency_tree.tree import DependencyTree
@@ -11,8 +13,6 @@ from pakk.modules.dependency_tree.tree_printer import TreePrinter
 from pakk.modules.module import Module
 from pakk.modules.resolver.base import Resolver
 from pakk.modules.resolver.base import ResolverException
-from pakk.args.install_args import InstallArgs
-from pakk.args.install_args import UpdateStrategy
 from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class ResolverFitting(Resolver):
         installed_version = pakkage.versions.installed
 
         if pakkage_has_target and pakkage_has_fixed_target:
-            versions = [pakkage.versions.target.version] if pakkage.versions.target.version in versions else [] # type: ignore
+            versions = [pakkage.versions.target.version] if pakkage.versions.target.version in versions else []  # type: ignore
             return versions
 
         # Filter versions by install config

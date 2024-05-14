@@ -55,8 +55,12 @@ class GitlabConfig(ConnectorConfiguration):
             long_instruction="If num_workers is > 1, the fetcher will use multithreading",
         )
 
-        self.use_cache = section_connector.ConfirmationOption(
-            "use_cache", True, "Use caching for the GitLab connector", inquire=self.is_enabled
+        self.cache_dir = section_connector.Option(
+            "cache_dir",
+            r"${Pakk.Subdirs:cache_dir}/gitlab",
+            "Directory for the cache",
+            is_dir=True,
+            inquire=False,
         )
 
     def is_enabled(self) -> bool:

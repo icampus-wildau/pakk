@@ -11,6 +11,7 @@ import shutil
 import subprocess
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Type
 
 import dotenv
 import jsons
@@ -27,6 +28,7 @@ from pakk.modules.types.base import TypeConfigSection
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from pakk.modules.connector.base import Connector
     from pakk.modules.environments.base import EnvironmentBase
 
 
@@ -88,8 +90,11 @@ class CompactPakkageConfig:
         self.dependencies: dict[str, str] = dict()
         """The dependencies of the pakkage. E.g. {"ros2": "0.1.0"}"""
 
-        self.attributes: dict[str, Any] = dict()
-        """Custom attributes for following modules."""
+        # self.attributes: dict[str, Any] = dict()
+        # """Custom attributes for following modules."""
+
+        self.connector_attributes: dict[Type[Connector], ConnectorAttributes] = dict()
+        """Custom connector attributes stored during discovery process."""
 
     @staticmethod
     def from_pakkage_config(config: PakkageConfig) -> CompactPakkageConfig:
@@ -109,7 +114,7 @@ class CompactPakkageConfig:
         cpc.keywords = config.keywords
         cpc.license = config.license
         cpc.dependencies = config.dependencies
-        cpc.attributes = config.attributes
+        cpc.connector_attributes = config.connector_attributes
 
         return cpc
 
@@ -129,7 +134,7 @@ class PakkageConfig:
     def __init__(self, state: PakkageState | None = None):
         # self._cfg = configparser.ConfigParser(interpolation=EnvInterpolation(allow_uninterpolated_values=True), allow_no_value=True)
         self._cfg = configparser.ConfigParser(interpolation=configparser.Interpolation(), allow_no_value=True)
-        self._cfg.optionxform = str
+        self._cfg.optionxform = str  # type: ignore
         """The configparser object, which is used to store the pakk.cfg data."""
         self.cfg_sections: list[str] = list()
         """The sections of the pakkage config."""
@@ -157,14 +162,23 @@ class PakkageConfig:
         self.state: PakkageState = state or PakkageState()
         """The state of the pakkage, including the installation state, the autostart and the running state."""
 
-        self.attributes: dict[str, Any] = dict()
-        """Custom attributes for following modules."""
+        # self.attributes: dict[str, Any] = dict()
+        # """Custom attributes for following modules."""
+
+        self.connector_attributes: dict[str, ConnectorAttributes] = dict()
+        """Custom connector attributes stored during discovery process."""
 
         self._types: list[TypeBase] | None = None
         """The types of the pakkage. E.g. ["ros2", "python"]"""
 
         self._environments: dict[type[EnvironmentBase], EnvironmentBase] = dict()
         """The stored environments of the pakkage. Used to use the same environment for multiple types."""
+
+    def set_attributes(self, connector: Connector, attributes: ConnectorAttributes):
+        self.connector_attributes[connector.connector_attributes_key] = attributes
+
+    def get_attributes(self, connector: Connector) -> ConnectorAttributes | None:
+        return self.connector_attributes.get(connector.connector_attributes_key, None)
 
     @staticmethod
     def from_compact_pakkage_config(compact: CompactPakkageConfig) -> PakkageConfig:
@@ -184,7 +198,7 @@ class PakkageConfig:
         pc.keywords = compact.keywords
         pc.license = compact.license
         pc.dependencies = compact.dependencies
-        pc.attributes = compact.attributes
+        pc.connector_attributes = compact.connector_attributes
         return pc
 
     @property
@@ -769,6 +783,14 @@ class PakkageVersions:
         return f"available: {self.available}, installed: {self.installed}, target: {self.target}"
 
 
+class ConnectorAttributes:
+    def __init__(self):
+
+        self.url: str | None = None
+        self.branch: str | None = None
+        self.commit: str | None = None
+
+
 class Pakkage:
     def __init__(self, pakkage_versions: PakkageVersions | None = None):
         self.versions: PakkageVersions = pakkage_versions or PakkageVersions()
@@ -793,8 +815,11 @@ class Pakkage:
         self.description: str = "" if info_version is None else info_version.description
         """If available, the description of the pakkage."""
 
-        self.attributes: dict[str, Any] = dict()
-        """Custom attributes for following modules."""
+        # self.attributes: dict[str, Any] = dict()
+        # """Custom attributes for following modules."""
+
+        # self.connector_attributes: dict[Type[Connector], ConnectorAttributes] = dict()
+        # """Custom connector attributes stored during discovery process."""
 
     def __str__(self):
         s = f"{self.id} @ {self.versions.installed.version if self.versions.installed else 'None'}"
