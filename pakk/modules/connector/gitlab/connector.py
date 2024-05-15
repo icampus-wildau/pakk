@@ -251,7 +251,7 @@ class GitlabConnector(Connector):
             items=filtered_group_projects,
             item_processing_callback=project_processing,
             num_workers=num_workers,
-            message="Updating cache",
+            message="Updating gitlab cache",
         )
 
         return cached_projects

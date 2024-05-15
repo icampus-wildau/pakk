@@ -5,6 +5,7 @@ import os
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
+from pakk.helper.progress import execute_process_and_display_progress
 import pytz
 from github import Github
 from github.ContentFile import ContentFile
@@ -107,6 +108,7 @@ class GithubConnector(Connector):
         """Helper method to update the cached projects"""
         # Discovering on GitHub only works for known organizations
         org_names = self.config.cached_organizations.value
+        num_workers = int(self.config.num_discover_workers.value)
 
         logger.info(f"Updating GitHub cache...")
 
@@ -116,9 +118,10 @@ class GithubConnector(Connector):
 
             logger.debug(f"Updating cache for organization {org_name}:")
 
-            # List all repos in the organization
-            for repo in org.get_repos():
+            # # List all repos in the organization
+            # for repo in org.get_repos():
 
+            def process_repo(repo: Repository):
                 # Load the cached repository
                 cache_file_path = self.get_repo_cache_file_path(repo)
                 cache_file = CachedRepository.from_file(cache_file_path)
@@ -130,17 +133,27 @@ class GithubConnector(Connector):
                 if cache_file is not None and repo_dt <= cache_file.last_activity:
                     # Use cached repository
                     logger.debug(f"Using cached repository for {repo.name}")
-                    continue
+                    return
 
                 logger.debug(f"Updating cache for repo {repo.name}")
 
                 cache_file = self._get_cached_repo(repo, cache_file)
                 cache_file.write(cache_file_path)
 
+            n_public = org.total_private_repos or 0
+            n_private = org.public_repos or 0
+
+            execute_process_and_display_progress(
+                items=org.get_repos(),
+                item_processing_callback=process_repo,
+                num_workers=num_workers,
+                item_count=n_public + n_private,
+                message=f"Updating github cache for {org_name}",
+            )
+
     def discover(self) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
         num_workers = int(self.config.num_discover_workers.value)
-
         logger.info("Discovering projects from GitHub")
 
         self._update_cache()
