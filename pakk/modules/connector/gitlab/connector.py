@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import base64
 import inspect
 import logging
 import os
 import re
 import subprocess
+from datetime import datetime
 from multiprocessing.pool import ThreadPool
-from threading import Lock
 
 import gitlab
+import gitlab.v4.objects as gl_objects
+import pytz
 from requests import ConnectTimeout
 from rich.progress import BarColumn
 from rich.progress import MofNCompleteColumn
@@ -21,12 +24,15 @@ from rich.progress import TimeRemainingColumn
 from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
+from pakk.helper.progress import execute_process_and_display_progress
 from pakk.logger import console
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.gitlab.cache import CachedProject
+from pakk.modules.connector.cache import CachedRepository
+from pakk.modules.connector.cache import CachedTag
 from pakk.modules.connector.gitlab.config import GitlabConfig
 from pakk.modules.module import Module
+from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
@@ -60,9 +66,6 @@ class GitlabConnector(Connector):
         except ConnectTimeout as e:
             logger.error("Failed to connect to gitlab: %s", e)
             pass
-
-        self.cached_projects: list[CachedProject] = list()
-        self.gitlab_pakkages: PakkageCollection = PakkageCollection()
 
         # Progress object for pbars
         self._pbar_progress = None
@@ -116,115 +119,182 @@ class GitlabConnector(Connector):
         http = re.sub(r"https+://", "", http_url_to_repo)
         return f"https://oauth2:{token}@{http}"
 
-    def retrieve_discovered_pakkages(self) -> PakkageCollection:
-        # self.discovered_pakkages.clear()
+    def get_cache_dir_path(self):
+        return self.config.cache_dir.value
 
-        for cp in self.cached_projects:
-            if len(cp.versions) == 0:
+    def get_repo_cache_file_path(self, repo: gl_objects.GroupProject) -> str:
+        name = repo.attributes["name_with_namespace"].replace("/", "_")
+        # name = repo.full_name.replace("/", "_")
+        return os.path.join(self.get_cache_dir_path(), name + ".json")
+
+    @staticmethod
+    def datetime_string_to_datetime(s: str) -> datetime:
+        s = s.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+        return dt
+
+    def _get_cached_repo(
+        self, project: gl_objects.GroupProject, existing_cache_project: CachedRepository | None
+    ) -> CachedRepository:
+        """
+        Load the project from the cache or from the gitlab api if cached version
+        is deprecated and cache it.
+
+        Parameters
+        ----------
+        project: GroupProject
+            The project object from the gitlab groups api
+
+        Returns
+        -------
+        tuple[CachedProject, bool]
+            The cached project and a boolean if the project was loaded from the cache
+
+        """
+
+        cache_project = existing_cache_project or CachedRepository()
+        cache_project.id = project.attributes["id"]
+        cache_project.url = project.attributes["http_url_to_repo"]
+        cache_project.last_activity = GitlabConnector.datetime_string_to_datetime(
+            project.attributes["last_activity_at"]
+        )
+
+        pakk_files = MainConfig.get_config().pakk_cfg_files
+
+        # Load project to access tags
+        gl_project = self.gl.projects.get(cache_project.id)
+        tags = gl_project.tags.list()
+        for tag in tags:
+
+            tag_str = tag.attributes["name"]
+            last_activity = GitlabConnector.datetime_string_to_datetime(tag.attributes["commit"]["committed_date"])
+
+            if tag_str in cache_project.tags and cache_project.tags[tag_str].last_activity >= last_activity:
                 continue
 
-            pakk_versions = cp.pakk_version_list
-            if len(pakk_versions) == 0:
-                continue
+            cached_tag = CachedTag()
+            cached_tag.tag = tag_str
+            cached_tag.commit = tag.attributes["commit"]["id"]
+            cached_tag.last_activity = last_activity
 
-            available_versions = [v.pakk_config for v in pakk_versions]
-            versions = PakkageVersions(available_versions)
-            p = Pakkage(versions)
+            # Load the pakk information from the tag
+            # TODO: http.client.RemoteDisconnected: Remote end closed connection without response
+            # TODO: urllib3.exceptions.ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+            # TODO: requests.exceptions.ConnectionError ("Connection aborted.", ...)
+            repo_tree = gl_project.repository_tree(ref=cached_tag.commit, all=True)
 
-            self.gitlab_pakkages[p.id] = p
+            for item in repo_tree:
+                if item["name"] in pakk_files:
+                    file_info = gl_project.repository_blob(item["id"])
+                    file_content = base64.b64decode(file_info["content"])  # type: ignore
+                    pakk_content_str = file_content.decode("utf-8")
+                    # pakk_cfg = PakkageConfig.from_string(pakk_content_str)
 
-        return self.gitlab_pakkages
+                    cached_tag.pakk_config_str = pakk_content_str
+                    cached_tag.is_pakk_version = True
+                    cache_project.tags[cached_tag.tag] = cached_tag
+                    break
+                    # if pakk_cfg is None:
+                    #     logger.warning("Failed to load pakk configuration from %s", item["name"])
+                    #     continue
+            # else:
+            #     logger.warning("Failed to load pakk configuration from %s", item["name"])
 
-    def discover(self) -> PakkageCollection:
+        return cache_project
+
+    def _update_cache(self) -> list[CachedRepository]:
+        """Helper method to update the cached projects"""
+        cached_projects: list[CachedRepository] = list()
+        if not self.connected:
+            logger.warning("Failed to connect to gitlab. Skipping discovery")
+            return cached_projects
+
         num_workers = int(self.config.num_discover_workers.value)
         main_group_id = int(self.config.group_id.value)
 
-        if not self.connected:
-            logger.warning("Failed to connect to gitlab. Skipping discovery")
-            return self.gitlab_pakkages
-
-        logger.info("Discovering projects from GitLab")
+        logger.info("Updating GitLab cache...")
         logger.debug(f"Main group id: {main_group_id}")
         logger.debug(f"Including archived projects: {self.config.include_archived.value}")
         logger.debug(f"Using {num_workers} workers" if num_workers > 1 else None)
 
         main_group = self.gl.groups.get(main_group_id)
+
         projects = main_group.projects.list(iterator=True, get_all=True, include_subgroups=True)
-
-        self.cached_projects.clear()
-
         include_archived = self.config.include_archived.value
 
-        results = {
-            "lock": Lock(),
-            "projects": self.cached_projects,
-            "cached": 0,
-            "not cached": 0,
-            "archived": 0,
-            "pbar": None,
-        }
-
-        # self.print_info(f"Discovering {len(projects)} projects...")
         logger.debug(f"Looking at {len(projects)} projects...")
 
-        filtered_group_projects = list(
-            filter(lambda gp: not gp.attributes.get("archived") or include_archived, projects)
-        )
-        results["archived"] = len(projects) - len(filtered_group_projects)
+        filtered_group_projects: list[gl_objects.GroupProject] = list(
+            filter(lambda gp: include_archived or not gp.attributes.get("archived"), projects)
+        )  # type: ignore
 
-        # with tqdm.tqdm(total=len(filtered_group_projects)) as pbar:
-        with Progress(
-            SpinnerColumn(),
-            *Progress.get_default_columns(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-        ) as progress:
-            pbar = progress.add_task("[cyan]Discovering projects", total=len(filtered_group_projects))
+        def project_processing(gp: gl_objects.GroupProject):
+            cache_file_path = self.get_repo_cache_file_path(gp)
+            cached_project = CachedRepository.from_file(cache_file_path)
 
-            results["pbar"] = pbar
+            repo_dt = self.datetime_string_to_datetime(gp.attributes["last_activity_at"])
 
-            def append_result(cp, cached):
-                # pbar.update(1)
-                progress.update(pbar, advance=1)
-                if cached:
-                    results["cached"] += 1
-                else:
-                    results["not cached"] += 1
+            if cached_project is not None and cached_project.last_activity >= repo_dt:
+                logger.debug(f"Skipping {gp.attributes['name']} because it is up to date.")
+                cached_projects.append(cached_project)
+                return
 
-                self.cached_projects.append(cp)
+            logger.debug(f"Updating cache for Gitlab repo {gp.attributes['name']}")
 
-            if num_workers > 1:
+            cached_project = self._get_cached_repo(gp, cached_project)
+            cached_project.write(cache_file_path)
+            cached_projects.append(cached_project)
 
-                def process(gp):
-                    return CachedProject.from_project(self, gp)
-
-                # with Pool(num_workers) as pool:
-                with ThreadPool(num_workers) as pool:
-                    for res in pool.imap_unordered(process, filtered_group_projects):
-                        append_result(*res)
-
-                pool.join()
-            else:
-                for gp in filtered_group_projects:
-                    append_result(*CachedProject.from_project(self, gp))  # type: ignore
-
-        logger.debug(f"Finished loading {len(projects)} projects:")
-        logger.debug(f"  {results['not cached']} loaded from gitlab api")
-        logger.debug(f"  {results['cached']} loaded from cache")
-        logger.debug(
-            f"  {results['archived']} archived projects were skipped"
-            if results["archived"] > 0
-            else "No archived projects found"
+        execute_process_and_display_progress(
+            items=filtered_group_projects,
+            item_processing_callback=project_processing,
+            num_workers=num_workers,
+            message="Updating cache",
         )
 
-        dps = self.retrieve_discovered_pakkages()
-        n_versions = 0
-        for p_id, pakkage in dps.pakkages.items():
-            n_versions += len(pakkage.versions.available)
+        return cached_projects
 
-        logger.info(f"Discovered {len(dps.pakkages)} pakk packages with {n_versions} versions")
+    def discover(self) -> PakkageCollection:
+        discovered_pakkages = PakkageCollection()
+        if not self.connected:
+            logger.warning("Failed to connect to gitlab. Skipping discovery")
+            return discovered_pakkages
 
-        return self.pakkages.merge(new_pakkages=dps)
+        logger.info("Discovering projects from GitLab")
+
+        cached_projects = self._update_cache()
+        n_projects = 0
+        n_tags = 0
+        n_pakk = 0
+
+        for project in cached_projects:
+            pakkage_versions = PakkageVersions()
+            n_projects += 1
+            for tag in project.tags.values():
+                n_tags += 1
+                if not tag.is_pakk_version:
+                    continue
+
+                n_pakk += 1
+                pakk_cfg = tag.pakk_config
+
+                # Set attributes for the fetch process
+                attr = ConnectorAttributes()
+                attr.url = project.url
+                attr.branch = tag.tag
+                attr.commit = tag.commit
+                pakk_cfg.set_attributes(self, attr)
+
+                pakkage_versions.available[pakk_cfg.version] = pakk_cfg
+
+            pakkage = Pakkage(pakkage_versions)
+            discovered_pakkages[pakkage.id] = pakkage
+
+        logger.info(f"Discovered {n_projects} gitlab projects with {n_tags} tags ({n_pakk} pakk versions)")
+
+        return discovered_pakkages
 
     def checkout_version(self, target_version: PakkageConfig) -> PakkageConfig:
 

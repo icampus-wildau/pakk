@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import inspect
-import json
 import logging
 import os
-import re
-import subprocess
-from datetime import datetime
-from datetime import timezone
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
@@ -17,142 +11,21 @@ from github.ContentFile import ContentFile
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 from github.Repository import Repository
-from pkg_resources import parse_version
-from requests import ConnectTimeout
-from rich.progress import BarColumn
 from rich.progress import MofNCompleteColumn
 from rich.progress import Progress
 from rich.progress import SpinnerColumn
-from rich.progress import TextColumn
 from rich.progress import TimeElapsedColumn
-from rich.progress import TimeRemainingColumn
 
-import pakk
-from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
-from pakk.helper.file_util import remove_dir
-from pakk.logger import console
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.connector.cache import CachedRepository
+from pakk.modules.connector.cache import CachedTag
 from pakk.modules.connector.github.config import GithubConfig
-from pakk.modules.connector.gitlab.cache import CachedProject
-from pakk.modules.connector.gitlab.config import GitlabConfig
-from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
-from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.core import PakkageInstallState
 from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
-
-CACHING_VERSION = "0.2.0"
-
-
-class CachedRepository:
-    def __init__(self):
-
-        self.id: str = ""
-        self.last_activity: datetime = datetime.now()
-        self.tags: dict[str, CachedTag] = dict()
-
-    def to_json_dict(self):
-        return {
-            "id": self.id,
-            "last_activity": self.last_activity.isoformat(),
-            "tags": [tag.to_json_dict() for tag in self.tags.values()],
-        }
-
-    def __str__(self):
-        return f"Repo {self.id} ({len(self.tags)} tags)"
-
-    def __repr__(self):
-        return self.__str__()
-
-    def to_json(self):
-        return json.dumps(self.to_json_dict())
-
-    @staticmethod
-    def from_json_dict(d: dict):
-        repo = CachedRepository()
-        repo.id = d["id"]
-        dt = datetime.fromisoformat(d["last_activity"])
-        if dt.tzinfo is None:
-            dt = pytz.utc.localize(dt)
-        repo.last_activity = dt
-        repo.tags = {tag["tag"]: CachedTag.from_json_dict(tag) for tag in d["tags"]}
-        return repo
-
-    @staticmethod
-    def from_file(file_path: str) -> None | CachedRepository:
-        if not os.path.exists(file_path):
-            return None
-        with open(file_path, "r") as f:
-            return CachedRepository.from_json_dict(json.load(f))
-
-    def write(self, file_path: str):
-        json_str = json.dumps(self.to_json_dict(), indent=2)
-        with open(file_path, "w") as f:
-            f.write(json_str)
-
-    @staticmethod
-    def from_directory(dir_path: str, recursive: bool = True) -> list[CachedRepository]:
-        repos = []
-        for root, dirs, files in os.walk(dir_path):
-            for file in files:
-                if file.endswith(".json"):
-                    file_path = os.path.join(root, file)
-                    repo = CachedRepository.from_file(file_path)
-                    if repo is not None:
-                        repos.append(repo)
-            if not recursive:
-                break
-        return repos
-
-
-class CachedTag:
-    def __init__(self):
-        self.tag: str = ""
-        self.commit: str = ""
-        self.last_activity: datetime = datetime.now()
-
-        self.pakk_config_str: str = ""
-        self.is_pakk_version = False
-
-    def to_json_dict(self):
-        return {
-            "tag": self.tag,
-            "commit": self.commit,
-            "last_activity": self.last_activity.isoformat(),
-            "pakk_config_str": self.pakk_config_str,
-            "is_pakk_version": self.is_pakk_version,
-        }
-
-    def to_json(self):
-        return json.dumps(self.to_json_dict())
-
-    @staticmethod
-    def from_json_dict(d: dict):
-        tag = CachedTag()
-        tag.tag = d["tag"]
-        tag.commit = d["commit"]
-        dt = datetime.fromisoformat(d["last_activity"])
-        if dt.tzinfo is None:
-            dt = pytz.utc.localize(dt)
-        tag.last_activity = dt
-        tag.pakk_config_str = d["pakk_config_str"]
-        tag.is_pakk_version = d["is_pakk_version"]
-        return tag
-
-    @property
-    def pakk_config(self) -> PakkageConfig:
-        return PakkageConfig.from_string(self.pakk_config_str)
-
-    @property
-    def version(self) -> str:
-        v = self.tag
-        if v.startswith("v"):
-            v = v[1:]
-        return v
 
 
 class GithubConnector(Connector):
@@ -250,7 +123,11 @@ class GithubConnector(Connector):
                 cache_file_path = self.get_repo_cache_file_path(repo)
                 cache_file = CachedRepository.from_file(cache_file_path)
 
-                if cache_file is not None and repo.pushed_at <= cache_file.last_activity:
+                repo_dt = repo.pushed_at
+                if repo_dt.tzinfo is None:
+                    repo_dt = pytz.utc.localize(repo_dt)
+
+                if cache_file is not None and repo_dt <= cache_file.last_activity:
                     # Use cached repository
                     logger.debug(f"Using cached repository for {repo.name}")
                     continue
