@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
-from pakk.helper.progress import execute_process_and_display_progress
 import pytz
 from github import Github
 from github.ContentFile import ContentFile
@@ -18,12 +18,18 @@ from rich.progress import SpinnerColumn
 from rich.progress import TimeElapsedColumn
 
 from pakk.config.main_cfg import MainConfig
+from pakk.helper.progress import ProgressManager
+from pakk.helper.progress import TaskPbar
+from pakk.helper.progress import execute_process_and_display_progress
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.cache import CachedRepository
 from pakk.modules.connector.cache import CachedTag
+from pakk.modules.connector.git_generic import GenericGitHelper
 from pakk.modules.connector.github.config import GithubConfig
+from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
@@ -58,18 +64,19 @@ class GithubConnector(Connector):
         return os.path.join(self.get_cache_dir_path(), name + ".json")
 
     def _get_cached_repo(
-        self, repo: Repository, existing_cache_file: CachedRepository | None = None
+        self, repo: Repository, existing_cached_repo: CachedRepository | None = None
     ) -> CachedRepository:
 
-        existing_cache_file = existing_cache_file or CachedRepository()
+        cached_repo = existing_cached_repo or CachedRepository()
         pakk_cfg_file_name = MainConfig.get_config().pakk_cfg_files[0]
 
-        existing_cache_file.id = repo.full_name
-        existing_cache_file.last_activity = repo.pushed_at
+        cached_repo.id = repo.full_name
+        cached_repo.url = repo.clone_url
+        cached_repo.last_activity = repo.pushed_at
 
         # Get all tags, skip if the tag is already in the cache
         for tag in repo.get_tags():
-            if tag.name in existing_cache_file.tags:
+            if tag.name in cached_repo.tags:
                 logger.debug(f"Tag {tag.name} already in cache")
                 continue
 
@@ -100,9 +107,9 @@ class GithubConnector(Connector):
             cached_tag.pakk_config_str = pakk_config_str
             cached_tag.is_pakk_version = is_pakk_version
 
-            existing_cache_file.tags[tag.name] = cached_tag
+            cached_repo.tags[tag.name] = cached_tag
 
-        return existing_cache_file
+        return cached_repo
 
     def _update_cache(self):
         """Helper method to update the cached projects"""
@@ -170,7 +177,16 @@ class GithubConnector(Connector):
                     continue
 
                 n_pakk += 1
-                pakkage_versions.available[tag.version] = tag.pakk_config
+
+                pakk_cfg = tag.pakk_config
+                # Set attributes for the fetch process
+                attr = ConnectorAttributes()
+                attr.url = repo.url
+                attr.branch = tag.tag
+                attr.commit = tag.commit
+                pakk_cfg.set_attributes(self, attr)
+
+                pakkage_versions.available[tag.version] = pakk_cfg
 
             if len(pakkage_versions.available) == 0:
                 continue
@@ -182,146 +198,63 @@ class GithubConnector(Connector):
 
         return discovered_pakkages
 
-        logger.info("Discovering projects from GitHub")
-        logger.debug(f"Main group id: {main_group_id}")
-        logger.debug(f"Including archived projects: {self.config.include_archived.value}")
-        logger.debug(f"Using {num_workers} workers" if num_workers > 1 else None)
+    def fetch(self, pakkages_to_fetch: list[PakkageConfig]):
 
-        main_group = self.gl.groups.get(main_group_id)
-        projects = main_group.projects.list(iterator=True, get_all=True, include_subgroups=True)
-
-        self.cached_projects.clear()
-
-        include_archived = self.config.include_archived.value
-
-        results = {
-            "lock": Lock(),
-            "projects": self.cached_projects,
-            "cached": 0,
-            "not cached": 0,
-            "archived": 0,
-            "pbar": None,
-        }
-
-        # self.print_info(f"Discovering {len(projects)} projects...")
-        logger.debug(f"Looking at {len(projects)} projects...")
-
-        filtered_group_projects = list(
-            filter(lambda gp: not gp.attributes.get("archived") or include_archived, projects)
-        )
-        results["archived"] = len(projects) - len(filtered_group_projects)
-
-        # with tqdm.tqdm(total=len(filtered_group_projects)) as pbar:
-        with Progress(
-            SpinnerColumn(),
-            *Progress.get_default_columns(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-        ) as progress:
-            pbar = progress.add_task("[cyan]Discovering projects", total=len(filtered_group_projects))
-
-            results["pbar"] = pbar
-
-            def append_result(cp, cached):
-                # pbar.update(1)
-                progress.update(pbar, advance=1)
-                if cached:
-                    results["cached"] += 1
-                else:
-                    results["not cached"] += 1
-
-                self.cached_projects.append(cp)
-
-            if num_workers > 1:
-
-                def process(gp):
-                    return CachedProject.from_project(self, gp)
-
-                # with Pool(num_workers) as pool:
-                with ThreadPool(num_workers) as pool:
-                    for res in pool.imap_unordered(process, filtered_group_projects):
-                        append_result(*res)
-
-                pool.join()
-            else:
-                for gp in filtered_group_projects:
-                    append_result(*CachedProject.from_project(self, gp))
-
-        logger.debug(f"Finished loading {len(projects)} projects:")
-        logger.debug(f"  {results['not cached']} loaded from gitlab api")
-        logger.debug(f"  {results['cached']} loaded from cache")
-        logger.debug(
-            f"  {results['archived']} archived projects were skipped"
-            if results["archived"] > 0
-            else "No archived projects found"
+        manager = ProgressManager(
+            items=pakkages_to_fetch,
+            item_processing_callback=self.checkout_version,
+            num_workers=self.config.num_fetcher_workers.value,
+            summary_description="[blue]Fetching pakkages from GitHub:",
+            worker_description="[cyan]Fetcher {}:",
+            text_fields=["pakkage", "info"],
         )
 
-        dps = self.retrieve_discovered_pakkages()
-        n_versions = 0
-        for p_id, pakkage in dps.discovered_packages.items():
-            n_versions += len(pakkage.versions.available)
+        manager.execute()
 
-        logger.info(f"Discovered {len(dps.discovered_packages)} pakk packages with {n_versions} versions")
+    @staticmethod
+    def get_github_http_with_token(http_url_to_repo: str, token: str | None = None) -> str:
+        """
+        Return the http url with the token directly in the url included.
+        For Github the form is the following: https://oauth2:{token}@{http_url}
+        See: https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
 
-        return dps
+        Parameters
+        ----------
+        http_url_to_repo: str
+            The http url to the git repo.
+        token: str
+            The token to use for authentication.
 
-    # def fetch(self, pakkages: FetchedPakkages) -> FetchedPakkages:
-    #     pakkages_to_fetch = pakkages.pakkages_to_fetch
+        Returns
+        -------
+        str: The http url with the token included.
 
-    #     for pakkage in pakkages_to_fetch:
-    #         self.checkout_target_version(pakkage)
-    #         progress.update(pbar, advance=1, info=f"Fetching: {pakkage.name}")
-    #         logger.info(f"Fetched {pakkage.name}.")
-    #         pakkages.fetched(pakkage)
+        """
+        if token is None:
+            token = GithubConfig.get_config().private_token.value
 
+        http = re.sub(r"https+://", "", http_url_to_repo)
+        return f"https://oauth2:{token}@{http}"
 
-if __name__ == "__main__":
+    def checkout_version(self, target_version: PakkageConfig, task: TaskPbar) -> None:
 
-    pass
-    # Authentication
-    # "your_github_token"
+        # Check if gitlab attributes are set
+        attr = target_version.get_attributes(self)
+        if attr is None:
+            logger.error(f"Connector {self.__class__} not in target_version.connector_attributes")
+            # return target_version
+            return
 
-    # token = "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"
-    # g = Github(token)
+        url = attr.url
+        tag = attr.branch
 
-    # # Parameters
-    # org_name = "icampus-wildau"
-    # repo_activity_threshold = datetime.timedelta(days=30)  # 30 days
-    # tag_activity_threshold = datetime.timedelta(days=30)  # 30 days
-    # file_name = "pakk.cfg"
+        if url is None or tag is None:
+            logger.error(f"URL or tag is None for {target_version.id}: {url}@{tag}")
+            # return target_version
+            return
 
-    # # Find the organization
-    # org = g.get_organization(org_name)
+        # Get the url to download the repository
+        url_with_token = self.get_github_http_with_token(url)
 
-    # # List all repos in the organization
-    # for repo in org.get_repos():
-
-    #     # Print repo information
-    #     print(f"Repo: {repo.name}")
-
-    #     # Get the latest activity on the repository
-    #     repo_latest_activity = repo.pushed_at
-    #     current_time = datetime.datetime.now(timezone.utc)
-    #     if True or current_time - repo_latest_activity > repo_activity_threshold:
-    #         # Get all tags of the repository
-    #         for tag in repo.get_tags():
-
-    #             print(f"Repo {repo.name}: Tag {tag.name}")
-
-    #             # Get the commit associated with the tag
-    #             commit = tag.commit
-
-    #             if True or current_time - commit.commit.committer.date > tag_activity_threshold:
-    #                 try:
-    #                     # Check if the file exists at the tag
-    #                     contents = repo.get_contents("", ref=tag.name)  # Get root directory contents
-    #                     # print(f"Contents of tag {tag.name}: {contents}")
-    #                     file_exists = any(file.path == file_name for file in contents)
-    #                     if file_exists:
-    #                         # Fetch the file from the tag
-    #                         file_content = repo.get_contents(file_name, ref=tag.name)
-    #                         print(f"File content from {tag.name}: {file_content.decoded_content.decode('utf-8')}")
-    #                     else:
-    #                         print(f"File {file_name} does not exist in tag {tag.name} of repo {repo.name}")
-    #                 except Exception as e:
-    #                     print(f"Error checking file presence in tag {tag.name} of repo {repo.name}: {str(e)}")
+        # Fetch the pakkage version
+        GenericGitHelper.fetch_pakkage_version_with_git(target_version, url_with_token, tag, task)

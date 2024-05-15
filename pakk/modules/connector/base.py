@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Generic
-from typing import Tuple
 from typing import Type
 from typing import TypeVar
 
@@ -10,7 +8,6 @@ from pakk.config.base import ConnectorConfiguration
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +50,8 @@ class PakkageCollection:
             if id not in self.id_abbreviations:
                 self.id_abbreviations[id] = []
 
-            self.id_abbreviations[id].append(pakkage.id)
+            if pakkage.id not in self.id_abbreviations[id]:
+                self.id_abbreviations[id].append(pakkage.id)
 
     def get_pakkage(self, id: str) -> Pakkage | None:
         """Get a pakkage by its id or its abbreviation."""
@@ -136,7 +134,9 @@ class PakkageCollection:
         for abbr, ids in new_pakkages.id_abbreviations.items():
             if abbr not in self.id_abbreviations:
                 self.id_abbreviations[abbr] = []
-            self.id_abbreviations[abbr].extend(ids)
+            for id in ids:
+                if id not in self.id_abbreviations[abbr]:
+                    self.id_abbreviations[abbr].append(id)
 
         # Merge ids_to_be_installed
         self.ids_to_be_installed.update(new_pakkages.ids_to_be_installed)

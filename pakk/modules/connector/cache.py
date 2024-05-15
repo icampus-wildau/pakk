@@ -4,11 +4,10 @@ import json
 import os
 from datetime import datetime
 
-from pakk.args.install_args import InstallArgs
 import pytz
 
+from pakk.args.install_args import InstallArgs
 from pakk.pakkage.core import PakkageConfig
-
 
 CACHING_VERSION = "0.1.0"
 
@@ -46,21 +45,21 @@ class CachedRepository:
             repo = CachedRepository()
             if d["cache_version"] != CACHING_VERSION:
                 return None
-            
+
             repo.id = d["id"]
             dt = datetime.fromisoformat(d["last_activity"])
             if dt.tzinfo is None:
                 dt = pytz.utc.localize(dt)
             repo.last_activity = dt
-            
+
             repo.url = d["url"]
-            
+
             tags = [CachedTag.from_json_dict(tag) for tag in d["tags"]]
             repo.tags = {tag.tag: tag for tag in tags if tag is not None}
             return repo
         except KeyError:
             return None
-        
+
     @staticmethod
     def from_file(file_path: str) -> None | CachedRepository:
         if not os.path.exists(file_path):
@@ -78,7 +77,7 @@ class CachedRepository:
         repos = []
         if InstallArgs.get().clear_cache:
             return repos
-        
+
         for root, dirs, files in os.walk(dir_path):
             for file in files:
                 if file.endswith(".json"):
@@ -119,7 +118,7 @@ class CachedTag:
         try:
             if d["cache_version"] != CACHING_VERSION:
                 return None
-            
+
             tag = CachedTag()
             tag.tag = d["tag"]
             tag.commit = d["commit"]
@@ -143,4 +142,3 @@ class CachedTag:
         if v.startswith("v"):
             v = v[1:]
         return v
-

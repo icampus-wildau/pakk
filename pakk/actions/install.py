@@ -104,9 +104,15 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
 
         p = pakkages[name]
         if p is None:
-            if name in pakkages.id_abbreviations and len(pakkages.id_abbreviations[name]) > 1:
+            if name not in pakkages.id_abbreviations:
+                raise PakkageNotFoundException(name, list(pakkages.keys()))
+            elif len(pakkages.id_abbreviations[name]) > 1:
                 raise AmbivalentIdsException(name, pakkages.id_abbreviations[name])
-            raise PakkageNotFoundException(name, list(pakkages.keys()))
+
+            p = pakkages[pakkages.id_abbreviations[name][0]]
+
+            if p is None:
+                raise PakkageNotFoundException(name, list(pakkages.keys()))
 
         pakkages.ids_to_be_installed.add(p.id)
         # installing_pakkage_ids.append(p.id)
@@ -131,6 +137,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
             else:
                 logger.info(f"{p.id} is already installed at {p.versions.installed}.")
                 available_versions = list(p.versions.available.keys())
+                # print(available_versions)
                 compare_result = nodesemver.compare(p.versions.installed.version, available_versions[0], loose=True)
                 if compare_result == 0:
                     logger.info(f"  No newer version available.")

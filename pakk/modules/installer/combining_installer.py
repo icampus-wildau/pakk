@@ -201,7 +201,7 @@ class InstallerCombining(Module):
                     raise ValueError(f"Target version of {pakkage.name} is None")
 
                 if pakkage.versions.installed is None:
-                    logger.info(f"Will install {pakkage.name} ({pakkage.versions.target.version})")
+                    logger.info(f"Will install {pakkage.id} ({pakkage.versions.target.version})")
                 else:
                     logger.info(
                         f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
