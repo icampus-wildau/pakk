@@ -91,4 +91,3 @@ class GenericGitHelper:
 
         if task is not None:
             task.update(pakkage="Done", info="")
-

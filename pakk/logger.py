@@ -1,40 +1,17 @@
 from __future__ import annotations
 
 import logging
+import time
 from functools import wraps
 
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.progress import Progress
 from rich.progress import TaskID
 
 console = Console()
 
 logger = None
-
-
-class ProgressTasks:
-    def __init__(self, progress: Progress):
-        self.progress = progress
-        self.tasks = []
-        self.free_pbars = []
-
-    def append_task(self, task_id: TaskID):
-        self.tasks.append(task_id)
-        self.free_pbars.append(True)
-
-    def get_next_free_task(self) -> TaskID:
-        pbar_index = self.free_pbars.index(True)
-        self.free_pbars[pbar_index] = False
-        return self.tasks[pbar_index]
-
-    def update(self, task_id: TaskID, **kwargs):
-        if "visible" not in kwargs:
-            kwargs["visible"] = True
-
-        self.progress.update(task_id, **kwargs)
-
-    def release_task(self, task_id: TaskID):
-        self.free_pbars[self.tasks.index(task_id)] = True
 
 
 class Logger:
@@ -49,8 +26,33 @@ class Logger:
         if ignore_if_already_setup and logger is not None:
             return
         logger = logging.getLogger("pakk")
+        # logger.setLevel(level)
+        # logger.addHandler(ConsoleLogger())
+        # return
+        #####
+
+        verbose = level < logging.INFO
+
+        if verbose:
+            # FORMAT = "%(asctime)s - %(name)s - %(message)s"
+            # FORMAT = "%(asctime)s %(message)s"
+            FORMAT = "%(message)s"
+        else:
+            FORMAT = "%(message)s"
+
+        # Set the format and handler for the logger
+        handler = RichHandler(
+            show_time=verbose,
+            show_level=verbose,
+            console=Logger.get_console(),
+            markup=True,
+        )
+        # formatter = logging.Formatter(fmt=FORMAT, datefmt="[%X]")
+        formatter = RichFormatter(fmt=FORMAT, datefmt="[%X]")
+
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
         logger.setLevel(level)
-        logger.addHandler(ConsoleLogger())
 
     @staticmethod
     def get_plain_text(message):
@@ -77,20 +79,20 @@ class Logger:
 
 
 class RichFormatter(logging.Formatter):
-    def __init__(self, compact: bool = False):
-        super().__init__()
-        self.base_format = "[%(levelname)s] %(message)s [%(asctime)s] (%(name)s - %(filename)s:%(lineno)d)"
-        self.compact_format = "[%(levelname)s] %(message)s"
-        self.raw_format = "%(message)s"
+    def __init__(self, fmt: str, datefmt: str):
+        super().__init__(fmt=fmt, datefmt=datefmt)
+        # self.base_format = "[%(levelname)s] %(message)s [%(asctime)s] (%(name)s - %(filename)s:%(lineno)d)"
+        # self.compact_format = "[%(levelname)s] %(message)s"
+        # self.raw_format = "%(message)s"
 
-        f = self.compact_format if compact else self.base_format
+        # f = self.compact_format if compact else self.base_format
 
         self.colored_formats = {
-            logging.DEBUG: "[grey]" + f,
-            logging.INFO: "[grey]" + (self.raw_format if compact else f),
-            logging.WARNING: "[yellow]" + f,
-            logging.ERROR: "[red]" + f,
-            logging.CRITICAL: "[bold red]" + f,
+            logging.DEBUG: "[grey]" + fmt,
+            logging.INFO: "[grey]" + fmt,
+            logging.WARNING: "[yellow]" + fmt,
+            logging.ERROR: "[red]" + fmt,
+            logging.CRITICAL: "[bold red]" + fmt,
         }
 
         self.formatters = {
@@ -103,7 +105,12 @@ class RichFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
         formatter = self.formatters[record.levelno]
-        return formatter.format(record)
+        s = formatter.format(record)
+
+        # Now also render rich markup in the log message
+        # print(s)
+        # s = console.render_str(s).
+        return s
 
 
 class ConsoleLogger(logging.StreamHandler):
@@ -112,7 +119,7 @@ class ConsoleLogger(logging.StreamHandler):
         global console
         self.console = console
 
-        self.setFormatter(RichFormatter(compact=True))
+        self.setFormatter(RichFormatter(fmt="%(message)s", datefmt="[%X]"))
 
     def emit(self, record):
         try:
