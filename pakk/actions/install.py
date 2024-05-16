@@ -156,7 +156,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
         logger.info("Nothing to install.")
         return
 
-    print(pakkages.ids_to_be_installed)
+    # print(pakkages.ids_to_be_installed)
 
     resolver = ResolverFitting(pakkages)
     try:

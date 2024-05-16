@@ -8,7 +8,8 @@ from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.helper.progress import TaskPbar
-from pakk.pakkage.core import PakkageConfig, PakkageInstallState
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -16,29 +17,8 @@ logger = logging.getLogger(__name__)
 class GenericGitHelper:
     @staticmethod
     def fetch_pakkage_version_with_git(
-        target_version: PakkageConfig, 
-        url: str, 
-        branch: str, 
-        task: TaskPbar | None
+        target_version: PakkageConfig, url: str, branch: str, task: TaskPbar | None
     ) -> None:
-
-        # # Check if gitlab attributes are set
-        # attr = target_version.get_attributes(self)
-        # if attr is None:
-        #     logger.error(f"Connector {self.__class__} not in target_version.connector_attributes")
-        #     # return target_version
-        #     return
-
-        # url = attr.url
-        # tag = attr.branch
-
-        # if url is None or tag is None:
-        #     logger.error(f"URL or tag is None for {target_version.id}: {url}@{tag}")
-        #     # return target_version
-        #     return
-
-        # # Get the url to download the repository
-        # url_with_token = self.get_gitlab_http_with_token(url)
 
         # Get the destination path
         fetched_dir = MainConfig.get_config().paths.fetch_dir.value
@@ -109,9 +89,6 @@ class GenericGitHelper:
         target_version.state.install_state = PakkageInstallState.FETCHED
         target_version.local_path = path
 
-        # self._free_pbars[pbar_index] = True
-        # self._pbar_progress.update(pbar, pakkage="Done", info="")
         if task is not None:
             task.update(pakkage="Done", info="")
 
-        # return target_version

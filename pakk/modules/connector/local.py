@@ -60,7 +60,7 @@ class LocalConnector(Connector):
     def discover_installed(self) -> PakkageCollection:
         """Discover all local installed pakkages."""
 
-        logger.info("Discovering installed pakkages...")
+        logger.debug("Discovering installed pakkages...")
 
         all_pakkges_dir = self.all_pakkges_dir
         pakkages = PakkageCollection()

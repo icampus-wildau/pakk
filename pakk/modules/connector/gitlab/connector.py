@@ -240,7 +240,7 @@ class GitlabConnector(Connector):
             repo_dt = self.datetime_string_to_datetime(gp.attributes["last_activity_at"])
 
             if cached_project is not None and cached_project.last_activity >= repo_dt:
-                logger.debug(f"Skipping {gp.attributes['name']} because it is up to date.")
+                logger.debug(f"Using cached repo for {gp.attributes['name']}.")
                 cached_projects.append(cached_project)
                 return
 

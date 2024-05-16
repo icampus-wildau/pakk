@@ -8,8 +8,8 @@ from rich.table import Table
 
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.connector.local import LocalConnector
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,8 @@ def status(**kwargs: str):
 
         TypeBase.initialize()
 
-    local_discoverer = [DiscovererLocal()]
-    discoverer = DiscoveredPakkagesMerger(local_discoverer, quiet=True)
-    pakkages_discovered = discoverer.merge()
+    pakkages = PakkageCollection()
+    pakkages.discover([LocalConnector(pakkages)])
 
     x = kwargs.get("extended", False)
 
@@ -59,7 +58,7 @@ def status(**kwargs: str):
         if visible:
             table.add_column(key, justify="left")
 
-    pakkages = builtins.list(pakkages_discovered.values())
+    pakkages = builtins.list(pakkages.values())
     pakkages.sort(key=lambda p: p.id)
 
     if regex is not None:

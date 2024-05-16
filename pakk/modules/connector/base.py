@@ -8,6 +8,7 @@ from pakk.config.base import ConnectorConfiguration
 from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -191,14 +192,21 @@ class PakkageCollection:
             configs = [p for p in configs_to_fetch if connector.is_fetchable(p)]
             # pakkages, configs = zip(*pakkage_tuples)
             if len(configs) > 0:
+                logger.info(f"{connector.__class__.__name__}: fetching {len(configs)} pakkages")
                 connector.fetch(configs)
 
         for pakkage in pakkages_to_fetch.values():
             # If there was an installed version, copy the state
             if pakkage.versions.target is not None:
-                # TODO: Handle pakkages that do not have the FETCHED state
-                pakkage.versions.target.state.copy_from(pakkage.versions.installed)
-                pakkage.versions.target.save_state()
+                if pakkage.versions.target.state.install_state == PakkageInstallState.FETCHED:
+                    pakkage.versions.target.state.copy_from(pakkage.versions.installed)
+                    pakkage.versions.target.save_state()
+                else:
+                    logger.error(
+                        f"Target version {pakkage.versions.target.version} of {pakkage.id} has not been fetched properly."
+                    )
+
+        logger.info(f"Finished fetching of {len(pakkages_to_fetch)} pakkages.")
 
         return self
 

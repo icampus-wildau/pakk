@@ -209,7 +209,7 @@ class PakkageConfig:
     @property
     def basename(self):
         """The name of the directory in which the pakkage is stored."""
-        return f"{self.id}@{self.version}"
+        return f"{self.id}@{self.version}".replace("/", "_")
 
     def is_startable(self) -> bool:
         """Returns true if the pakkage is startable."""

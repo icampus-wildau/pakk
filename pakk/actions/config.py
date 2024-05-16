@@ -32,6 +32,9 @@ CFG_REPLACE_PATTERN = re.compile(r"((#+ .*?\n)*)(.*?)( ?[=:] ?)(\[\[((.*?)(\|\|)
 def config(**kwargs):
     # f = Figlet(font='cyberlarge')
 
+    print("THIS IS DEPRECATED")
+    return
+
     console = Logger.get_console()
     Module.print_rule("Setup of Pakk")
     # console.print(f.renderText("pakk"))
