@@ -4,6 +4,7 @@ import logging
 import os
 
 from extended_configparser.configuration.entries.section import ConfigSection
+from extended_configparser.parser import ExtendedConfigParser
 
 from pakk.config.base import TypeConfiguration
 from pakk.modules.environments.base import EnvironmentBase
@@ -14,6 +15,7 @@ from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +313,67 @@ location {prefix} {{
     #     TypeRos2.unlink_pakkage_in_pakkages_dir(self.pakkage_version)
     #     ros_src_pakkage_path = os.path.join(self.env.path_ros_ws_src, self.pakkage_version.id)
     #     TypeRos2.unlink_pakkage_from(ros_src_pakkage_path)
+
+
+class NginxSetup(SetupBase):
+    NAME = "nginx"
+    VERSION = "0.0.0"
+
+    def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
+        super().__init__(parser, environment)
+
+    def run_setup(self) -> bool:
+        return False
+
+        # Adapt nginx to work with user_name user
+        logger.info(f"Adapting nginx' www-data to work with {self.user_name} user")
+        self.system(f"sudo gpasswd -a www-data {self.user_name}")
+
+        # Adapt nginx config
+        logger.info("Adapting nginx config")
+        nginx_config_path = "/etc/nginx/sites-enabled/default"
+        locations_dir = config.get_abs_path("locations", "Env.Nginx")
+
+        # Search for the following pattern
+        # ### PAKK LOCATIONS ###
+        # include {locations_dir/*};
+        # ### END PAKK LOCATIONS ###
+
+        start_pattern = "### PAKK LOCATIONS ###"
+        end_pattern = "### END PAKK LOCATIONS ###"
+        content = f"include {locations_dir}/*;"
+        all_content = rf"{start_pattern}\n{content}\n{end_pattern}"
+        # Escape every $.*/[\]^+?(){}| so that sed does not interpret them as regex
+        escape_dict = {
+            "$": r"\$",
+            ".": r"\.",
+            "*": r"\*",
+            "/": r"\/",
+            "[": r"\[",
+            "]": r"\]",
+            "^": r"\^",
+            "+": r"\+",
+            "?": r"\?",
+            "(": r"\(",
+            ")": r"\)",
+            "{": r"\{",
+            "}": r"\}",
+            "|": r"\|",
+        }
+        escaped_content = all_content.translate(str.maketrans(escape_dict))
+
+        grep_command = f"sudo grep -q '{start_pattern}' {nginx_config_path}"
+
+        # If the pattern already exists, replace the content
+        if os.system(grep_command) == 0:
+            logger.info(f"Replacing existing nginx content")
+            sed_command = rf"sudo sed -i '/{start_pattern}/,/{end_pattern}/c\\{escaped_content}' {nginx_config_path}"
+            os.system(sed_command)
+        # Otherwise append the content after the server_name
+        else:
+            sed_command = rf"sudo sed -i '/server_name _;/a\\{escaped_content}' {nginx_config_path}"
+            logger.info(f"Appending nginx sites content: {sed_command}")
+            os.system(sed_command)
 
 
 class InitHelper(InitHelperBase):

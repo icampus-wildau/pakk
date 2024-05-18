@@ -13,3 +13,7 @@ def get_current_environment_cls() -> type[EnvironmentBase]:
         return LinuxEnvironment
 
     raise NotImplementedError(f"No environment not implemented for this platform ({platform.system()})")
+
+
+def get_current_environment() -> EnvironmentBase:
+    return get_current_environment_cls()()

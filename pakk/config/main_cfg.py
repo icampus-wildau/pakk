@@ -18,6 +18,7 @@ class MainConfigPaths(ConfigEntryCollection):
 
     def __init__(self):
         section = ConfigSection("Pakk.Dirs")
+        self.pakk_dir_section = section
         self.data_root_dir = section.Option(
             "data_root_dir",
             r"${HOME}/pakk",

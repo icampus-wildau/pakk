@@ -7,14 +7,16 @@ import tempfile
 from InquirerPy import inquirer
 
 from pakk import ROOT_DIR
+from pakk.args.base_args import BaseArgs
 from pakk.config import pakk_config
-from pakk.config.pakk_config import Sections
+from pakk.config.main_cfg import MainConfig
+from pakk.helper.loader import PakkLoader
 from pakk.logger import Logger
 from pakk.modules.manager.systemd.unit_generator import PakkAutoUpdateService
 from pakk.modules.manager.systemd.unit_generator import PakkParentService
 from pakk.modules.manager.systemd.unit_generator import PakkServiceFileBase
 from pakk.modules.manager.systemd.unit_generator import ServiceFile
-from pakk.pakk.args.base_config import BaseConfig
+from pakk.setup.checker import PakkSetupChecker
 
 # from pyfiglet import Figlet
 
@@ -24,8 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 def setup(**kwargs):
-    base_config = BaseConfig.set(**kwargs)
+    base_config = BaseArgs.set(**kwargs)
     flag_verbose = base_config.verbose
+    reset = kwargs.get("reset", False)
 
     Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
 
@@ -37,13 +40,35 @@ def setup(**kwargs):
     logger.info("Starting pakk setup")
 
     # Check if config exists
-    config = pakk_config.get()
-    data_root_dir = config.get_abs_path("data_root_dir", Sections.MAIN)
-    app_data_dir = config.get_abs_path("app_data_dir", Sections.MAIN)
-    log_dir = config.get_abs_path("log_dir", Sections.MAIN)
-    service_dir = config.get_abs_path("service_dir", Sections.MAIN)
+    config = MainConfig.get_config()
 
-    dirs = [ROOT_DIR, data_root_dir, app_data_dir, log_dir, service_dir]
+    # Get all setup routines
+
+    PakkSetupChecker.check_setups(also_run=True, reset_configs=reset)
+
+    return
+    for setup_routine in setup_routines:
+        if not setup_routine.is_up_to_date():
+            logger.info(f"Running setup routine {setup_routine.name}")
+            if setup_routine.run():
+                setup_routine.save()
+
+    # logger.info(f"It is recommended to restart the system now to apply all changes properly")
+    proceed = inquirer.confirm(
+        message="It is recommended to restart the system now to apply all changes properly. Restart now?",
+        default=True,
+    ).execute()
+
+    if proceed:
+        logger.info(f"Restarting system")
+        os.system(f"sudo reboot now")
+
+    path_section = config[config.paths.pakk_dir_section.name]
+    dirs: list[str] = [ROOT_DIR]
+    for option in path_section:
+        dirs.append(path_section[option])
+
+    print(dirs)
 
     group_name = "pakk"
 
@@ -66,9 +91,9 @@ def setup(**kwargs):
     # TODO: script execution is security risk, allow that only for checked system pakkages
     paths = [
         "# Created by pakk setup\n",
-        "# Allow pakk group to execute setup scripts in pakkages",
-        f"{data_root_dir}/*/*/*",  # TODO: bspw. für Lilv benötigt, das muss aber besser gehen
-        f"{data_root_dir}/*/*/*/*",
+        # "# Allow pakk group to execute setup scripts in pakkages",
+        # f"{data_root_dir}/*/*/*",  # TODO: bspw. für Lilv benötigt, das muss aber besser gehen
+        # f"{data_root_dir}/*/*/*/*",
         "/usr/bin/bash",
         "# Allow pakk group to execute apt commands for setups",
         f"/usr/bin/apt",

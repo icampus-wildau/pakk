@@ -8,9 +8,14 @@ import pkgutil
 from typing import Type
 from typing import TypeVar
 
+from extended_configparser.parser import ExtendedConfigParser
+
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.environments.loader import get_current_environment
+from pakk.modules.environments.loader import get_current_environment_cls
 from pakk.modules.types.base import TypeBase
+from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +25,7 @@ T = TypeVar("T")
 class PakkLoader:
     __connector_sub_paths = ["modules.connector", "connector"]
     __types_sub_paths = ["modules.types", "types"]
+    __setup_sub_paths = ["modules.connector", "connector", "modules.types", "types", "setup"]
 
     __pakk_modules: list[tuple[str, str]] = []
 
@@ -39,9 +45,9 @@ class PakkLoader:
         return pakk_modules
 
     @staticmethod
-    def __get_pakk_sub_modules(paths: list[str]):
+    def __get_pakk_sub_modules(paths: list[str]) -> list[str]:
         pakk_modules = PakkLoader.__get_pakk_modules()
-        sub_modules = []
+        sub_modules: list[str] = []
         for module_path, pakk_module in pakk_modules:
             for sub_path in paths:
                 sub_module_path = f"{pakk_module}.{sub_path}"
@@ -115,3 +121,22 @@ class PakkLoader:
         logger.debug(f"Found types: {types}")
 
         return types
+
+    @staticmethod
+    def get_setup_routines() -> list[SetupBase]:
+        setup_modules = PakkLoader.__get_pakk_sub_modules(PakkLoader.__setup_sub_paths)
+        logger.debug(f"Found setup modules: {setup_modules}")
+
+        setup_routines_cls = PakkLoader.get_module_subclasses(setup_modules, SetupBase)
+        logger.debug(f"Found setup routines: {setup_routines_cls}")
+
+        parser = ExtendedConfigParser()
+        env = get_current_environment()
+        setup_routines: list[SetupBase] = []
+        for setup_cls in setup_routines_cls:
+            try:
+                setup_routines.append(setup_cls(parser, env))
+            except Exception as e:
+                logger.error(f"Error while creating setup routine '{setup_cls.__name__}': {e}")
+
+        return setup_routines

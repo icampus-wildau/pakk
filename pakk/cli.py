@@ -265,6 +265,7 @@ def configure(ctx: Context, **kwargs):
 
 @cli.command(aliases=["s"])
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
+@click.option("-r", "--reset", is_flag=True, default=False, help="Reset and rerun the configuration.")
 @click.pass_context
 def setup(ctx: Context, **kwargs):
     """
