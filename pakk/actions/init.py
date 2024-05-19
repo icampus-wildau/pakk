@@ -15,13 +15,13 @@ from prompt_toolkit.completion import Completer
 from prompt_toolkit.completion import Completion
 from prompt_toolkit.validation import ValidationError
 
+from pakk.args.base_args import BaseArgs
 from pakk.helper.module_importer import ModuleImporter
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase

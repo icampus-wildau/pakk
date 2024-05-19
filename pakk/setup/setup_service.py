@@ -4,17 +4,14 @@ import logging
 import os
 import tempfile
 
+from extended_configparser.parser import ExtendedConfigParser
 
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.manager.systemd.unit_generator import PakkAutoUpdateService
 from pakk.modules.manager.systemd.unit_generator import PakkParentService
 from pakk.modules.manager.systemd.unit_generator import PakkServiceFileBase
 from pakk.modules.manager.systemd.unit_generator import ServiceFile
-
-
-from extended_configparser.parser import ExtendedConfigParser
 from pakk.setup.base import SetupBase
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,6 @@ class ServiceSetup(SetupBase):
     NAME = "pakk_service"
     VERSION = "1.0.0"
     PRIORITY = 60
-
 
     def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
         super().__init__(parser, environment)

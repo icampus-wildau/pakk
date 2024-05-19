@@ -6,14 +6,14 @@ import re
 
 from git import Repo
 
+from pakk.args.base_args import BaseArgs
 from pakk.logger import Logger
-from pakk.pakk.args.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
 
 def dev(path: str, **kwargs: str):
-    base_config = BaseConfig.set(**kwargs)
+    base_config = BaseArgs.set(**kwargs)
     flag_verbose = base_config.verbose
 
     Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)

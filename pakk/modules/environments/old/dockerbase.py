@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import os
 
+from pakk.args.base_args import BaseArgs
 from pakk.config import pakk_config
 from pakk.config.pakk_config import Sections as ConfigSections
 from pakk.modules.module import Module
-from pakk.pakk.args.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 

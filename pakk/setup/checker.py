@@ -1,12 +1,17 @@
+from __future__ import annotations
+
+import logging
 import os
+
 from extended_configparser.parser import ExtendedConfigParser
+
 from pakk.config.base import PakkConfigBase
 from pakk.helper.loader import PakkLoader
-import logging
 from pakk.logger import console
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
+
 
 class PakkSetupChecker:
     _setup_routines: list[SetupBase] = []
@@ -60,12 +65,11 @@ class PakkSetupChecker:
             if not setup_routine.is_up_to_date():
                 console.rule(f"Setup routine '{setup_routine.NAME}'")
                 logger.info(f">>> Starting setup routine '{setup_routine.NAME}'")
-                if setup_routine.run_setup_with_except(reset_sudo = True):
+                if setup_routine.run_setup_with_except(reset_sudo=True):
                     setup_routine.save_setup_version()
                 else:
                     logger.error(f"<<< Setup routine '{setup_routine.NAME}' failed.")
                     failed_setups.append(setup_routine.NAME)
-                
 
         if parser is not None:
             logger.info("Saving setup versions")
@@ -76,6 +80,6 @@ class PakkSetupChecker:
             console.rule("[red]Failed setup routines")
             logger.error(f"Failed to run setup routines: {', '.join(failed_setups)}")
             return False
-        
+
         logger.info("All setup routines are up to date.")
         return True

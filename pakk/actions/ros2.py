@@ -12,6 +12,7 @@ from prompt_toolkit.completion import Completion
 from prompt_toolkit.document import Document
 
 import pakk.config.pakk_config as pakk_config
+from pakk.args.base_args import BaseArgs
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
@@ -19,7 +20,6 @@ from pakk.modules.environments.parts.ros2 import EnvPartROS2
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.type_ros2 import TypeRos2
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)

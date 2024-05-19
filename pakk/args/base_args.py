@@ -22,6 +22,6 @@ class BaseArgs:
         return cls.__config  # type: ignore[return-value]
 
     @classmethod
-    def set(cls: type[BaseArgsType], **kwargs: dict[str, str]) -> BaseArgsType:
+    def set(cls: type[BaseArgsType], **kwargs: str) -> BaseArgsType:
         cls.__config = cls(**kwargs)
         return cls.get()

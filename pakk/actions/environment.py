@@ -5,13 +5,13 @@ import subprocess
 
 from InquirerPy import inquirer
 
+from pakk.args.base_args import BaseArgs
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 
 # from pakk.modules.environments.dockerbase import DockerEnvironment
 from pakk.modules.types.base import TypeBase
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)

@@ -8,13 +8,13 @@ import re
 from rich.table import Table
 
 import pakk.config.pakk_config as cfg
+from pakk.args.base_args import BaseArgs
 from pakk.config.pakk_config import Sections
 from pakk.helper.file_util import remove_dir
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
 from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState

@@ -9,6 +9,7 @@ from pakk.modules.module import Module
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ class PakkageCollection:
 
         self.ids_to_be_installed: set[str] = set()
         """Pakkages that are to be installed."""
+
+    ####################################################################################################################
+    ### Collection functions
+    ####################################################################################################################
 
     def add_pakkage(self, pakkage: Pakkage):
         """
@@ -65,39 +70,6 @@ class PakkageCollection:
                 return self.pakkages[self.id_abbreviations[id][0]]
 
         return None
-
-    def __len__(self):
-        return len(self.pakkages)
-
-    def __iter__(self):
-        return iter(self.pakkages)
-
-    def values(self):
-        return self.pakkages.values()
-
-    def items(self):
-        return self.pakkages.items()
-
-    def keys(self):
-        return self.pakkages.keys()
-
-    def __getitem__(self, key: str) -> Pakkage | None:
-        return self.pakkages.get(key, None)
-
-    def __setitem__(self, key: str, value: Pakkage):
-        return self.add_pakkage(value)
-
-    @property
-    def pakkages_to_fetch(self) -> dict[str, Pakkage]:
-        return {pakkage.id: pakkage for pakkage in self.pakkages.values() if pakkage.versions.is_update_candidate()}
-
-    @property
-    # def pakkage_configs_to_fetch(self) -> list[Tuple[Pakkage, PakkageConfig]]:
-    def pakkage_configs_to_fetch(self) -> list[PakkageConfig]:
-        pakkages = self.pakkages_to_fetch
-        versions = [p.versions.target for p in pakkages.values() if p.versions.target is not None]
-        # versions = [(p, p.versions.target) for p in pakkages.values() if p.versions.target is not None]
-        return versions
 
     def merge(self, new_pakkages: PakkageCollection) -> PakkageCollection:
         """Merge PakkageCollection objects."""
@@ -143,6 +115,54 @@ class PakkageCollection:
         self.ids_to_be_installed.update(new_pakkages.ids_to_be_installed)
 
         return self
+
+    def __len__(self):
+        return len(self.pakkages)
+
+    def __iter__(self):
+        return iter(self.pakkages)
+
+    def values(self):
+        return self.pakkages.values()
+
+    def items(self):
+        return self.pakkages.items()
+
+    def keys(self):
+        return self.pakkages.keys()
+
+    def __getitem__(self, key: str) -> Pakkage | None:
+        return self.pakkages.get(key, None)
+
+    def __setitem__(self, key: str, value: Pakkage):
+        return self.add_pakkage(value)
+
+    ####################################################################################################################
+    ### Calculated properties
+    ####################################################################################################################
+
+    @property
+    def pakkages_to_fetch(self) -> dict[str, Pakkage]:
+        """Get all pakkages that have versions to be fetched."""
+        return {pakkage.id: pakkage for pakkage in self.pakkages.values() if pakkage.versions.is_update_candidate()}
+
+    @property
+    # def pakkage_configs_to_fetch(self) -> list[Tuple[Pakkage, PakkageConfig]]:
+    def pakkage_configs_to_fetch(self) -> list[PakkageConfig]:
+        """Get all pakkage versions that have to be fetched."""
+        pakkages = self.pakkages_to_fetch
+        versions = [p.versions.target for p in pakkages.values() if p.versions.target is not None]
+        # versions = [(p, p.versions.target) for p in pakkages.values() if p.versions.target is not None]
+        return versions
+
+    @property
+    def startable_pakkages(self) -> list[PakkageConfig]:
+        """Get all pakkages that are startable."""
+        return [
+            p.versions.installed
+            for p in self.pakkages.values()
+            if p.versions.installed is not None and p.versions.installed.is_startable()
+        ]
 
     ####################################################################################################################
     ### Connector functions

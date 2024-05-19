@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import os
+
 from extended_configparser.parser import ExtendedConfigParser
+
 from pakk.modules.environments.base import EnvironmentBase
 
 
 class CommandFailedException(Exception):
     pass
+
 
 class SetupBase:
     VERSION = "0.0.1"
@@ -25,18 +30,18 @@ class SetupBase:
                 raise CommandFailedException(f"Command '{command}' failed with code '{code}'")
 
         return code
-    
+
     def run_setup_with_except(self, reset_sudo: bool = True) -> bool:
         success = False
         try:
             success = self.run_setup()
         except CommandFailedException as e:
             print(e)
-        
+
         if reset_sudo:
             self.system("sudo -k")
 
-        return success        
+        return success
 
     def run_setup(self) -> bool:
         raise NotImplementedError

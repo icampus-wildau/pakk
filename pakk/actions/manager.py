@@ -7,15 +7,15 @@ import threading
 
 from InquirerPy import inquirer
 
+from pakk.args.base_args import BaseArgs
 from pakk.config.process import Process
 from pakk.helper.cli_util import split_name_version
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 
 # from pakk.modules.environments.dockerbase import DockerEnvironment
+from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.connector.local import LocalConnector
 from pakk.modules.types.base import TypeBase
-from pakk.pakk.args.base_config import BaseConfig
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
@@ -52,9 +52,9 @@ class ErrorHandling:
 
 
 def _get_startable_pakkages(
-    pakkage_names, select_message="Select pakkage to start:", **kwargs: dict[str, str]
-) -> list[PakkageConfig]:
-    base_config = BaseConfig.set(**kwargs)
+    pakkage_names, select_message="Select pakkage to start:", **kwargs: str
+) -> tuple[list[PakkageConfig], PakkageCollection]:
+    base_config = BaseArgs.set(**kwargs)
     get_all = kwargs.get("all", False)
 
     flag_verbose = kwargs.get("verbose", False)
@@ -62,16 +62,15 @@ def _get_startable_pakkages(
     Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
     TypeBase.initialize()
 
-    local_discoverer = DiscovererLocal()
-    discoverer = DiscoveredPakkagesMerger([local_discoverer])
-    discoverer.quiet = not flag_verbose
-    pakkages_discovered = discoverer.merge()
+    pakkages = PakkageCollection()
+    local_discoverer = LocalConnector(pakkages)
+    pakkages.discover([local_discoverer], quiet=not flag_verbose)
 
     pakkage_names = [split_name_version(n)[0] for n in pakkage_names]
 
     startable_pakkages: dict[str, PakkageConfig] = dict()
 
-    for p in pakkages_discovered.values():
+    for p in pakkages.values():
         v = p.versions.installed
         if v is None:
             continue
@@ -85,11 +84,11 @@ def _get_startable_pakkages(
         #     logger.error(f"No startable pakkages found with name '{pakkage_names}'")
         # else:
         #     logger.error("No startable pakkages found")
-        return [], pakkages_discovered
+        return [], pakkages
 
     pakkages_to_start: list[PakkageConfig] = []
     if not pakkage_names and not get_all:
-        action = inquirer.fuzzy(
+        action = inquirer.fuzzy(  # type: ignore
             message=select_message,
             choices=list([p for p in startable_pakkages.keys()]),
             default="",
@@ -103,11 +102,11 @@ def _get_startable_pakkages(
         else:
             pakkages_to_start = list(startable_pakkages.values())
 
-    return pakkages_to_start, pakkages_discovered
+    return pakkages_to_start, pakkages
 
 
 @ErrorHandling
-def run(pakkage_names, **kwargs: dict[str, str]):
+def run(pakkage_names, **kwargs: str):
     pakkages_to_start, pakkages_discovered = _get_startable_pakkages(pakkage_names, "Select pakkage to run:", **kwargs)
 
     if len(pakkages_to_start) == 0:
@@ -121,7 +120,7 @@ def run(pakkage_names, **kwargs: dict[str, str]):
 
 
 @ErrorHandling
-def start(pakkage_names, **kwargs: dict[str, str]):
+def start(pakkage_names, **kwargs: str):
 
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to start as service:", **kwargs)
 
@@ -136,7 +135,7 @@ def start(pakkage_names, **kwargs: dict[str, str]):
 
 
 @ErrorHandling
-def stop(pakkage_names, **kwargs: dict[str, str]):
+def stop(pakkage_names, **kwargs: str):
 
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to stop:", **kwargs)
 
@@ -151,7 +150,7 @@ def stop(pakkage_names, **kwargs: dict[str, str]):
 
 
 @ErrorHandling
-def enable(pakkage_names, **kwargs: dict[str, str]):
+def enable(pakkage_names, **kwargs: str):
 
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to enable for autostart:", **kwargs)
 
@@ -166,7 +165,7 @@ def enable(pakkage_names, **kwargs: dict[str, str]):
 
 
 @ErrorHandling
-def disable(pakkage_names, **kwargs: dict[str, str]):
+def disable(pakkage_names, **kwargs: str):
 
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to disable from autostart:", **kwargs)
 
@@ -189,7 +188,7 @@ def restart(pakkage_names, **kwargs: str | bool):
         kwargs["all"] = True
         pakkage_names = []
 
-    pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to restart:", **kwargs)
+    pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to restart:", **kwargs)  # type: ignore
 
     if len(pakkages_to_start) == 0:
         if len(pakkage_names) >= 1:
@@ -224,7 +223,7 @@ def follow_log(pakkage_names, **kwargs: str | bool):
         pakkage_names = []
 
     pakkages_to_start, _ = _get_startable_pakkages(
-        pakkage_names, "Select pakkage to follow the log messages:", **kwargs
+        pakkage_names, "Select pakkage to follow the log messages:", **kwargs  # type: ignore
     )
 
     if len(pakkages_to_start) == 0:
