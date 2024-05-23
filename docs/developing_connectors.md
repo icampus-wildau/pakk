@@ -6,7 +6,21 @@ By default, pakk includes connectors for GitHub and GitLab.
 
 If you have your repositories / projects stored somewhere else and want to use pakk to access these projects, you can easily develop your own connector.
 
-# How to Develop New Connectors
+# Develop a custom connector
+
+To create a connector, define a class inheriting from the `pakk.modules.connector.Connector` base class. 
+
+In your class, you have to:
+- override the discover() method
+- override the fetch() method
+
+Furthermore, you can:
+- override the priority of the connector 
+- define the configuration of the connector
+
+## Discovering process
+
+## Fetching process
 
 
 
@@ -57,3 +71,7 @@ __all__ = ["MyConnector"]
 # How to Configure Connectors
 
 # How to Run Setups for the Connector
+
+# Priority of a connector
+
+# Caching of projects
