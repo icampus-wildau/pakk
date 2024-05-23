@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.connector.local import LocalConnector
 from rich import print
 from rich.tree import Tree
 
@@ -9,16 +11,14 @@ from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
 from pakk.modules.dependency_tree.tree import DependencyTree
 from pakk.modules.dependency_tree.tree_printer import TreePrinter
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-from pakk.pakk.args.install_config import InstallConfig
+from pakk.args.install_args import InstallArgs
 
 logger = logging.getLogger(__name__)
 
 
 def show_tree(**kwargs):
     # Initialize install_config containing flags for other modules
-    install_config = InstallConfig.set(**kwargs)
+    install_config = InstallArgs.set(**kwargs)
     # Initialize logger that prints to rich console
     Logger.setup_logger(logging.DEBUG if install_config.verbose else logging.INFO)
 
@@ -26,14 +26,13 @@ def show_tree(**kwargs):
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the tree could be wrong.")
 
-    discoverer = DiscoveredPakkagesMerger([DiscovererLocal()], quiet=True)
+    pakkages = PakkageCollection()
+    pakkages.discover([LocalConnector(pakkages)])
 
-    pakkages_discovered = discoverer.merge()
-
-    deptree = DependencyTree(pakkages_discovered)
+    deptree = DependencyTree(pakkages.pakkages)
     deptree.init_pakkages()
 
-    printer = TreePrinter(pakkages_discovered, deptree)
+    printer = TreePrinter(pakkages.pakkages, deptree)
     tree = printer.get_tree(name="Installed pakkages", max_depth=int(kwargs.get("depth")))
     Logger.get_console().print(tree)
 
