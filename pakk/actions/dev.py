@@ -13,11 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 def dev(path: str, **kwargs: str):
-    base_config = BaseArgs.set(**kwargs)
-    flag_verbose = base_config.verbose
-
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
-
     if path is None or len(path) == 0:
         # Get current working directory
         path = os.getcwd()

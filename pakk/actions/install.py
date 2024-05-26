@@ -58,12 +58,9 @@ class VersionNotFoundException(Exception):
         super().__init__(s)
 
 
-def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
-    # Initialize install_config containing flags for other modules
-    install_config = InstallArgs.set(**kwargs)
-    # Initialize logger that prints to rich console
-    Logger.setup_logger(logging.DEBUG if install_config.verbose else logging.INFO)
+def install(pakkage_names: list[str] | str, **kwargs: dict[str, str | bool]):
 
+    install_args = InstallArgs.get()
     lock = PakkLock("install")
     if not lock.access:
         logger.error("Wait for the other pakk process to finish to continue.")
@@ -114,10 +111,10 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
 
         # If version is not given, find the correct version
         if version is None:
-            if install_config.upgrade:
+            if install_args.upgrade:
                 version = list(p.versions.available.keys())[0]
                 p.versions.target = p.versions.available.get(version, None)
-            elif install_config.force_reinstall and p.versions.installed is not None:
+            elif install_args.force_reinstall and p.versions.installed is not None:
                 p.versions.target = p.versions.installed
                 p.versions.reinstall = True
             elif p.versions.installed is None:
@@ -153,14 +150,14 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
 
     resolver = ResolverFitting(pakkages)
     try:
-        if not install_config.no_deps:
+        if not install_args.no_deps:
             resolver.resolve()
     except ResolverException as e:
         x = e.print_msg()
         return
 
     # Filter repairing installations
-    if not install_config.repair:
+    if not install_args.repair:
         for pakkage in pakkages.pakkages.values():
             if pakkage.versions.target is not None and pakkage.versions.is_repairing_install:
                 pakkage.versions.target = None
@@ -169,7 +166,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # Abfrage, ob Pakete geupdated werden sollen
 
     installer = InstallerCombining(pakkages, resolver.deptree)
-    if install_config.dry_run:
+    if install_args.dry_run:
         return
 
     installer.uninstall()

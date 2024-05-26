@@ -28,7 +28,6 @@ def clean(**kwargs: str):
     base_config = BaseConfig.set(**kwargs)
     config = cfg.get()
 
-    Logger.setup_logger(logging.DEBUG if base_config.verbose else logging.INFO)
 
     lock = PakkLock("clean")
     if not lock.access:

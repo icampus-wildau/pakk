@@ -23,7 +23,6 @@ def environment(**kwargs: dict[str, str]):
     flag_verbose = kwargs.get("verbose", False)
     flag_rebuild = kwargs.get("rebuild", False)
 
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
     TypeBase.initialize()
 
     local_discoverer = DiscovererLocal()

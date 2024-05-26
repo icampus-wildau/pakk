@@ -72,12 +72,8 @@ class Ros2RunCompleter(Completer):
 
 
 def ros2(run_args: str | list[str], **kwargs: dict[str, str]):
-    base_config = BaseConfig.set(**kwargs)
-
+    base_args = BaseArgs.get()
     flag_verbose = kwargs.get("verbose", False)
-    # flag_rebuild = kwargs.get("rebuild", False)
-
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
     TypeBase.initialize()
 
     if isinstance(run_args, str):

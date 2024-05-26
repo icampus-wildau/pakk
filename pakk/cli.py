@@ -26,7 +26,9 @@ def init_pakk(**kwargs):
     from pakk.args.base_args import PakkArgs
     from pakk.logger import Logger
 
+    # Initialize the pakk args to be globally available 
     PakkArgs.init(**kwargs)
+    # Initialize logger that prints to rich console
     Logger.setup_logger(logging.DEBUG if BaseArgs.get().verbose else logging.INFO)
 
 

@@ -21,10 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 def source(**kwargs: dict[str, str]):
-    base_config = BaseConfig.set(**kwargs)
+    base_config = BaseArgs.set()
     flag_verbose = base_config.verbose
 
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
     TypeBase.initialize()
 
     local_discoverer = [DiscovererLocal()]

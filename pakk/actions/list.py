@@ -22,7 +22,6 @@ def list(**kwargs):
     flag_types = kwargs.get("types", False) or kwargs.get("extended", False)
     verbose = kwargs.get("verbose", False)
     has_locations = len(kwargs.get("location", [])) > 0
-    # Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
 
     lock = PakkLock("list", create_lock=False)
     if not lock.access:

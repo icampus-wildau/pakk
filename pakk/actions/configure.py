@@ -23,7 +23,6 @@ def configure(**kwargs):
     # f = Figlet(font='cyberlarge')
     verbose = kwargs.get("verbose", False)
     reset = kwargs.get("reset", False)
-    Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
 
     console = Logger.get_console()
     Module.print_rule("Pakk Configuration")

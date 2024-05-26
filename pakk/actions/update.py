@@ -19,10 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def update(pakkage_names: list[str] | str, **kwargs: str):
-    base_config = BaseConfig.set(**kwargs)
     config = cfg.get()
-
-    Logger.setup_logger(logging.DEBUG if base_config.verbose else logging.INFO)
 
     lock = PakkLock("update")
     if not lock.access:

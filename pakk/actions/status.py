@@ -19,7 +19,6 @@ def status(**kwargs: str):
     # flag_available = kwargs.get("available", False)
     # flag_types = kwargs.get("types", False) or kwargs.get("extended", False)
     flag_types = True
-    Logger.setup_logger(logging.INFO)
 
     lock = PakkLock("status", create_lock=False)
     if not lock.access:

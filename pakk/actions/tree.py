@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 def show_tree(**kwargs):
-    # Initialize install_config containing flags for other modules
-    install_config = InstallArgs.set(**kwargs)
-    # Initialize logger that prints to rich console
-    Logger.setup_logger(logging.DEBUG if install_config.verbose else logging.INFO)
-
     lock = PakkLock("tree", create_lock=False)
     if not lock.access:
         logger.warn("Another pakk process is currently running, thus the tree could be wrong.")

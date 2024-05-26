@@ -58,7 +58,6 @@ def _get_startable_pakkages(
 
     flag_verbose = kwargs.get("verbose", False)
 
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
     TypeBase.initialize()
 
     pakkages = PakkageCollection()

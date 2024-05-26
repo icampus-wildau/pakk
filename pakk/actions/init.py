@@ -124,11 +124,9 @@ class DependencyCompleter(Completer):
 
 
 def init(path: str, **kwargs: str):
-    base_config = BaseConfig.set(**kwargs)
-
+    base_config = BaseArgs.get()
     flag_verbose = kwargs.get("verbose", False)
 
-    Logger.setup_logger(logging.DEBUG if flag_verbose else logging.INFO)
 
     if path is None or len(path) == 0:
         # Get current working directory
