@@ -19,6 +19,17 @@ def show_figlet(message: str):
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], max_content_width=800)
 
 
+def init_pakk(**kwargs):
+    import logging
+
+    from pakk.args.base_args import BaseArgs
+    from pakk.args.base_args import PakkArgs
+    from pakk.logger import Logger
+
+    PakkArgs.init(**kwargs)
+    Logger.setup_logger(logging.DEBUG if BaseArgs.get().verbose else logging.INFO)
+
+
 @click.group(cls=ClickAliasedGroup, context_settings=CONTEXT_SETTINGS)
 @click.pass_context
 def cli(ctx: Context, **kwargs):
@@ -89,6 +100,8 @@ def install(ctx: Context, **kwargs):
     from pakk.config.main_cfg import MainConfig
     from pakk.helper.module_importer import PakkModuleNotFoundException
     from pakk.modules.resolver.base import ResolverException
+
+    init_pakk(**kwargs)
 
     try:
         install(builtins.list(kwargs["pakkage"]), **kwargs)
@@ -213,6 +226,7 @@ def list(ctx: Context, **kwargs):
     """
     from pakk.actions.list import list
 
+    init_pakk(**kwargs)
     list(**kwargs)
 
 
@@ -229,6 +243,7 @@ def tree(ctx: Context, **kwargs):
 
     from pakk.actions.tree import show_tree
 
+    init_pakk(**kwargs)
     show_tree(**kwargs)
 
 
@@ -244,6 +259,7 @@ def config(ctx: Context, **kwargs):
     """
     from pakk.actions.config import config
 
+    init_pakk(**kwargs)
     config(**kwargs)
 
 
@@ -260,6 +276,7 @@ def configure(ctx: Context, **kwargs):
     """
     from pakk.actions.configure import configure
 
+    init_pakk(**kwargs)
     configure(**kwargs)
 
 
@@ -274,6 +291,7 @@ def setup(ctx: Context, **kwargs):
     """
     from pakk.actions.setup import setup
 
+    init_pakk(**kwargs)
     setup(**kwargs)
 
 
@@ -288,6 +306,7 @@ def ros_environment(**kwargs):
 
     from pakk.actions.environment import environment
 
+    init_pakk(**kwargs)
     environment(**kwargs)
 
 
@@ -303,6 +322,7 @@ def ros2(run_args, **kwargs):
 
     from pakk.actions.ros2 import ros2
 
+    init_pakk(**kwargs)
     ros2(run_args, **kwargs)
 
 
@@ -318,6 +338,7 @@ def source(**kwargs):
 
     from pakk.actions.source import source
 
+    init_pakk(**kwargs)
     source(**kwargs)
 
 
@@ -335,12 +356,14 @@ def run(**kwargs):
 
     from pakk.actions.manager import run as r
 
+    init_pakk(**kwargs)
     r(**kwargs)
 
 
 @cli.command(aliases=[])
 @click.argument("pakkage_names", nargs=-1)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
+@click.option("-R", "--reload_service_files", is_flag=True, default=False, help="Reloads the service files.")
 def start(**kwargs):
     """
     Starts the given executable pakkage as services.
@@ -348,6 +371,7 @@ def start(**kwargs):
 
     from pakk.actions.manager import start
 
+    init_pakk(**kwargs)
     start(**kwargs)
     # print("RUN DUMMY")
 
@@ -362,6 +386,7 @@ def enable(**kwargs):
 
     from pakk.actions.manager import enable
 
+    init_pakk(**kwargs)
     enable(**kwargs)
 
 
@@ -375,6 +400,7 @@ def stop(**kwargs):
 
     from pakk.actions.manager import stop
 
+    init_pakk(**kwargs)
     stop(**kwargs)
 
 
@@ -388,6 +414,7 @@ def disable(**kwargs):
 
     from pakk.actions.manager import disable
 
+    init_pakk(**kwargs)
     disable(**kwargs)
 
 
@@ -403,12 +430,16 @@ def restart(**kwargs):
 
     from pakk.actions.manager import restart
 
+    init_pakk(**kwargs)
     restart(**kwargs)
 
 
 @cli.command(aliases=[])
 @click.argument("pakkage_names", nargs=-1)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
+@click.option(
+    "-f", "--follow_logs", is_flag=True, default=False, help="Follow the logs of the given executable pakkage."
+)
 def log(**kwargs):
     """
     Follows the log of the given executable pakkage.
@@ -416,6 +447,7 @@ def log(**kwargs):
 
     from pakk.actions.manager import follow_log
 
+    init_pakk(**kwargs)
     follow_log(**kwargs)
 
 
@@ -429,6 +461,7 @@ def status(**kwargs):
 
     from pakk.actions.status import status
 
+    init_pakk(**kwargs)
     status(**kwargs)
 
 
@@ -445,6 +478,7 @@ def init(**kwargs):
     """
     from pakk.actions.init import init
 
+    init_pakk(**kwargs)
     init(**kwargs)
 
 
@@ -461,6 +495,7 @@ def dev(**kwargs):
     """
     from pakk.actions.dev import dev
 
+    init_pakk(**kwargs)
     dev(**kwargs)
 
 
@@ -486,6 +521,7 @@ def update(**kwargs):
 
     from pakk.actions.update import update
 
+    init_pakk(**kwargs)
     update(**kwargs)
 
 
@@ -502,4 +538,5 @@ def clean(**kwargs):
 
     from pakk.actions.clean import clean
 
+    init_pakk(**kwargs)
     clean(**kwargs)

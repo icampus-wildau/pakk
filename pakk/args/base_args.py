@@ -6,22 +6,30 @@ BaseArgsType = TypeVar("BaseArgsType", bound="BaseArgs")
 
 
 class BaseArgs:
-    __config: BaseArgs | None = None
+    # __config: BaseArgs | None = None
+    configs: dict[str, BaseArgs] = {}
 
-    def __init__(self, **kwargs: str):
+    def __init__(self, **kwargs: str | list[str] | bool):
         self.verbose: bool = bool(kwargs.get("verbose", False))
         self.rebuild_base_images: bool = bool(kwargs.get("rebuild_base_images", False))
 
-        if BaseArgs.__config is None:
-            BaseArgs.__config = self
-
     @classmethod
-    def get(cls: type[BaseArgsType], **kwargs) -> BaseArgsType:
-        if cls.__config is None:
-            cls.__config = cls(**kwargs)
-        return cls.__config  # type: ignore[return-value]
+    def get(cls: type[BaseArgsType]) -> BaseArgsType:
+
+        if cls.__name__ not in cls.configs:
+            cls.configs[cls.__name__] = cls(**PakkArgs.kwargs)
+
+        return cls.configs[cls.__name__]  # type: ignore
 
     @classmethod
     def set(cls: type[BaseArgsType], **kwargs: str) -> BaseArgsType:
         cls.__config = cls(**kwargs)
         return cls.get()
+
+
+class PakkArgs:
+    kwargs: dict[str, str | bool | list[str]] = {}
+
+    @classmethod
+    def init(cls, **kwargs: str | list[str] | bool):
+        cls.kwargs = kwargs
