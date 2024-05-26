@@ -18,6 +18,7 @@ import jsons
 from extended_configparser.parser import ExtendedConfigParser
 from semver.version import Version
 
+from pakk.args.manager_args import ManagerArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import remove_dir
 from pakk.modules.environments.loader import get_current_environment_cls
@@ -247,7 +248,8 @@ class PakkageConfig:
             raise Exception("Pakkage is not startable.")
 
         service = PakkChildService(self)
-        if not os.path.exists(f"/etc/systemd/system/{service.service_file.filename}"):
+        reload_service_files = ManagerArgs.get().reload_service_files
+        if reload_service_files or not os.path.exists(f"/etc/systemd/system/{service.service_file.filename}"):
             logger.info(f"Writing service file to {service.service_file.filepath}")
             service.service_file.write()
             logger.info(f"Linking service file to /etc/systemd/system/{service.service_file.filename}")
@@ -276,8 +278,14 @@ class PakkageConfig:
             raise Exception(f"Pakkage {self.id} is not startable.")
 
         service = PakkChildService(self)
+        follow = ManagerArgs.get().follow_logs
         logger.info(f"Following log of {service.service_file.name}")
-        os.system(f"sudo journalctl -f -u {service.service_file.name}")
+        # os.system(f"sudo journalctl -f -u {service.service_file.name}")
+        if follow:
+            cmd = f"journalctl -fu {service.service_file.name}"
+        else:
+            cmd = f"journalctl -ru {service.service_file.name}"
+        os.system(cmd)
 
     def is_active(self) -> bool:
         """Returns true if the pakkage service is active."""

@@ -31,11 +31,16 @@ class ServiceFile:
     PATH = MainConfig.get_config().paths.services_dir.value
 
     def __init__(self, name: str):
+        name = self.escape_name(name)
         self.name: str = name
         if name.endswith(".service"):
             self.name = name[: -len(".service")]
 
         self.sections: list[UnitFileSection] = []
+
+    @staticmethod
+    def escape_name(name: str) -> str:
+        return name.replace("/", "-")
 
     def add_section(self, name: str) -> UnitFileSection:
         s = UnitFileSection(name)
@@ -124,7 +129,9 @@ class PakkChildService(PakkServiceFileBase):
         service_section: UnitFileSection = self.service_file.add_section(UnitFileDefinition.Service.NAME)
         service_section.add_line("User", getpass.getuser())
         service_section.add_line(
-            UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} run {self.pakkage_version.basename}"
+            # UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} run {self.pakkage_version.basename}"
+            UnitFileDefinition.Service.ExecStart,
+            f"{PAKK_CMD_PATH} run {self.pakkage_version.id}",
         )
         # service_section.add_line(UnitFileDefinition.Service.ExecStart, f"pakk run {self.pakkage_version.basename}")
         service_section.add_line(UnitFileDefinition.Service.Restart, "on-failure")
