@@ -16,13 +16,13 @@ from pakk.modules.connector.local import LocalConnector
 logger = logging.getLogger(__name__)
 
 
-def list(**kwargs: str):
+def list(**kwargs):
     flag_all = kwargs.get("all", False)
     flag_available = kwargs.get("available", False)
     flag_types = kwargs.get("types", False) or kwargs.get("extended", False)
     verbose = kwargs.get("verbose", False)
     has_locations = len(kwargs.get("location", [])) > 0
-    Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
+    # Logger.setup_logger(logging.DEBUG if verbose else logging.INFO)
 
     lock = PakkLock("list", create_lock=False)
     if not lock.access:
@@ -30,11 +30,11 @@ def list(**kwargs: str):
 
     pakkages = PakkageCollection()
 
-    local_connector: builtins.list[Connector] = [LocalConnector(pakkages, **kwargs)]
+    local_connector: builtins.list[Connector] = [LocalConnector()]
     discoverer_list: builtins.list[Connector] = []
 
     if flag_all or flag_available:
-        connectors = PakkLoader.get_connector_instances(pakkages)
+        connectors = PakkLoader.get_connector_instances()
         discoverer_list = connectors
     else:
         discoverer_list = local_connector
@@ -82,7 +82,7 @@ def list(**kwargs: str):
         regex = re.compile(regex)
 
     for p in pakkages:
-        if regex is not None and not regex.match(p.id):
+        if regex is not None and not regex.search(p.id):
             continue
 
         iv = p.versions.installed
