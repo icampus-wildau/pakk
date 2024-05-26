@@ -2,21 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
-import re
-from multiprocessing.pool import ThreadPool
-from threading import Lock
 
 import pytz
-from github import Github
+from extended_configparser.configuration.entries.section import ConfigSection
 from github.ContentFile import ContentFile
-from github.Organization import Organization
-from github.PaginatedList import PaginatedList
 from github.Repository import Repository
-from rich.progress import MofNCompleteColumn
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TimeElapsedColumn
 
+from pakk.config.base import ConnectorConfiguration
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.progress import ProgressManager
 from pakk.helper.progress import TaskPbar
@@ -25,13 +17,11 @@ from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.cache import CachedRepository
 from pakk.modules.connector.cache import CachedTag
-from pakk.modules.connector.git_generic import GenericGitHelper
-from pakk.modules.connector.github.config import GithubConfig
 from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.core import PakkageInstallState
 from pakk.pakkage.core import PakkageVersions
-from pakk.config.base import ConnectorConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -42,42 +32,37 @@ class MyConnectorConfig(ConnectorConfiguration):
     def __init__(self):
         super().__init__()
 
-        self.github_section = ConfigSection("GitHub")
-        self.enabled = self.github_section.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)
+        self.section = ConfigSection("MyConnector")
+        self.enabled = self.section.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)
 
-        self.private_token = self.github_section.Option(
+        self.private_token = self.section.Option(
             "private_token",
             "",
-            "Private token for the GitHub instance",
+            "Private token for the Connector",
             value_getter=lambda x: None if (x == "" or x.lower() == "none") else x,
             inquire=self.is_enabled,
+        )
+
+        self.cache_dir = self.section.Option(
+            "cache_dir",
+            r"${Pakk.Subdirs:cache_dir}/my_connector",
+            "Directory for the cache files",
+            inquire=False,
+            is_dir=True,
         )
 
     def is_enabled(self) -> bool:
         return self.enabled.value
 
 
-
 class MyConnector(Connector):
-    CONFIG_CLS = GithubConfig
+    CONFIG_CLS = MyConnectorConfig
 
-    def __init__(self, pakkages: PakkageCollection, **kwargs):
-        super().__init__(pakkages, **kwargs)
-        self.config = GithubConfig.get_config()
+    def __init__(self):
+        super().__init__()
+        self.config = MyConnectorConfig.get_config()
 
         self._token = self.config.private_token.value
-
-        # TODO: Catch connection exceptions
-        self._github = Github(self._token)
-
-    def get_organization(self, name: str) -> Organization:
-        return self._github.get_organization(name)
-
-    def get_repos_of_organization(self, organization: Organization) -> PaginatedList[Repository]:
-        return organization.get_repos()
-
-    def get_repo(self, name: str) -> Repository:
-        return self._github.get_repo(name)
 
     def get_cache_dir_path(self):
         return self.config.cache_dir.value
@@ -87,7 +72,7 @@ class MyConnector(Connector):
         return os.path.join(self.get_cache_dir_path(), name + ".json")
 
     def _get_cached_repo(
-        self, repo: Repository, existing_cached_repo: CachedRepository | None = None
+        self, repo: "RepositoryObject", existing_cached_repo: CachedRepository | None = None
     ) -> CachedRepository:
 
         cached_repo = existing_cached_repo or CachedRepository()
@@ -136,55 +121,42 @@ class MyConnector(Connector):
 
     def _update_cache(self):
         """Helper method to update the cached projects"""
-        # Discovering on GitHub only works for known organizations
-        org_names = self.config.cached_organizations.value
-        num_workers = int(self.config.num_discover_workers.value)
 
-        logger.info(f"Updating GitHub cache...")
+        # Connect to the Connector
+        # Search for changed projects
+        # Update the cache by storing CachedRepository
 
-        for org_name in org_names:
-            # Find the organization
-            org = self._github.get_organization(org_name)
+        def process_repo(repo: "RepositoryObject"):
+            # Load the cached repository
+            cache_file_path = self.get_repo_cache_file_path(repo)
+            cache_file = CachedRepository.from_file(cache_file_path)
 
-            logger.debug(f"Updating cache for organization {org_name}:")
+            repo_dt = repo.pushed_at
+            if repo_dt.tzinfo is None:
+                repo_dt = pytz.utc.localize(repo_dt)
 
-            # # List all repos in the organization
-            # for repo in org.get_repos():
+            if cache_file is not None and repo_dt <= cache_file.last_activity:
+                # Use cached repository
+                logger.debug(f"Using cached repository for {repo.name}")
+                return
 
-            def process_repo(repo: Repository):
-                # Load the cached repository
-                cache_file_path = self.get_repo_cache_file_path(repo)
-                cache_file = CachedRepository.from_file(cache_file_path)
+            logger.debug(f"Updating cache for repo {repo.name}")
 
-                repo_dt = repo.pushed_at
-                if repo_dt.tzinfo is None:
-                    repo_dt = pytz.utc.localize(repo_dt)
+            cache_file = self._get_cached_repo(repo, cache_file)
+            cache_file.write(cache_file_path)
 
-                if cache_file is not None and repo_dt <= cache_file.last_activity:
-                    # Use cached repository
-                    logger.debug(f"Using cached repository for {repo.name}")
-                    return
-
-                logger.debug(f"Updating cache for repo {repo.name}")
-
-                cache_file = self._get_cached_repo(repo, cache_file)
-                cache_file.write(cache_file_path)
-
-            n_public = org.total_private_repos or 0
-            n_private = org.public_repos or 0
-
-            execute_process_and_display_progress(
-                items=org.get_repos(),
-                item_processing_callback=process_repo,
-                num_workers=num_workers,
-                item_count=n_public + n_private,
-                message=f"Updating github cache for {org_name}",
-            )
+        repos = self.get_repos()
+        execute_process_and_display_progress(
+            items=repos,
+            item_processing_callback=process_repo,
+            num_workers=4,
+            item_count=len(repos),
+            message=f"Updating connector cache",
+        )
 
     def discover(self) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
-        num_workers = int(self.config.num_discover_workers.value)
-        logger.info("Discovering projects from GitHub")
+        logger.info("Discovering projects from MyConnector")
 
         self._update_cache()
         repos = CachedRepository.from_directory(self.get_cache_dir_path())
@@ -226,7 +198,7 @@ class MyConnector(Connector):
         manager = ProgressManager(
             items=pakkages_to_fetch,
             item_processing_callback=self.checkout_version,
-            num_workers=self.config.num_fetcher_workers.value,
+            num_workers=4,
             summary_description="[blue]Fetching pakkages from GitHub:",
             worker_description="[cyan]Fetcher {}:",
             text_fields=["pakkage", "info"],
@@ -234,34 +206,9 @@ class MyConnector(Connector):
 
         manager.execute()
 
-    @staticmethod
-    def get_github_http_with_token(http_url_to_repo: str, token: str | None = None) -> str:
-        """
-        Return the http url with the token directly in the url included.
-        For Github the form is the following: https://oauth2:{token}@{http_url}
-        See: https://stackoverflow.com/questions/42148841/github-clone-with-oauth-access-token
-
-        Parameters
-        ----------
-        http_url_to_repo: str
-            The http url to the git repo.
-        token: str
-            The token to use for authentication.
-
-        Returns
-        -------
-        str: The http url with the token included.
-
-        """
-        if token is None:
-            token = GithubConfig.get_config().private_token.value
-
-        http = re.sub(r"https+://", "", http_url_to_repo)
-        return f"https://oauth2:{token}@{http}"
-
     def checkout_version(self, target_version: PakkageConfig, task: TaskPbar) -> None:
 
-        # Check if gitlab attributes are set
+        # Check if connector attributes from the fetch process are set
         attr = target_version.get_attributes(self)
         if attr is None:
             logger.error(f"Connector {self.__class__} not in target_version.connector_attributes")
@@ -276,8 +223,13 @@ class MyConnector(Connector):
             # return target_version
             return
 
-        # Get the url to download the repository
-        url_with_token = self.get_github_http_with_token(url)
+        # Fetch the target version
+        fetched_dir = MainConfig.get_config().paths.fetch_dir.value
+        name = target_version.basename
+        path = os.path.join(fetched_dir, name)
 
-        # Fetch the pakkage version
-        GenericGitHelper.fetch_pakkage_version_with_git(target_version, url_with_token, tag, task)
+        self._fetch_to_path(target_version, url, tag, path)
+
+        # Set the state to fetched and the local_path
+        target_version.state.install_state = PakkageInstallState.FETCHED
+        target_version.local_path = path

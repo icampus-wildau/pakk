@@ -1,6 +1,6 @@
 # What are Connectors
 
-Connector are on of the basic elements of pakk, allowing the connection to a pakkage-index. 
+Connector are on of the basic elements of pakk, allowing the connection to a pakkage-index.
 This connection allows the discovery and the fetching from the index in order to install a pakkage.
 By default, pakk includes connectors for GitHub and GitLab.
 
@@ -8,17 +8,19 @@ If you have your repositories / projects stored somewhere else and want to use p
 
 # Develop a custom connector
 
-To create a connector, define a class inheriting from the `pakk.modules.connector.Connector` base class. 
+To create a connector, define a class inheriting from the `pakk.modules.connector.Connector` base class.
 
 In your class, you have to:
 - override the discover() method
 - override the fetch() method
 
 Furthermore, you can:
-- override the priority of the connector 
+- override the priority of the connector
 - define the configuration of the connector
 
 ## Discovering process
+
+
 
 ## Fetching process
 
@@ -38,7 +40,7 @@ pakk_your_custom_connector
 |- __init__.py
 |-  connector
     |- __init__.py
-    |- my_connector.py 
+    |- my_connector.py
 ```
 
 In `my_connector` you can define and implement the connector class (or multiple classes) inheriting from `Connector`.
