@@ -103,11 +103,11 @@ class PakkLoader:
         return valid_connectors
 
     @staticmethod
-    def get_connector_instances(pakkages: PakkageCollection, **kwargs):
+    def get_connector_instances():
         connectors = PakkLoader.get_connector_classes()
         instances = []
         for connector_cls in connectors:
-            connector = connector_cls(pakkages, **kwargs)
+            connector = connector_cls()
             instances.append(connector)
         return instances
 

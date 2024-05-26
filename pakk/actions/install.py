@@ -86,15 +86,8 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str]):
     # Import necessary modules
     TypeBase.initialize()
 
-    # # TODO Used discoverers should be configurable, look at setup and installer classes
-    # discoverer = DiscoveredPakkagesMerger([
-    #     DiscovererGitlabCached(use_cache=(not install_config.clear_cache)),
-    #     DiscovererLocal()
-    # ])
-    # pakkages_discovered = discoverer.merge()
-
     pakkages = PakkageCollection()
-    connectors = PakkLoader.get_connector_instances(pakkages, **kwargs)
+    connectors = PakkLoader.get_connector_instances()
     pakkages.discover(connectors)
 
     # TODO: Handle undiscovered pakkages

@@ -101,8 +101,23 @@ class PakkConfigBase(Configuration):
 class ConnectorConfiguration(PakkConfigBase):
     CFG_BASE = ["main.cfg"]
 
+    def __init__(self):
+        if self.NAME is None:
+            logger.warning(
+                f"NAME of the Configuration must be set. Override the static variable NAME in your {self.__class__.__name__} subclass."
+            )
+        super().__init__(self.NAME or "connector.cfg")
+
     def is_enabled(self) -> bool:
         raise NotImplementedError(f"is_enabled() must be implemented in the subclass of {self.__class__.__name__}")
+
+    @classmethod
+    def get_config(cls: Type[C]) -> C:
+        """
+        Get the instance of this configuration.
+        """
+
+        return cls.__load_config__()
 
 
 class TypeConfiguration(PakkConfigBase):

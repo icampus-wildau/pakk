@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 class GitlabConfig(ConnectorConfiguration):
     NAME = "gitlab.cfg"
 
-    def __init__(self, name: str):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
         gitlab = ConfigSection("GitLab")
         self.enabled = gitlab.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)

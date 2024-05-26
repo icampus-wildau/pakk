@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class GithubConfig(ConnectorConfiguration):
     NAME = "github.cfg"
 
-    def __init__(self, name: str):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
         self.github_section = ConfigSection("GitHub")
         self.enabled = self.github_section.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)

@@ -5,6 +5,7 @@ import os
 import shutil
 from typing import Type
 
+from pakk.args.base_args import PakkArgs
 from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
 from pakk.modules.connector.base import Connector
@@ -24,16 +25,18 @@ class LocalConnector(Connector):
     PRIORITY = 20
     CONFIG_CLS = None
 
-    def __init__(self, pakkages: PakkageCollection, **kwargs):
-        super().__init__(pakkages, **kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.all_pakkges_dir = MainConfig.get_config().paths.all_pakkages_dir.value
 
         self.additional_locations: list[str] = []
+
+        kwargs = PakkArgs.kwargs
         # print(kwargs)
         if "location" in kwargs:
             locations_set = set()
-            for location in kwargs["location"]:
+            for location in kwargs["location"]:  # type: ignore
                 if location not in self.additional_locations:
                     path = self.get_absolute_path(location)
                     if path is not None:
@@ -97,9 +100,9 @@ class LocalConnector(Connector):
 
         return pakkages
 
-    def discover_in_path(self, pakkages: PakkageCollection, path: str, recursive: bool = True):
+    def discover_in_dir(self, pakkages: PakkageCollection, path: str, recursive: bool = True):
 
-        logger.info("Discovering available local pakkages @ %s", path)
+        logger.debug("Discovering available local pakkages @ %s", path)
 
         # Check if the directory contains a pakkage file
         pakkage_config = PakkageConfig.from_directory(path)
@@ -133,8 +136,14 @@ class LocalConnector(Connector):
             if recursive:
                 for subdir, dirs, _ in os.walk(path):
                     for d in dirs:
+
+                        # Ignore paths starting with a dot
+                        if d.startswith("."):
+                            continue
                         abs_path = os.path.join(subdir, d)
-                        self.discover_in_path(pakkages, abs_path, recursive)
+                        self.discover_in_dir(pakkages, abs_path, recursive)
+
+                    break
 
     def discover_available(self) -> PakkageCollection:
         """Discover all local available pakkages in provided local directories."""
@@ -142,7 +151,8 @@ class LocalConnector(Connector):
         pakkages = PakkageCollection()
 
         for location_path in self.additional_locations:
-            self.discover_in_path(pakkages, location_path, True)
+            logger.info(f"Discovering local pakkages @ {location_path}")
+            self.discover_in_dir(pakkages, location_path, True)
 
         return pakkages
 

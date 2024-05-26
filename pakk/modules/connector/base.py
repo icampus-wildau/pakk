@@ -245,12 +245,12 @@ class Connector(Module):
     If None, this connector does not require a configuration.
     """
 
-    def __init__(self, pakkages: PakkageCollection, **kwargs):
+    def __init__(self, **kwargs):  # pakkages: PakkageCollection,
         """Create a new connector."""
         super().__init__()
 
-        self.pakkages = pakkages
-        """The pakkage collection to work on."""
+        # self.pakkages = pakkages
+        # """The pakkage collection to work on."""
 
         # self.config = self.CONFIG_CLS.get_config() if self.CONFIG_CLS else None
 

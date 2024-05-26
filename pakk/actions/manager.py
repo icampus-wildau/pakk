@@ -54,7 +54,6 @@ class ErrorHandling:
 def _get_startable_pakkages(
     pakkage_names, select_message="Select pakkage to start:", **kwargs: str
 ) -> tuple[list[PakkageConfig], PakkageCollection]:
-    base_config = BaseArgs.set(**kwargs)
     get_all = kwargs.get("all", False)
 
     flag_verbose = kwargs.get("verbose", False)
@@ -63,7 +62,7 @@ def _get_startable_pakkages(
     TypeBase.initialize()
 
     pakkages = PakkageCollection()
-    local_discoverer = LocalConnector(pakkages)
+    local_discoverer = LocalConnector()
     pakkages.discover([local_discoverer], quiet=not flag_verbose)
 
     pakkage_names = [split_name_version(n)[0] for n in pakkage_names]

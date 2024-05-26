@@ -75,8 +75,8 @@ class CachedRepository:
     @staticmethod
     def from_directory(dir_path: str, recursive: bool = True) -> list[CachedRepository]:
         repos = []
-        if InstallArgs.get().clear_cache:
-            return repos
+        # if InstallArgs.get().clear_cache:
+        #     return repos
 
         for root, dirs, files in os.walk(dir_path):
             for file in files:

@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-from multiprocessing.pool import ThreadPool
-from threading import Lock
 
 import pytz
 from github import Github
@@ -12,11 +10,8 @@ from github.ContentFile import ContentFile
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 from github.Repository import Repository
-from rich.progress import MofNCompleteColumn
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TimeElapsedColumn
 
+from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.progress import ProgressManager
 from pakk.helper.progress import TaskPbar
@@ -38,8 +33,8 @@ logger = logging.getLogger(__name__)
 class GithubConnector(Connector):
     CONFIG_CLS = GithubConfig
 
-    def __init__(self, pakkages: PakkageCollection, **kwargs):
-        super().__init__(pakkages, **kwargs)
+    def __init__(self):
+        super().__init__()
         self.config = GithubConfig.get_config()
 
         self._token = self.config.private_token.value
@@ -131,7 +126,10 @@ class GithubConnector(Connector):
             def process_repo(repo: Repository):
                 # Load the cached repository
                 cache_file_path = self.get_repo_cache_file_path(repo)
-                cache_file = CachedRepository.from_file(cache_file_path)
+                if InstallArgs.get().clear_cache:
+                    cache_file = None
+                else:
+                    cache_file = CachedRepository.from_file(cache_file_path)
 
                 repo_dt = repo.pushed_at
                 if repo_dt.tzinfo is None:

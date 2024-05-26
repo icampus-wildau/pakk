@@ -31,7 +31,7 @@ def status(**kwargs: str):
         TypeBase.initialize()
 
     pakkages = PakkageCollection()
-    pakkages.discover([LocalConnector(pakkages)])
+    pakkages.discover([LocalConnector()])
 
     x = kwargs.get("extended", False)
 
