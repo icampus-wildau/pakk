@@ -8,9 +8,7 @@ import time
 import psutil
 
 from pakk import DEFAULT_CFG_DIR
-from pakk import DEFAULT_CFG_FILENAME
 from pakk import ENVS
-from pakk import ROOT_DIR
 
 logger = logging.getLogger(__name__)
 

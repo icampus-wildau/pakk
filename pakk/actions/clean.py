@@ -28,7 +28,6 @@ def clean(**kwargs: str):
     base_config = BaseConfig.set(**kwargs)
     config = cfg.get()
 
-
     lock = PakkLock("clean")
     if not lock.access:
         return

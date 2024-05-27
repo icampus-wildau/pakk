@@ -6,9 +6,9 @@ import shutil
 from typing import Dict
 
 ROOT_DIR = os.path.realpath(os.path.dirname(__file__))
-DEFAULT_CFG_DIR = os.path.join(ROOT_DIR, "..", "config")
-DEFAULT_CFG_FILENAME = os.path.join(DEFAULT_CFG_DIR, "pakk.cfg")
-DEFAULT_USR_CFG_FILENAME = os.path.join(DEFAULT_CFG_DIR, "user_pakk.cfg")
+HOME_DIR = os.environ["HOME"]
+DEFAULT_CFG_DIR = os.path.join(HOME_DIR, ".config", "pakk")
+# DEFAULT_CFG_DIR = os.path.join(ROOT_DIR, "..", "config")
 PAKK_CMD_PATH = shutil.which("pakk")
 
 

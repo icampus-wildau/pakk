@@ -8,7 +8,6 @@ import subprocess
 from typing import TYPE_CHECKING
 from typing import Callable
 
-import pakk.config.pakk_config as cfg
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.file_util import create_dir_symlink
 from pakk.helper.file_util import unlink_dir_symlink
@@ -55,7 +54,7 @@ class Module:
         print_output=False,
         execute_in_bash=False,
         env: dict[str, str] | None = None,
-    ) -> tuple(int, str, str):
+    ) -> tuple[int, str, str]:
         """
         Run a command.
         If command is a list, the elements are concatenated with "&&".

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pakk.args.base_args import BaseArgs
 
+
 class ManagerArgs(BaseArgs):
     def __init__(self, **kwargs: str | bool):
         super().__init__(**kwargs)

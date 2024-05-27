@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "pakk"
+name = "pakk-package-manager"
 version = "0.2.0"
 authors = [{ name = "Valentin Schröter", email = "vasc9380@th-wildau.de" }]
 description = "Pakk Package Manager."
@@ -26,6 +26,7 @@ dependencies = [
   'prettytable',
   'psutil',
   'pyfiglet',
+  'PyGithub',
   'python-dotenv',
   'python-gitlab>=3.0.0',
   'rich',

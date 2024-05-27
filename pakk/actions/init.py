@@ -127,7 +127,6 @@ def init(path: str, **kwargs: str):
     base_config = BaseArgs.get()
     flag_verbose = kwargs.get("verbose", False)
 
-
     if path is None or len(path) == 0:
         # Get current working directory
         path = os.getcwd()
