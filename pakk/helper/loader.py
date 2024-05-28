@@ -130,7 +130,10 @@ class PakkLoader:
         setup_routines_cls = PakkLoader.get_module_subclasses(setup_modules, SetupBase)
         logger.debug(f"Found setup routines: {setup_routines_cls}")
 
+        from pakk.setup.checker import PakkSetupChecker
         parser = ExtendedConfigParser()
+        parser.read(PakkSetupChecker.path)
+        
         env = get_current_environment()
         setup_routines: list[SetupBase] = []
         for setup_cls in setup_routines_cls:

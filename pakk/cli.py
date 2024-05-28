@@ -25,11 +25,23 @@ def init_pakk(**kwargs):
     from pakk.args.base_args import BaseArgs
     from pakk.args.base_args import PakkArgs
     from pakk.logger import Logger
+    
+    from pakk.setup.checker import PakkSetupChecker
+    from pakk.setup.setup_group import PakkGroupSetup
+    from pakk.setup.setup_service import ServiceSetup
+    from pakk.setup.setup_sudoers import PakkSudoersSetup
 
     # Initialize the pakk args to be globally available
     PakkArgs.init(**kwargs)
     # Initialize logger that prints to rich console
     Logger.setup_logger(logging.DEBUG if BaseArgs.get().verbose else logging.INFO)
+
+
+    PakkSetupChecker.require_setups([
+        PakkGroupSetup,
+        ServiceSetup,
+        PakkSudoersSetup,
+    ])
 
 
 @click.group(cls=ClickAliasedGroup, context_settings=CONTEXT_SETTINGS)

@@ -6,6 +6,8 @@ from extended_configparser.parser import ExtendedConfigParser
 
 from pakk.modules.environments.base import EnvironmentBase
 
+import logging
+logger = logging.getLogger(__name__)
 
 class CommandFailedException(Exception):
     pass
@@ -53,6 +55,7 @@ class SetupBase:
         return self.parser.get("Setup", self.NAME, fallback=None)
 
     def is_up_to_date(self):
+        # logger.info(f"Checking if {self.NAME} is up to date... {self.get_configured_version()} / {self.VERSION}")
         if self.get_configured_version() is None:
             return False
         return self.get_configured_version() == self.VERSION

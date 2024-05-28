@@ -30,7 +30,7 @@ def setup(**kwargs):
     config = MainConfig.get_config()
 
     # Check and run all setup routines
-    PakkSetupChecker.check_setups(also_run=True, reset_configs=reset)
+    PakkSetupChecker.check_all_setups(also_run=True, reset_configs=reset)
 
     return
 

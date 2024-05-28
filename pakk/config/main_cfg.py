@@ -116,13 +116,6 @@ class AutoUpdateConfig(ConfigEntryCollection):
         )
 
 
-# class ConnectorsConfig(ConfigEntryCollection):
-#     def __init__(self):
-
-#         section = ConfigSection("Pakk.Connectors")
-
-#         self.enabled = section.SelectOption
-
 
 class MainConfig(PakkConfigBase):
     NAME = "main.cfg"
