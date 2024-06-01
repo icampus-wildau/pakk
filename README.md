@@ -40,7 +40,7 @@ See the [Examples](#examples) section for more information on how to use this pr
 
 # Getting Started
 
-## Pakk Installation
+## Installation of `pakk`
 
 ```bash
 # Install pakk from pip
@@ -53,7 +53,7 @@ pip install git+https://github.com/icampus-wildau/pakk
 > Make sure, that your path for installed python packages is added to PATH in order to make pakk executable.
 > If `pakk`is not found as command, add something like `export PATH="$PATH:/home/user/.local/bin"` to your `~/.bashrc`.
 
-## Setup and Configuration of pakk
+## Setup and Configuration of `pakk`
 
 After the installation, you need to setup pakk for your system.
 This includes the creation of the necessary directories and files.
@@ -107,7 +107,41 @@ pakk disable PACKAGE_NAME
 pakk status
 ```
 
+You can enter `pakk -h` or `pakk [CMD] -h` to get an overview of other available commands and options for specific commands.
+
 ## Create a pakkage
+
+You can transform every of your projects/repositories to a *pakkage* by:
+- adding a `pakk.cfg` with your pakkage specifications to your project
+- releasing the pakkage on your index, e.g. if using GitHub by adding a tag
+
+The `pakk.cfg` contains meta-information about your pakkage with at least the following:
+```ini
+# The obligatory meta-information
+[info]
+# The unique id of your pakkage matching the GitHub url suffix.
+id = my_name/my_pakkage
+# The current version (using semantic versioning) of your pakkage.
+# This should match the tag of the release.
+version = 1.2.5
+# A short title
+title = My Pakkage - a beautiful pakkage example
+# A short description what your pakkage is for
+description = Base framework for Flexible Intent Recognition
+# Optionally a list of keywords
+keywords = keyword1, keyword2
+
+# Optionally the dependencies
+[dependencies]
+my_name/my_other_pakkage = ^0.5.0
+some_org/another_pakkage = ^1.4.0
+
+# Definition of the pakkage type
+```
+
+After the obligatory definition of the pakkage and the dependencies, one or multiple pakkage types can be added, to define the installation process. 
+See [the docs for creating a pakkage](./docs/creating_packages.md) for a list of out-of-the-box supported types. 
+
 
 
 See the [Examples](#examples) section for more information on how to use this project.
