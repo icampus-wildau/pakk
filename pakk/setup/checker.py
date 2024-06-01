@@ -12,8 +12,10 @@ from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
 
+
 class SetupRequiredException(Exception):
     pass
+
 
 class PakkSetupChecker:
     _setup_routines: list[SetupBase] = []
@@ -37,10 +39,13 @@ class PakkSetupChecker:
                 failed = PakkSetupChecker.run_setups(not_up_to_date)
                 if len(failed) > 0:
                     logger.error("Some setup routines failed.")
-                    raise SetupRequiredException(f"Failed to run setup routines: {', '.join([f'{f.NAME}@{f.VERSION}' for f in failed])}")
+                    raise SetupRequiredException(
+                        f"Failed to run setup routines: {', '.join([f'{f.NAME}@{f.VERSION}' for f in failed])}"
+                    )
             else:
-                raise SetupRequiredException(f"Setup routines are not up to date: {', '.join([f'{f.NAME}@{f.VERSION}' for f in not_up_to_date])}")
-
+                raise SetupRequiredException(
+                    f"Setup routines are not up to date: {', '.join([f'{f.NAME}@{f.VERSION}' for f in not_up_to_date])}"
+                )
 
     @staticmethod
     def check_setups(setups: list[SetupBase | type[SetupBase]]) -> list[SetupBase]:
@@ -68,7 +73,7 @@ class PakkSetupChecker:
             else:
                 if not setup.is_up_to_date():
                     not_up_to_date.append(setup)
-        
+
         not_up_to_date.sort(key=lambda x: x.PRIORITY)
         return not_up_to_date
 

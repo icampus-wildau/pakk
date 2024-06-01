@@ -116,7 +116,6 @@ class AutoUpdateConfig(ConfigEntryCollection):
         )
 
 
-
 class MainConfig(PakkConfigBase):
     NAME = "main.cfg"
 

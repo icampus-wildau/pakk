@@ -154,7 +154,7 @@ class MyConnector(Connector):
             message=f"Updating connector cache",
         )
 
-    def discover(self) -> PakkageCollection:
+    def discover(self, pakkage_ids: list[str] | None = None) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
         logger.info("Discovering projects from MyConnector")
 

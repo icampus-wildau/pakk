@@ -156,7 +156,7 @@ class LocalConnector(Connector):
 
         return pakkages
 
-    def discover(self):
+    def discover(self, pakkage_ids: list[str] | None = None):
         installed_pakkages = self.discover_installed()
         available_pakkages = self.discover_available()
         return installed_pakkages.merge(available_pakkages)

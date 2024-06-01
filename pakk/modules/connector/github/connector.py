@@ -106,19 +106,35 @@ class GithubConnector(Connector):
 
         return cached_repo
 
-    def _update_cache(self):
+    def _update_cache(self, pakkage_ids: list[str] | None = None):
         """Helper method to update the cached projects"""
+
         # Discovering on GitHub only works for known organizations
         org_names = self.config.cached_organizations.value
-        num_workers = int(self.config.num_discover_workers.value)
+
+        # Add new organizations if pakkage_ids are given
+        if pakkage_ids is not None:
+            for id in pakkage_ids:
+                splits = id.split("/")
+                if len(splits) == 2:
+                    org_name, repo_name = splits
+                    if org_name not in org_names:
+                        logger.info(f"Adding organization '{org_name}' to cache")
+                        org_names.append(org_name)
+
+        # Write back the updated organizations
+        self.config.cached_organizations.value = org_names
+
+        if len(org_names) == 0:
+            logger.info("No organizations to discover. Specify Github-Pakk-IDs to cache github projects.")
+            return
 
         logger.info(f"Updating GitHub cache...")
 
         for org_name in org_names:
             # Find the organization
+            logger.debug(f"Updating cache for organization '{org_name}':")
             org = self._github.get_organization(org_name)
-
-            logger.debug(f"Updating cache for organization {org_name}:")
 
             # # List all repos in the organization
             # for repo in org.get_repos():
@@ -151,17 +167,16 @@ class GithubConnector(Connector):
             execute_process_and_display_progress(
                 items=org.get_repos(),
                 item_processing_callback=process_repo,
-                num_workers=num_workers,
+                num_workers=int(self.config.num_discover_workers.value),
                 item_count=n_public + n_private,
                 message=f"Updating github cache for {org_name}",
             )
 
-    def discover(self) -> PakkageCollection:
+    def discover(self, pakkage_ids: list[str] | None) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
-        num_workers = int(self.config.num_discover_workers.value)
         logger.info("Discovering projects from GitHub")
 
-        self._update_cache()
+        self._update_cache(pakkage_ids)
         repos = CachedRepository.from_directory(self.get_cache_dir_path())
 
         n_repos, n_tags, n_pakk = 0, 0, 0

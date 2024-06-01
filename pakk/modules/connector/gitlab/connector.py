@@ -5,40 +5,28 @@ import inspect
 import logging
 import os
 import re
-import subprocess
 from datetime import datetime
-from multiprocessing.pool import ThreadPool
 
 import gitlab
 import gitlab.v4.objects as gl_objects
 import pytz
+from gitlab.exceptions import GitlabAuthenticationError
 from requests import ConnectTimeout
-from rich.progress import BarColumn
-from rich.progress import MofNCompleteColumn
-from rich.progress import Progress
-from rich.progress import SpinnerColumn
-from rich.progress import TextColumn
-from rich.progress import TimeElapsedColumn
-from rich.progress import TimeRemainingColumn
 
 from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
-from pakk.helper.file_util import remove_dir
 from pakk.helper.progress import ProgressManager
 from pakk.helper.progress import TaskPbar
 from pakk.helper.progress import execute_process_and_display_progress
-from pakk.logger import console
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.cache import CachedRepository
 from pakk.modules.connector.cache import CachedTag
 from pakk.modules.connector.git_generic import GenericGitHelper
 from pakk.modules.connector.gitlab.config import GitlabConfig
-from pakk.modules.module import Module
 from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.core import PakkageInstallState
 from pakk.pakkage.core import PakkageVersions
 
 logger = logging.getLogger(__name__)
@@ -68,7 +56,8 @@ class GitlabConnector(Connector):
             self.connected = True
         except ConnectTimeout as e:
             logger.error("Failed to connect to gitlab: %s", e)
-            pass
+        except GitlabAuthenticationError as e:
+            logger.error("Failed to authenticate to gitlab: %s", e)
 
         # Progress object for pbars
         self._pbar_progress = None
@@ -263,7 +252,7 @@ class GitlabConnector(Connector):
 
         return cached_projects
 
-    def discover(self) -> PakkageCollection:
+    def discover(self, pakkage_ids: list[str] | None = None) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
         if not self.connected:
             logger.warning("Failed to connect to gitlab. Skipping discovery")

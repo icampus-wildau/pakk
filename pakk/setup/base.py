@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from extended_configparser.parser import ExtendedConfigParser
 
 from pakk.modules.environments.base import EnvironmentBase
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class CommandFailedException(Exception):
     pass

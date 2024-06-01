@@ -168,7 +168,9 @@ class PakkageCollection:
     ### Connector functions
     ####################################################################################################################
 
-    def discover(self, connectors: list[Connector], quiet: bool = False) -> PakkageCollection:
+    def discover(
+        self, connectors: list[Connector], pakkage_ids: list[str] | None = None, quiet: bool = False
+    ) -> PakkageCollection:
         """
         Discover pakkages with the given connectors.
         The discovery process addes packages to the collection.
@@ -178,7 +180,7 @@ class PakkageCollection:
             Module.print_rule(f"Discovering pakkages")
 
         for connector in connectors:
-            discovered_pakkages = connector.discover()
+            discovered_pakkages = connector.discover(pakkage_ids)
             self.merge(discovered_pakkages)
 
         # Check if all installed versions are also available, otherwise there are problems with reinstalling
@@ -273,8 +275,21 @@ class Connector(Module):
             return True
         return cls.CONFIG_CLS.exists() and cls.CONFIG_CLS.get_config().is_enabled()
 
-    def discover(self) -> PakkageCollection:
-        """Discover all the packages with the implemented discoverer."""
+    def discover(self, pakkage_ids: list[str] | None = None) -> PakkageCollection:
+        """Discover pakkages with the connector.
+
+        Parameters
+        ----------
+        pakkage_ids : list[str] | None
+            If given, contains a list of names that should be discovered. If None, all pakkages should be discovered.
+            This is used for connectors, that cannot fetch all available pakkages by default but instead need a name.
+        Returns
+        -------
+        PakkageCollection
+            A pakkage collection with the discovered pakkages.
+
+        """
+
         logger.error("Discover method not implemented for %s", self.__class__.__name__)
         raise NotImplementedError()
 

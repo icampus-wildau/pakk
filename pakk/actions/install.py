@@ -85,7 +85,7 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str | bool]):
 
     pakkages = PakkageCollection()
     connectors = PakkLoader.get_connector_instances()
-    pakkages.discover(connectors)
+    pakkages.discover(connectors, pakkage_names)
 
     # TODO: Handle undiscovered pakkages
 

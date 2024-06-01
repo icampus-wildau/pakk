@@ -64,4 +64,4 @@ class GitlabConfig(ConnectorConfiguration):
         )
 
     def is_enabled(self) -> bool:
-        return self.enabled.value
+        return self.enabled.value and len(self.private_token.value.split()) > 0
