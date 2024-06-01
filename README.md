@@ -13,12 +13,12 @@ Pakk not only supports the installation of pakkages of different types, but also
 ### Installation of Pakkages:
 - discovery of pakkages hosted on GitHub (or other sources using add-ins)
 - dependency resolving
-- installation of different **pakkage types**:
-  - ROS 2 (Robot Operating System 2) pakkages
-  - Python pakkages
-  - Asset pakkages (static data like images, audio, neural networks, etc.)
-  - Static Web pakkages (built webapps) (WIP)
-  - Dynamic Web pakkages (reverse proxy apps) (WIP)
+- installation of different **pakkage types**. Out-of-the-box available types:
+  - **ROS 2** (Robot Operating System 2) pakkages
+  - **Python** pakkages
+  - **Asset** pakkages (static data like images, audio, neural networks, etc.)
+  - **Static Web** pakkages (built webapps) (WIP)
+  - **Dynamic Web** pakkages (reverse proxy apps) (WIP)
 
 ### Management of Pakkages:
 - starting / stopping of executable pakkages
@@ -53,19 +53,61 @@ pip install git+https://github.com/icampus-wildau/pakk
 > Make sure, that your path for installed python packages is added to PATH in order to make pakk executable.
 > If `pakk`is not found as command, add something like `export PATH="$PATH:/home/user/.local/bin"` to your `~/.bashrc`.
 
-## Configuration
+## Setup and Configuration of pakk
+
+After the installation, you need to setup pakk for your system.
+This includes the creation of the necessary directories and files.
+Some features of pakk require root access, so you might need to enter your password during the setup process.
+
+> [!IMPORTANT]
+> Do **NOT** run the setup as root with `sudo pakk setup`, just call `pakk setup` and enter your authentication when asked.
+
+```bash
+pakk setup
+```
+---
 
 By default, pakk uses its standard configuration, including default paths for the installed packages, etc.
 To adapt these configurations, you can run:
 - `pakk cfg main` for the main settings
 - `pakk cfg <connector_name>` for connector settings (e.g. `pakk cfg GithubConnector` to configure the connection to GitHub)
 
-## Install your first Paakkage
+You can easily skip this step and continue with the default settings.
+
+## Install and start a pakkage
 
 ```bash
-pakk install icampus-wildau/ros-i2c
+pakk install PACKAGE_NAME
+# e.g. pakk install icampus-wildau/ros-i2c
 ```
 
+When installing a pakkage, all required setup setups are executed and all dependencies are installed as well.
+
+After installation, you can list your installed pakkages:
+```bash
+pakk ls
+```
+
+If the installed pakkage is executable, you can start it with:
+```bash
+# Run it interactively
+pakk run PACKAGE_NAME
+
+# Start it as a service
+pakk start PACKAGE_NAME
+# Enable it for autostart
+pakk enable PACKAGE_NAME
+
+# Stop it
+pakk stop PACKAGE_NAME
+# Disable it for autostart
+pakk disable PACKAGE_NAME
+
+# See the status of all startable pakkages
+pakk status
+```
+
+## Create a pakkage
 
 
 See the [Examples](#examples) section for more information on how to use this project.
