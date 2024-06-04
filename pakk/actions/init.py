@@ -16,15 +16,17 @@ from prompt_toolkit.completion import Completion
 from prompt_toolkit.validation import ValidationError
 
 from pakk.args.base_args import BaseArgs
-from pakk.helper.module_importer import ModuleImporter
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+
+from pakk.modules.connector.base import PakkageCollection
+from pakk.modules.connector.local import LocalConnector
+
+from pakk.helper.loader import PakkLoader
 
 # pyright: reportPrivateImportUsage=false
 
@@ -187,10 +189,8 @@ def init(path: str, **kwargs: str):
         )
     )
 
-    local_discoverer = DiscovererLocal()
-    discoverer = DiscoveredPakkagesMerger([local_discoverer])
-    discoverer.quiet = not flag_verbose
-    pakkages_discovered = discoverer.merge()
+    pakkages = PakkageCollection()
+    pakkages.discover([LocalConnector()], quiet=not flag_verbose)
 
     dep_confirmed = False
     dependencies = []
@@ -198,7 +198,7 @@ def init(path: str, **kwargs: str):
         dependencies_str = inquirer.text(
             message="Dependencies:",
             long_instruction="A comma separated list of dependencies (pakkage IDs)",
-            completer=DependencyCompleter(pakkages_discovered),
+            completer=DependencyCompleter(pakkages.pakkages),
             qmark=">",
         ).execute()
 
@@ -239,7 +239,9 @@ def init(path: str, **kwargs: str):
         # Get module name
         module_name = c.__module__
         # Try to get InitHelper class from the module
-        helper_cls = ModuleImporter.get_class_from_module(module_name, "InitHelper")
+        # helper_cls = ModuleImporter.get_class_from_module(module_name, "InitHelper")
+        helper_cls = PakkLoader.get_module_subclasses(module_name, InitHelperBase)
+        helper_cls = helper_cls[0] if len(helper_cls) > 0 else None
         if helper_cls is None:
             logger.warning(f"Could not find InitHelper class in {module_name}")
             cfg_sections.append(InitConfigSection(c.PAKKAGE_TYPE, []))
