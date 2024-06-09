@@ -12,6 +12,7 @@ from pakk.logger import Logger
 from pakk.modules.connector.base import Connector
 from pakk.modules.connector.base import PakkageCollection
 from pakk.modules.connector.local import LocalConnector
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +87,19 @@ def list(**kwargs):
 
         iv = p.versions.installed
         av = p.versions.available
-        if not flag_all:
-            if iv is None and not has_locations:
-                continue
+        at = p.versions.target
+        is_failed = False
+        if iv is not None:
+            if iv.state.install_state == PakkageInstallState.FAILED:
+                is_failed = True
+
+        if not is_failed:
+            if not flag_all:
+                if iv is None and not has_locations:
+                    continue
 
         is_startable = iv.is_startable() if iv is not None else False
-        iv_str = iv.version if iv is not None else "-"
+        iv_str = "[red]FAILED[/red]" if is_failed else (iv.version if iv is not None else "-")
 
         limit = int(kwargs.get("limit_available", 5))
         av_tag_list = builtins.list(av.keys())

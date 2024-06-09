@@ -82,7 +82,10 @@ class LocalConnector(Connector):
                         logger.warning(f"Pakkage state is None for {pakkage_config.id}")
                         pakkage_config.state = PakkageState(PakkageInstallState.FETCHED)
 
-                    if pakkage_config.state.install_state == PakkageInstallState.INSTALLED:
+                    if (
+                        pakkage_config.state.install_state == PakkageInstallState.INSTALLED
+                        or pakkage_config.state.install_state == PakkageInstallState.FAILED
+                    ):
                         versions.installed = pakkage_config
                     elif (
                         pakkage_config.state.install_state == PakkageInstallState.FETCHED

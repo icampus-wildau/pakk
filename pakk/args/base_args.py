@@ -33,3 +33,7 @@ class PakkArgs:
     @classmethod
     def init(cls, **kwargs: str | list[str] | bool):
         cls.kwargs = kwargs
+
+    @classmethod
+    def update(cls, **kwargs: str | list[str] | bool):
+        cls.kwargs.update(kwargs)

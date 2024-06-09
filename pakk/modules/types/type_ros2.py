@@ -11,6 +11,7 @@ from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
 
 # from pakk.modules.environments.parts.ros2 import EnvPartROS2
+from pakk.modules.types.base import InstallationFailedException
 from pakk.modules.types.base import TypeBase
 from pakk.modules.types.base_instruction_parser import RunInstructionParser
 from pakk.pakkage.core import PakkageConfig
@@ -41,7 +42,7 @@ class Ros2TypeConfiguration(TypeConfiguration):
             inquire=False,
             is_dir=True,
         )
-        
+
         self.local_by_default = self.ros_section.ConfirmationOption(
             "local_by_default",
             True,
@@ -164,7 +165,7 @@ class TypeRos2(TypeBase):
             code, _, _ = self.run_commands_with_returncode(cmds, cwd=self.config.path_ros_ws.value, print_output=True)
 
             # If the packages could not be built, try to delete the build and install directories
-            if code == 2:
+            if code > 0:
                 logger.warning("Build failed. Trying to delete build and install directories...")
                 for p in package_names:
                     for d in ["build", "install"]:
@@ -176,6 +177,11 @@ class TypeRos2(TypeBase):
                 code, _, _ = self.run_commands_with_returncode(
                     cmds, cwd=self.config.path_ros_ws.value, print_output=True
                 )
+
+                if code > 0:
+                    raise InstallationFailedException(
+                        f"Building ROS packages ({package_names}) failed with code {code}"
+                    )
 
     def install(self) -> None:
         """Install a ROS pakkage."""

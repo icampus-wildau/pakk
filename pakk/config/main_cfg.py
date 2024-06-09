@@ -4,7 +4,6 @@ import logging
 
 from extended_configparser.configuration import ConfigEntryCollection
 from extended_configparser.configuration import ConfigSection
-from networkx import is_path
 
 from pakk.config.base import PakkConfigBase
 
@@ -57,7 +56,7 @@ class MainConfigPaths(ConfigEntryCollection):
         self.pakkages_dir = subdir_section.Option(
             "pakkages_dir",
             r"${Pakk.Dirs:data_root_dir}/pakkages",
-            "Main directory for the acktual pakkages.",
+            "Main directory for the actual pakkages.",
             is_dir=True,
         )
         """Main directory for the actual pakkages."""
@@ -110,8 +109,8 @@ class AutoUpdateConfig(ConfigEntryCollection):
 
         self.update_channel = section.Option(
             option="update_channel",
-            default="main",
-            message="Channel to check for updates",
+            default="pip",
+            message="Channel to check for updates. If 'pip' is selected, the pakkage will be updated via pip.",
             inquire=False,
         )
 

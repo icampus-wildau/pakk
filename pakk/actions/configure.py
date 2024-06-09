@@ -31,7 +31,7 @@ def configure(**kwargs):
     for type in types:
         if type.CONFIG_CLS is not None:
             configs_cls[type.__name__] = type.CONFIG_CLS
-            
+
     for connector in connectors:
         if connector.CONFIG_CLS is not None:
             configs_cls[connector.__name__] = connector.CONFIG_CLS

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Type
 from typing import TypeVar
 
+from pakk.config.base import TypeConfiguration
 from pakk.config.main_cfg import MainConfig
 from pakk.config.process import Process
 from pakk.modules.environments.base import GenericEnvironment
@@ -14,8 +15,6 @@ from pakk.modules.module import Module
 from pakk.modules.types.base_instruction_parser import InstallInstructionParser
 from pakk.modules.types.base_instruction_parser import InstructionParser
 from pakk.modules.types.base_instruction_parser import RunInstructionParser
-
-from pakk.config.base import TypeConfiguration
 
 if TYPE_CHECKING:
     from pakk.modules.environments.base import EnvironmentBase
@@ -38,6 +37,13 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound="InstructionParser", covariant=True)
 InstructionParserType = TypeVar("InstructionParserType", bound=InstructionParser)
+
+
+class InstallationFailedException(Exception):
+    """Exception raised when the installation of a pakkage failed."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
 class TypeBase(Module):
@@ -69,7 +75,7 @@ class TypeBase(Module):
     The order is important.
     The classes in this list are used to create the instruction parser objects automatically.
     """
-    
+
     CONFIG_CLS: type[TypeConfiguration] = None
     """
     The configuration class for this type.
@@ -88,7 +94,7 @@ class TypeBase(Module):
         """The environment used to install this pakkage type."""
 
         self.install_type = InstallType()
-        """Controls the installation behaviour of this pakkage type."""
+        """Controls the installation behavior of this pakkage type."""
 
         self.instruction_parser: dict[str, InstructionParser] = {}
         """Dictionary of instruction parsers for this type. Key is the instruction name."""
@@ -305,6 +311,25 @@ class TypeBase(Module):
         raise NotImplementedError()
 
     @staticmethod
+    def supervised_installation(types: list[TypeBase], raise_exception: bool = False):
+        """
+        Execute multiple installations simultaneously and handle exceptions.
+        If the installation fails, this type is considered as failed.
+        """
+        try:
+            TypeBase.install_multiple(types)
+        except InstallationFailedException as e:
+            logger.error(f"Installation failed: {e}")
+
+            for type_ in types:
+                type_.pakkage_version.state.failed_types.append(type_.__class__.__name__)
+
+            if raise_exception:
+                raise e
+            # type_.uninstall()
+            # raise InstallationFailedException(f"Installation of {type_} failed: {e}")
+
+    @staticmethod
     def install_multiple(types: list[TypeBase]):
         """
         Execute multiple installations simultaneously.
@@ -354,21 +379,21 @@ class TypeConfigSection:
 class InstallType:
     def __init__(self):
         self.is_independent = False
-        """If True, the installation can be started even if the dependencie installations not have finished yet."""
+        """If True, the installation can be started even if the dependency installations not have finished yet."""
 
         self.is_combinable_with_children = False
         """If True, the installation can be combined with other install instructions of the same type of the child (parent nodes when looking from the dep tree view) nodes,
         even if they are not independent from dependency nodes and thus should be executed one after the other."""
 
         """
-        Exampels:
+        Examples:
         ROS: Not IndependentFromDependencies + CombinableWithChildren
         --> ROS nodes should be build only after dependency nodes are finished (e.g. to setup Asset Symlinks etc.)
         --> ROS installation can be combined with other ROS installation (that are independent leaf nodes) (this combining installation is handled by overriding `install_multiple` method in the ROS type)
         --> If a node has only the ROS installation left, it can be combined with other ROS installations in the dependency hierarchie, thus these types are installed before the current dependency node is finished
 
         Setup: IndependentFromDependencies
-        --> Can be installed independently from dependencies, thus can be allways installed first from all nodes
+        --> Can be installed independently from dependencies, thus can be always installed first from all nodes
 
         Asset: Not IndependentFromDependencies + Not CombinableWithChildren
         --> Asset nodes should be build only after dependency nodes are finished (e.g. to setup other Asset Symlinks etc.)

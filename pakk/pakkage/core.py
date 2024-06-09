@@ -40,6 +40,7 @@ class PakkageInstallState(enum.Enum):
     UNINSTALLED = "uninstalled"
     FETCHED = "fetched"
     DISCOVERED = "discovered"
+    FAILED = "failed"
 
 
 class PakkageState:
@@ -52,6 +53,7 @@ class PakkageState:
         self.install_state: PakkageInstallState = install_state
         self.auto_start_enabled: bool = False
         self.running: bool = False
+        self.failed_types: list[str] = list()
 
     def copy_from(self, other: PakkageState | PakkageConfig | None):
         if other is None:
@@ -659,9 +661,9 @@ class PakkageConfig:
         pc.id = cfg.get("info", "id", fallback="")
         pc.version = cfg.get("info", "version", fallback="")
 
-        pc.name = cfg.get("info", "name", fallback="")
-        if pc.name is None:
-            pc.name = cfg.get("info", "title", fallback=pc.id)
+        pc.name = cfg.get("info", "title", fallback="")
+        if pc.name == "":
+            pc.name = cfg.get("info", "name", fallback=pc.id)
 
         pc.description = cfg.get("info", "description", fallback="")
         pc.author = cfg.get("info", "author", fallback="")
@@ -831,6 +833,11 @@ class Pakkage:
 
     def __str__(self):
         s = f"{self.id} @ {self.versions.installed.version if self.versions.installed else 'None'}"
+        if (
+            self.versions.installed is not None
+            and self.versions.installed.state.install_state == PakkageInstallState.FAILED
+        ):
+            s += " ([red]failed[/red])"
         if self.versions.target and self.versions.target != self.versions.installed:
             s += f" -> {self.versions.target.version}"
             if self.versions.is_repairing_install:

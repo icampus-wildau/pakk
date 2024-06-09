@@ -20,6 +20,7 @@ from pakk.modules.resolver.base import ResolverException
 from pakk.modules.resolver.resolver_fitting import ResolverFitting
 from pakk.modules.types.base import TypeBase
 from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class VersionNotFoundException(Exception):
         super().__init__(s)
 
 
-def install(pakkage_names: list[str] | str, **kwargs: dict[str, str | bool]):
+def install(pakkage_names: list[str] | str, **kwargs: str | bool):
 
     install_args = InstallArgs.get()
     lock = PakkLock("install")
@@ -117,6 +118,12 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str | bool]):
             elif install_args.force_reinstall and p.versions.installed is not None:
                 p.versions.target = p.versions.installed
                 p.versions.reinstall = True
+            elif (
+                p.versions.installed is not None
+                and p.versions.installed.state.install_state == PakkageInstallState.FAILED
+            ):
+                p.versions.target = p.versions.installed
+                p.versions.reinstall = True
             elif p.versions.installed is None:
                 available = list(p.versions.available.keys())
                 if len(available) > 0:
@@ -137,6 +144,8 @@ def install(pakkage_names: list[str] | str, **kwargs: dict[str, str | bool]):
                 # if p.versions.installed < p.versions.available.keys()[-1]
         else:
             p.versions.target = p.versions.available.get(version, None)
+            if install_args.force_reinstall:
+                p.versions.reinstall = True
 
         p.versions.target_fixed = True
         if version is not None and p.versions.target is None:
@@ -214,7 +223,7 @@ if __name__ == "__main__":
     # install(["ros2-displays", "ros2-respeaker"], **kwargs)
     # install("ros2-rosbridge-suite", **kwargs)
     # install("ros2-system-info", **kwargs)
-    install("static_web_dummy", **kwargs)
+    install("ros-i2c", **kwargs)
     # install("ros2-displays", **kwargs)
     # install("ros2-resource-manager", **kwargs)
     # install("ros2-rosass-rose", **kwargs)

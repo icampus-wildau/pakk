@@ -203,9 +203,12 @@ class InstallerCombining(Module):
                 if pakkage.versions.installed is None:
                     logger.info(f"Will install {pakkage.id} ({pakkage.versions.target.version})")
                 else:
-                    logger.info(
-                        f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
-                    )
+                    if pakkage.versions.reinstall:
+                        logger.info(f"Will reinstall {pakkage.id} ({pakkage.versions.installed.version})")
+                    else:
+                        logger.info(
+                            f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
+                        )
                     pakkages_to_uninstall.append(pakkage)
             elif pakkage.versions.target is not None:
                 if pakkage.versions.reinstall and pakkage.versions.installed is not None:
@@ -257,7 +260,7 @@ class InstallerCombining(Module):
             def callback(pakkage_name, info):
                 logger.info(f"[cyan]{pakkage_name}[/cyan]: {info}")
 
-            # Move to installed dir
+            # Move to installed dir and reset failed types
             for pakkage in self.pakkages_to_install:
                 v = pakkage.versions.target
                 if v is None:
@@ -266,6 +269,9 @@ class InstallerCombining(Module):
                 new_dir = self.all_pakkges_dir
                 logger.debug(f"Moving {v.name} to {new_dir}")
                 v.move_to(new_dir)
+
+                # Reset failed types
+                v.state.failed_types.clear()
 
             install_graph = InstallGraph(self.pakkages_to_install, self.deptree)
 
@@ -284,7 +290,7 @@ class InstallerCombining(Module):
 
             # Execute these installations first
             for type_, type_list in independent_types.items():
-                type_.install_multiple(type_list)
+                type_.supervised_installation(type_list)
 
             # After that: while there are still unfinished nodes:
             while len(unfinished_nodes := list(install_graph.unfinished_nodes)) > 0:
@@ -321,7 +327,7 @@ class InstallerCombining(Module):
 
                         for t in top_types_to_install:
                             t.status_callback = callback
-                        top_type.install_multiple(top_types_to_install)
+                        top_type.supervised_installation(top_types_to_install)
                     # If selected installation allows combination with other installations of the same type on the children:
                     else:
                         i = 0
@@ -356,21 +362,30 @@ class InstallerCombining(Module):
 
                         for t in top_types_to_install:
                             t.status_callback = callback
-                        top_type.install_multiple(top_types_to_install)
+                        top_type.supervised_installation(top_types_to_install)
 
             # Finish the installation by saving the install state
             for pakkage in self.pakkages_to_install:
                 if pakkage.versions.target is None:
                     logger.error("This should not happen")
                     continue
-                pakkage.versions.installed = pakkage.versions.target
-                pakkage.versions.installed.save_state()
+
+                version = pakkage.versions.target
+                if len(version.state.failed_types) > 0:
+                    logger.error(f"Installation of {version.id} failed.")
+                    version.state.install_state = PakkageInstallState.FAILED
+                    version.save_state()
+                    continue
+
+                pakkage.versions.installed = version
+                version.save_state()
 
                 # Set group of the pakkage directory to pakk
-                v.set_group("pakk")
+                version.set_group("pakk")
+                # v.set_group("pakk")
 
-                if pakkage.versions.installed.is_startable() and pakkage.versions.installed.is_enabled():
-                    pakkage.versions.installed.enable()
+                if version.is_startable() and version.is_enabled():
+                    version.enable()
 
                 logger.info(f"Finished installation of {pakkage.name}.")
 
