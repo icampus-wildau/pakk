@@ -27,6 +27,11 @@ def configure(**kwargs):
     configs_cls["main"] = MainConfig
 
     connectors = PakkLoader.get_connector_classes(False)
+    types = PakkLoader.get_type_classes()
+    for type in types:
+        if type.CONFIG_CLS is not None:
+            configs_cls[type.__name__] = type.CONFIG_CLS
+            
     for connector in connectors:
         if connector.CONFIG_CLS is not None:
             configs_cls[connector.__name__] = connector.CONFIG_CLS
@@ -49,5 +54,5 @@ def configure(**kwargs):
             console.print(f"Finished configuration of {config_name} at {config.config_path}!")
         else:
             console.print(
-                f"Configuration file {config.config_path} already exists. Use `pakk configure {config_name}` to explicitly configure  it."
+                f"Configuration file {config.config_path} already exists. Use 'pakk configure {config_name}' to explicitly configure  it."
             )

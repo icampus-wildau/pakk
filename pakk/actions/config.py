@@ -8,8 +8,8 @@ from InquirerPy import inquirer
 from InquirerPy import prompt
 
 from pakk import DEFAULT_CFG_DIR
-from pakk import DEFAULT_CFG_FILENAME
-from pakk import DEFAULT_USR_CFG_FILENAME
+# from pakk import DEFAULT_CFG_FILENAME
+# from pakk import DEFAULT_USR_CFG_FILENAME
 from pakk import ENVS
 from pakk.logger import Logger
 from pakk.modules.module import Module

@@ -28,7 +28,7 @@ class Ros2TypeConfiguration(TypeConfiguration):
         self.ros_section = ConfigSection("ROS2")
         self.path_ros_ws = self.ros_section.Option(
             "workspace_directory",
-            r"${Pakk.Subdirs:enviroment_dir}/ros2",
+            r"${Pakk.Subdirs:environment_dir}/ros2",
             "The path to your ROS workspace root used for ROS package installation",
             inquire=False,
             is_dir=True,
@@ -40,6 +40,13 @@ class Ros2TypeConfiguration(TypeConfiguration):
             "The ROS2 package source directory",
             inquire=False,
             is_dir=True,
+        )
+        
+        self.local_by_default = self.ros_section.ConfirmationOption(
+            "local_by_default",
+            True,
+            "Use ROS_LOCALHOST_ONLY=1 by default or not",
+            inquire=True,
         )
 
     def get_cmd_setup_ws(self):
@@ -101,6 +108,8 @@ class TypeRos2(TypeBase):
 
     PAKKAGE_TYPE: str = "ROS2"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
+
+    CONFIG_CLS = Ros2TypeConfiguration
 
     INSTRUCTION_PARSER = [
         RosStartInstructionParser,

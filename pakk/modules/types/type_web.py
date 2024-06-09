@@ -27,7 +27,7 @@ class WebTypeConfiguration(TypeConfiguration):
         self.python_section = ConfigSection("Web")
         self.location_definition_directory = self.python_section.Option(
             "location_definition_directory",
-            r"${Pakk.Subdirs:enviroment_dir}/nginx/locations",
+            r"${Pakk.Subdirs:environment_dir}/nginx/locations",
             "Location where the nginx location files are stored",
             inquire=False,
             is_dir=True,

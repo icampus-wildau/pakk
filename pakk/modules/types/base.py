@@ -15,6 +15,8 @@ from pakk.modules.types.base_instruction_parser import InstallInstructionParser
 from pakk.modules.types.base_instruction_parser import InstructionParser
 from pakk.modules.types.base_instruction_parser import RunInstructionParser
 
+from pakk.config.base import TypeConfiguration
+
 if TYPE_CHECKING:
     from pakk.modules.environments.base import EnvironmentBase
     from pakk.pakkage.core import PakkageConfig
@@ -61,15 +63,17 @@ class TypeBase(Module):
 
     SECTION_NAME = "Types"
 
-    CONFIG_REQUIREMENTS = {
-        SECTION_NAME: [],
-    }
-
     INSTRUCTION_PARSER: list[type[InstructionParser]] = []
     """
     List of instruction parsers for this type.
     The order is important.
     The classes in this list are used to create the instruction parser objects automatically.
+    """
+    
+    CONFIG_CLS: type[TypeConfiguration] = None
+    """
+    The configuration class for this type.
+    Set this to a subclass of TypeConfiguration to enable configuration for this type when using `pakk configure`.
     """
 
     def __init__(self, pakkage_version: PakkageConfig, environment: EnvironmentBase):

@@ -62,13 +62,13 @@ class MainConfigPaths(ConfigEntryCollection):
         )
         """Main directory for the actual pakkages."""
 
-        self.enviroment_dir = subdir_section.Option(
-            "enviroment_dir",
-            r"${Pakk.Dirs:data_root_dir}/enviroment",
-            "Main directory for pakk enviroments.",
+        self.environment_dir = subdir_section.Option(
+            "environment_dir",
+            r"${Pakk.Dirs:data_root_dir}/environment",
+            "Main directory for pakk environments.",
             is_dir=True,
         )
-        """Main directory for pakk enviroments."""
+        """Main directory for pakk environments."""
 
         self.all_pakkages_dir = subdir_section.Option(
             "all_pakkages_dir",
