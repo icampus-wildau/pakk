@@ -201,7 +201,7 @@ class TypeSetup(TypeBase):
     General setup instructions.
     """
 
-    PAKKAGE_TYPE: str = "Setup"
+    PAKKAGE_TYPE = "Setup"
     VISIBLE_TYPE = False
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = True
 

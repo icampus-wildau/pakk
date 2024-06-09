@@ -262,22 +262,6 @@ def tree(ctx: Context, **kwargs):
     show_tree(**kwargs)
 
 
-# @click.argument('NAME_REGEX', required=False)
-# @click.option("-d", "--depth", default=0, help="Maximum depth of the tree. 0 prints the complete tree.")
-@cli.command(aliases=[""])
-@click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
-@click.pass_context
-def config(ctx: Context, **kwargs):
-    """
-    Run the configuration setup for Pakk.
-    This helps you to create a pakk.cfg configuration file.
-    """
-    from pakk.actions.config import config
-
-    init_pakk(**kwargs)
-    config(**kwargs)
-
-
 @cli.command(aliases=["cfg"])
 @click.argument("configuration", required=False)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")

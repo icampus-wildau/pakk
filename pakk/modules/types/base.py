@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from typing import TYPE_CHECKING
+from typing import Generic
 from typing import Type
 from typing import TypeVar
 
@@ -38,6 +39,8 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound="InstructionParser", covariant=True)
 InstructionParserType = TypeVar("InstructionParserType", bound=InstructionParser)
 
+TB = TypeVar("TB", bound="TypeBase")
+
 
 class InstallationFailedException(Exception):
     """Exception raised when the installation of a pakkage failed."""
@@ -46,7 +49,7 @@ class InstallationFailedException(Exception):
         super().__init__(message)
 
 
-class TypeBase(Module):
+class TypeBase(Module, Generic[TB]):
     PAKKAGE_TYPE: str | None = None
     """
     The name of this pakkage type.
@@ -311,7 +314,7 @@ class TypeBase(Module):
         raise NotImplementedError()
 
     @staticmethod
-    def supervised_installation(types: list[TypeBase], raise_exception: bool = False):
+    def supervised_installation(types: list[TB], raise_exception: bool = False):
         """
         Execute multiple installations simultaneously and handle exceptions.
         If the installation fails, this type is considered as failed.
@@ -330,7 +333,7 @@ class TypeBase(Module):
             # raise InstallationFailedException(f"Installation of {type_} failed: {e}")
 
     @staticmethod
-    def install_multiple(types: list[TypeBase]):
+    def install_multiple(types: list[TB]):
         """
         Execute multiple installations simultaneously.
         Should be overwritten if the installer supports optimized simultaneous installations.
@@ -431,8 +434,11 @@ class InstallType:
         """
         return self.install_priority < other.install_priority
 
-    def __eq__(self, other: InstallType):
+    def __eq__(self, other: object):
         """
         Compares the install priority of two InstallType objects.
         """
+        if not isinstance(other, InstallType):
+            return False
+
         return self.install_priority == other.install_priority
