@@ -1,3 +1,6 @@
+<!-- MD+:META
+title = "Creating Packages"
+ -->
 
 # Creating a pakkage
 

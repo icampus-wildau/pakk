@@ -1,3 +1,7 @@
+<!-- MD+:META
+title = "Developing new Connectors"
+ -->
+
 # What are Connectors
 
 Connector are on of the basic elements of pakk, allowing the connection to a pakkage-index.
