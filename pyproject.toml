@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "pakk-package-manager"
+version = "0.3.0"
+authors = [{ name = "Valentin Schröter", email = "vasc9380@th-wildau.de" }]
+description = "Pakk Package Manager."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  'braceexpand',
+  'click',
+  'click-aliases',
+  'extended-configparser',
+  'flock',
+  'graphviz',
+  'InquirerPy',
+  'jellyfish',
+  'jsons',                # Does not work for Python3.11 any more
+  'markdown-plus',
+  'networkx',
+  'node-semver',
+  'prettytable',
+  'psutil',
+  'pyfiglet',
+  'PyGithub',
+  'python-dotenv',
+  'python-gitlab>=3.0.0',
+  'pytz',
+  'requests',
+  'rich',
+  'semver',
+  'tqdm',
+]
+classifiers = ["Programming Language :: Python :: 3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pakk"]
+
+[project.urls]
+Homepage = "https://github.com/icampus-wildau/pakk"
+Issues = "https://github.com/icampus-wildau/pakk/issues"
+
+[project.scripts]
+pakk = "pakk.cli:cli"
