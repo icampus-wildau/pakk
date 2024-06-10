@@ -5,15 +5,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pakk-package-manager"
-version = "0.2.0"
+version = "0.3.0"
 authors = [{ name = "Valentin Schröter", email = "vasc9380@th-wildau.de" }]
 description = "Pakk Package Manager."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   'braceexpand',
-  'click-aliases',
   'click',
+  'click-aliases',
   'extended-configparser',
   'flock',
   'graphviz',
@@ -29,10 +29,11 @@ dependencies = [
   'PyGithub',
   'python-dotenv',
   'python-gitlab>=3.0.0',
+  'pytz',
+  'requests',
   'rich',
   'semver',
   'tqdm',
-  # 'jsons @ https://github.com/vschroeter/jsons.git',
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 
