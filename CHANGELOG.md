@@ -31,6 +31,10 @@ Plugins:
 - support for dynamic integration of new commands and new options for existing commands
 
 ## [UNRELEASED]
+
+
+## [0.3.0]
+
 Working commands
 - install
 - list
@@ -52,3 +56,5 @@ Working commands
 Working pakkage types:
 - ROS2
 - Setup, Asset and Python should work, but not tested yet
+
+Basic documentation.
