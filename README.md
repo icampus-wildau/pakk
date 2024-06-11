@@ -155,14 +155,6 @@ some_org/another_pakkage = ^1.4.0
 After the obligatory definition of the pakkage and the dependencies, one or multiple pakkage types can be added, to define the installation process.
 See [the docs for creating a pakkage](./docs/creating_packages.md) for a list of out-of-the-box supported types.
 
-
-# Usage Examples
-
-> [!IMPORTANT]
-> Add some basic examples on how to use the package here. These examples should be easy to understand and should cover the most important use cases. Always include the necessary imports and the expected output, but assume that the user has already gone through a 'Getting Started' section.
-
-For more examples and advanced topics, please refer to the [Documentation](docs/README.md) or have a look at the [Examples](examples/README.md) directory.
-
 <!-- MD+:generate.content
 header = '# Contents of this Repository'
 level = 1
