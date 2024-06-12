@@ -7,6 +7,7 @@ import re
 import pytz
 from github import Github
 from github.ContentFile import ContentFile
+from github.GithubException import BadCredentialsException
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 from github.Repository import Repository
@@ -176,7 +177,13 @@ class GithubConnector(Connector):
         discovered_pakkages = PakkageCollection()
         logger.info("Discovering projects from GitHub")
 
-        self._update_cache(pakkage_ids)
+        try:
+            self._update_cache(pakkage_ids)
+        except BadCredentialsException as e:
+            logger.warning("Github Token is invalid. Only taking public repositories into account.")
+            self._github = Github()
+            self._update_cache(pakkage_ids)
+
         repos = CachedRepository.from_directory(self.get_cache_dir_path())
 
         n_repos, n_tags, n_pakk = 0, 0, 0
