@@ -122,11 +122,16 @@ class TypeBase(Module, Generic[TB]):
         }
 
         self.instruction_parser_install = [
-            p for p in self.instruction_parser.values() if isinstance(p, InstallInstructionParser)
+            p
+            for p in self.instruction_parser.values()
+            if (isinstance(p, InstallInstructionParser) or issubclass(p.__class__, InstallInstructionParser))
         ]
+
         """List of instruction parsers that are used for installation."""
         self.instruction_parser_run = [
-            p for p in self.instruction_parser.values() if isinstance(p, RunInstructionParser)
+            p
+            for p in self.instruction_parser.values()
+            if (isinstance(p, RunInstructionParser) or issubclass(p.__class__, RunInstructionParser))
         ]
         """List of instruction parsers that are used for running commands."""
 
@@ -313,14 +318,14 @@ class TypeBase(Module, Generic[TB]):
         """Install the package version with this type."""
         raise NotImplementedError()
 
-    @staticmethod
-    def supervised_installation(types: list[TB], raise_exception: bool = False):
+    @classmethod
+    def supervised_installation(cls, types: list[TB], raise_exception: bool = False):
         """
         Execute multiple installations simultaneously and handle exceptions.
         If the installation fails, this type is considered as failed.
         """
         try:
-            TypeBase.install_multiple(types)
+            cls.install_multiple(types)
         except InstallationFailedException as e:
             logger.error(f"Installation failed: {e}")
 

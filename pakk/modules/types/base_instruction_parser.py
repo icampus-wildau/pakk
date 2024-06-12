@@ -73,5 +73,9 @@ class CombinableInstructionParser(InstructionParser):
         return " && ".join([p.get_cmd() for p in parser])
 
 
+class CombinableInstallInstructionParser(CombinableInstructionParser, InstallInstructionParser):
+    pass
+
+
 class RunInstructionParser(InstructionParser):
     pass

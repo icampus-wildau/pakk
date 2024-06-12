@@ -13,6 +13,9 @@ from pakk.modules.environments.linux import LinuxEnvironment
 from pakk.modules.environments.parts.python import EnvPartPython
 from pakk.modules.module import Module
 from pakk.modules.types.base import TypeBase
+from pakk.modules.types.base_instruction_parser import (
+    CombinableInstallInstructionParser,
+)
 from pakk.modules.types.base_instruction_parser import CombinableInstructionParser
 from pakk.modules.types.base_instruction_parser import InstallInstructionParser
 from pakk.modules.types.base_instruction_parser import InstructionParser
@@ -25,7 +28,7 @@ from pakk.pakkage.init_helper import InitHelperBase
 logger = logging.getLogger(__name__)
 
 
-class AptInstructionParser(CombinableInstructionParser):
+class AptInstructionParser(CombinableInstallInstructionParser):
     INSTRUCTION_NAME = "apt"
     DEFAULT_SUBINSTRUCTION = "install"
 
@@ -64,7 +67,7 @@ class AptInstructionParser(CombinableInstructionParser):
         return None
 
 
-class PipInstructionParser(InstructionParser):
+class PipInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "pip"
     DEFAULT_SUBINSTRUCTION = "install"
 
@@ -173,7 +176,7 @@ class LocalEnvVarParser(InstructionParser):
             super().parse_undefined_subinstruction(instruction_content, subinstruction)
 
 
-class GitInstructionParser(InstructionParser):
+class GitInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "git"
     DEFAULT_SUBINSTRUCTION = "clone"
 
@@ -223,6 +226,7 @@ class TypeSetup(TypeBase):
             instruction_content, instruction_name, instruction_name
         )
 
+    # TODO: Refactor code, so that install is always for multiple types to avoid code duplication.
     def install(self) -> None:
         """Install by executing the setup instruction."""
         logger.info(f"Execute setup instructions for '{self.pakkage_version.id}'...")
@@ -248,6 +252,8 @@ class TypeSetup(TypeBase):
                     )
                     cmd = setup_instruction_parser.get_cmd()
                     self.run_commands(cmd, cwd=self.pakkage_version.local_path, env=setup_env, print_output=True)
+        else:
+            logger.error(f"Setup not yet implemented for other OS than Linux.")
 
     @staticmethod
     def install_multiple(types: list[TypeSetup]):
