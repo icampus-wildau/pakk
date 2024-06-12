@@ -32,6 +32,21 @@ Plugins:
 
 ## [UNRELEASED]
 
+## [0.4.0]
+
+Fixes and changes:
+- General:
+  - restructured project directories and names (thus, some import names has been changed)
+- Actions:
+  - [Update] Is now waiting to have an internet connection to work properly on system start
+  - [Update] Now uses the correct pip command to update pakk
+- Types:
+  - [ROS] Fixed execution of ROS packages by adapting the PYTHONPATH according to the venv
+  - [Setup] Fixed installation instruction parsing
+  - [Setup] Now checks for failed commands
+- Setup routines: 
+  - dir creation in first run of group setup routine
+
 
 ## [0.3.0]
 
