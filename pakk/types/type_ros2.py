@@ -188,29 +188,7 @@ class TypeRos2(TypeBase):
 
     def install(self) -> None:
         """Install a ROS pakkage."""
-        logger.info(f"Installing ROS2 pakkage '{self.pakkage_version.id}'...")
-
-        v = self.pakkage_version
-        self.env: LinuxEnvironment
-
-        # Link into pakkages_dir
-        self.set_status(v.name, f"Linking {v.basename} into modules directory...")
-        self.symlink_pakkage_in_pakkages_dir(v)
-
-        # Link into ROS workspace
-        self.set_status(v.name, f"Linking {v.basename} into ROS workspace...")
-        # Don't use v.basename here. ROS supports atm only one version simultaneously, thus it should always be the same name
-        ros_src_pakkage_path = os.path.join(self.config.path_ros_ws_src.value, v.id)
-        self.symlink_pakkage_to(v, ros_src_pakkage_path)
-
-        # return
-        # Get ROS packages present in the pakkage
-        self.set_status(v.name, f"Retrieving ROS packages in {v.basename}...")
-        ros_p_names = self.get_ros_package_names()
-
-        # Build the ROS packages
-        self.set_status(v.name, f"Building ROS packages in {v.basename}...")
-        out = self.build_ros_packages(ros_p_names)
+        self.install_multiple([self])
 
     @staticmethod
     def install_multiple(types: list[TypeRos2]):

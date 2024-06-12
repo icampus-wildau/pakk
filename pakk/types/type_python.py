@@ -37,7 +37,8 @@ class PythonTypeConfiguration(TypeConfiguration):
         requirements_file: str | None = None,
         packages: list[str] | None = None,
     ):
-        parts = ["pip install"]
+        pip = Environment.get_pip()
+        parts = [f"{pip} install"]
         if path is not None:
             if editable:
                 parts.append("-e")

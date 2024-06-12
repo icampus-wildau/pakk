@@ -16,6 +16,7 @@ from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.types.base import InstallationFailedException
 from pakk.types.base import TypeBase
 from pakk.types.base_instruction_parser import CombinableInstallInstructionParser
 from pakk.types.base_instruction_parser import CombinableInstructionParser
@@ -224,34 +225,9 @@ class TypeSetup(TypeBase):
             instruction_content, instruction_name, instruction_name
         )
 
-    # TODO: Refactor code, so that install is always for multiple types to avoid code duplication.
     def install(self) -> None:
         """Install by executing the setup instruction."""
-        logger.info(f"Execute setup instructions for '{self.pakkage_version.id}'...")
-
-        base_cfg = BaseArgs.get()
-        v = self.pakkage_version
-
-        if isinstance(self.env, LinuxEnvironment):
-
-            env_vars = self.get_instruction_parser_by_cls(LocalEnvVarParser).env_vars
-            Process.update_temp_env_vars(v, env_vars)
-
-            setup_env = os.environ.copy()
-            setup_env.update(env_vars)
-
-            for setup_instruction_parser in self.instruction_parser_install:
-                if isinstance(setup_instruction_parser, LocalEnvVarParser):
-                    continue
-                if setup_instruction_parser.has_cmd():
-
-                    self.set_status(
-                        v.name, f"Executing setup instruction '{setup_instruction_parser.INSTRUCTION_NAME}'..."
-                    )
-                    cmd = setup_instruction_parser.get_cmd()
-                    self.run_commands(cmd, cwd=self.pakkage_version.local_path, env=setup_env, print_output=True)
-        else:
-            logger.error(f"Setup not yet implemented for other OS than Linux.")
+        self.install_multiple([self])
 
     @staticmethod
     def install_multiple(types: list[TypeSetup]):
@@ -287,7 +263,10 @@ class TypeSetup(TypeBase):
                 logger.info(
                     f"Executing '{instruction_parser.INSTRUCTION_NAME}' instruction for {[t.pakkage_version.id for t in types_with_instruction]}..."
                 )
-                Module.run_commands(cmd, print_output=True)
+                code, _, _ = Module.run_commands_with_returncode(cmd, print_output=True)
+                if code > 0:
+                    logger.warning(f"{cmd} failed with {code}")
+                    raise InstallationFailedException(f"Setup command ({cmd}) failed with code {code}")
             else:
                 for t in types:
                     parser = t.get_instruction_parser_by_cls(instruction_parser)
@@ -300,7 +279,12 @@ class TypeSetup(TypeBase):
                         envs.update(temp_env_vars)
 
                         cmd = parser.get_cmd()
-                        Module.run_commands(cmd, cwd=t.pakkage_version.local_path, print_output=True, env=envs)
+                        code, _, _ = Module.run_commands_with_returncode(
+                            cmd, cwd=t.pakkage_version.local_path, print_output=True, env=envs
+                        )
+                        if code > 0:
+                            logger.warning(f"{cmd} failed with {code}")
+                            raise InstallationFailedException(f"Setup command ({cmd}) failed with code {code}")
 
     def uninstall(self) -> None:
         pass
