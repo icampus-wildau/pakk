@@ -7,11 +7,11 @@ from InquirerPy import inquirer
 
 from pakk.args.base_args import BaseArgs
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+from pakk.discoverer.base import DiscoveredPakkagesMerger
+from pakk.discoverer.discoverer_local import DiscovererLocal
 
-# from pakk.modules.environments.dockerbase import DockerEnvironment
-from pakk.modules.types.base import TypeBase
+# from pakk.environments.dockerbase import DockerEnvironment
+from pakk.types.base import TypeBase
 from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)

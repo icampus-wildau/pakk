@@ -7,7 +7,7 @@ from extended_configparser.parser import ExtendedConfigParser
 
 from pakk import ROOT_DIR
 from pakk.config.main_cfg import MainConfig
-from pakk.modules.environments.base import EnvironmentBase
+from pakk.environments.base import EnvironmentBase
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)

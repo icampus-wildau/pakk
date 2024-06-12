@@ -13,8 +13,8 @@ from pakk.config.pakk_config import Sections
 from pakk.helper.file_util import remove_dir
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+from pakk.discoverer.base import DiscoveredPakkagesMerger
+from pakk.discoverer.discoverer_local import DiscovererLocal
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState

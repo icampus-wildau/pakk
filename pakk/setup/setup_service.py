@@ -6,11 +6,11 @@ import tempfile
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.environments.base import EnvironmentBase
-from pakk.modules.manager.systemd.unit_generator import PakkAutoUpdateService
-from pakk.modules.manager.systemd.unit_generator import PakkParentService
-from pakk.modules.manager.systemd.unit_generator import PakkServiceFileBase
-from pakk.modules.manager.systemd.unit_generator import ServiceFile
+from pakk.environments.base import EnvironmentBase
+from pakk.manager.systemd.unit_generator import PakkAutoUpdateService
+from pakk.manager.systemd.unit_generator import PakkParentService
+from pakk.manager.systemd.unit_generator import PakkServiceFileBase
+from pakk.manager.systemd.unit_generator import ServiceFile
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)

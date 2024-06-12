@@ -9,9 +9,9 @@ from rich.table import Table
 from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
-from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.local import LocalConnector
+from pakk.connector.base import Connector
+from pakk.connector.base import PakkageCollection
+from pakk.connector.local import LocalConnector
 from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def list(**kwargs):
 
     if flag_types:
         print("Initializing types...")
-        from pakk.modules.types.base import TypeBase
+        from pakk.types.base import TypeBase
 
         TypeBase.initialize()
 

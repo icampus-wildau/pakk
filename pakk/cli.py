@@ -50,7 +50,7 @@ def catched_execution(function, *args, **kwargs):
     from pakk.actions.install import PakkageNotFoundException
     from pakk.config.main_cfg import MainConfig
     from pakk.logger import Logger
-    from pakk.modules.resolver.base import ResolverException
+    from pakk.resolver.base import ResolverException
     from pakk.setup.checker import SetupRequiredException
 
     try:

@@ -10,11 +10,11 @@ from typing import TypeVar
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.environments.loader import get_current_environment
-from pakk.modules.environments.loader import get_current_environment_cls
-from pakk.modules.types.base import TypeBase
+from pakk.connector.base import Connector
+from pakk.connector.base import PakkageCollection
+from pakk.environments.loader import get_current_environment
+from pakk.environments.loader import get_current_environment_cls
+from pakk.types.base import TypeBase
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)

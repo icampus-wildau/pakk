@@ -8,11 +8,11 @@ from pakk import ROOT_DIR
 from pakk.args.base_args import PakkArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.lockfile import PakkLock
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.local import LocalConnector
+from pakk.connector.base import PakkageCollection
+from pakk.connector.local import LocalConnector
 
-# from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-# from pakk.modules.discoverer.discoverer_local import DiscovererLocal
+# from pakk.discoverer.base import DiscoveredPakkagesMerger
+# from pakk.discoverer.discoverer_local import DiscovererLocal
 
 logger = logging.getLogger(__name__)
 

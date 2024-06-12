@@ -6,7 +6,7 @@ import tempfile
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.environments.base import EnvironmentBase
+from pakk.environments.base import EnvironmentBase
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)

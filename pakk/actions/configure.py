@@ -7,7 +7,7 @@ from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
 from pakk.helper.loader import PakkLoader
 from pakk.logger import Logger
-from pakk.modules.module import Module
+from pakk.module import Module
 
 logger = logging.getLogger(__name__)
 

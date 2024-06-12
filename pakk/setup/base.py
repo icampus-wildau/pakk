@@ -5,7 +5,7 @@ import os
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.environments.base import EnvironmentBase
+from pakk.environments.base import EnvironmentBase
 
 logger = logging.getLogger(__name__)
 

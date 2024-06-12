@@ -8,8 +8,8 @@ from rich.table import Table
 
 from pakk.helper.lockfile import PakkLock
 from pakk.logger import Logger
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.local import LocalConnector
+from pakk.connector.base import PakkageCollection
+from pakk.connector.local import LocalConnector
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def status(**kwargs: str):
         logger.warn("Another pakk process is currently running, thus the list could be wrong.")
 
     if flag_types:
-        from pakk.modules.types.base import TypeBase
+        from pakk.types.base import TypeBase
 
         TypeBase.initialize()
 

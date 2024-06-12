@@ -12,10 +12,10 @@ import pakk.config.pakk_config as config
 from pakk.args.base_args import BaseArgs
 from pakk.config.process import Process
 from pakk.logger import Logger
-from pakk.modules.discoverer.base import DiscoveredPakkagesMerger
-from pakk.modules.discoverer.discoverer_gitlab import DiscovererGitlabCached
-from pakk.modules.discoverer.discoverer_local import DiscovererLocal
-from pakk.modules.types.base import TypeBase
+from pakk.discoverer.base import DiscoveredPakkagesMerger
+from pakk.discoverer.discoverer_gitlab import DiscovererGitlabCached
+from pakk.discoverer.discoverer_local import DiscovererLocal
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 
