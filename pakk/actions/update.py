@@ -50,6 +50,26 @@ def is_git_repo_clean(dir: str):
     except subprocess.CalledProcessError as e:
         return False
     
+def remote_branch_exists(remote_name: str, branch_name: str):
+    try:
+        # Run 'git ls-remote --heads' to list all branches on the remote
+        result = subprocess.run(
+            ['git', 'ls-remote', '--heads', remote_name, branch_name],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        # Check if the output contains the branch
+        if result.stdout.strip():
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e}")
+        return False
+
+    
 def _self_update():
     config = MainConfig.get_config()
     project_dir = os.path.abspath(os.path.join(ROOT_DIR, ".."))
@@ -62,8 +82,12 @@ def _self_update():
     # Check if project dir is a git repository
     if pakk_is_git_repo:        
         if is_git_repo_clean(project_dir):
+            if not remote_branch_exists("origin", update_channel):
+                logger.warning(f"Given update channel {update_channel} does not exist on remote.")
+                return
+            
             # If so, pull from channel and install
-            cmd = f"cd {project_dir} && git pull origin {update_channel} && pip install -e ."
+            cmd = f"cd {project_dir} && git pull origin {update_channel} && {pip} install -e ."
             logger.info(f"Executing self update command: {cmd}")
             os.system(cmd)
             return
