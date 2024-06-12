@@ -45,12 +45,13 @@ def init_pakk(**kwargs):
 
 
 def catched_execution(function, *args, **kwargs):
-    from pakk.setup.checker import SetupRequiredException
     from configparser import InterpolationMissingOptionError
+
     from pakk.actions.install import PakkageNotFoundException
     from pakk.config.main_cfg import MainConfig
-    from pakk.modules.resolver.base import ResolverException
     from pakk.logger import Logger
+    from pakk.modules.resolver.base import ResolverException
+    from pakk.setup.checker import SetupRequiredException
 
     try:
         init_pakk(**kwargs)
@@ -97,7 +98,6 @@ def catched_execution(function, *args, **kwargs):
         Logger.print_exception_message(e)
         fix_msg = "To fix this, do one of the following:\n"
         fix_msg += f"  - rerun 'pakk setup' and check for occuring errors & fixes.\n"
-        
 
     except Exception as e:
         Logger.get_console().print_exception()
@@ -119,7 +119,6 @@ def catched_execution(function, *args, **kwargs):
 
     #     Logger.get_console().print(fix_msg)
 
-
     # except PakkModuleNotFoundException as e:
     #     from pakk.logger import Logger
 
@@ -140,11 +139,10 @@ def catched_execution(function, *args, **kwargs):
     #         fix_msg += f"  - check if '{e.class_name}' is a class in the module '{e.module_name}'\n"
 
     #     Logger.get_console().print(fix_msg)
-    
+
     #     pass
     # finally:
     #     ctx.exit(0)
-
 
 
 @click.group(cls=ClickAliasedGroup, context_settings=CONTEXT_SETTINGS)
@@ -213,7 +211,6 @@ def install(ctx: Context, **kwargs):
     catched_execution(install, builtins.list(kwargs["pakkage"]), **kwargs)
 
 
-
 # @cli.command()
 # @click.option('--version', default=1.0, prompt='Version', help='Version number.')
 # @click.argument('package_name')
@@ -245,6 +242,7 @@ def list(ctx: Context, **kwargs):
     You can optionally specify a REGEX_FILTER expression to filter the list.
     """
     from pakk.actions.list import list
+
     catched_execution(list, **kwargs)
 
 
@@ -260,6 +258,7 @@ def tree(ctx: Context, **kwargs):
     # You can optionally specify a NAME_REGEX expression to filter the list.
 
     from pakk.actions.tree import show_tree
+
     catched_execution(show_tree, **kwargs)
 
 
@@ -267,7 +266,9 @@ def tree(ctx: Context, **kwargs):
 @click.argument("configuration", required=False)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 @click.option("-r", "--reset", is_flag=True, default=False, help="Reset the configuration.")
-@click.option("-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit.")
+@click.option(
+    "-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit."
+)
 @click.pass_context
 def configure(ctx: Context, **kwargs):
     """
@@ -278,10 +279,12 @@ def configure(ctx: Context, **kwargs):
 
     if kwargs["show_dir"]:
         from pakk.config.base import PakkConfigBase
+
         print(PakkConfigBase.get_configs_dir())
-        return 
-    
+        return
+
     from pakk.actions.configure import configure
+
     catched_execution(configure, **kwargs)
 
 
@@ -295,6 +298,7 @@ def setup(ctx: Context, **kwargs):
     This initiates all necessary rights and files to let Pakk run successfully.
     """
     from pakk.actions.setup import setup
+
     catched_execution(setup, **kwargs)
 
 
@@ -308,6 +312,7 @@ def ros_environment(**kwargs):
     """
 
     from pakk.actions.environment import environment
+
     catched_execution(environment, **kwargs)
 
 
@@ -322,6 +327,7 @@ def ros2(run_args, **kwargs):
     """
 
     from pakk.actions.ros2 import ros2
+
     catched_execution(ros2, run_args, **kwargs)
 
 
@@ -336,6 +342,7 @@ def source(**kwargs):
     """
 
     from pakk.actions.source import source
+
     catched_execution(source, **kwargs)
 
 
@@ -352,6 +359,7 @@ def run(**kwargs):
     """
 
     from pakk.actions.manager import run as r
+
     catched_execution(r, **kwargs)
 
 
@@ -365,6 +373,7 @@ def start(**kwargs):
     """
 
     from pakk.actions.manager import start
+
     catched_execution(start, **kwargs)
     # print("RUN DUMMY")
 
@@ -378,6 +387,7 @@ def enable(**kwargs):
     """
 
     from pakk.actions.manager import enable
+
     catched_execution(enable, **kwargs)
 
 
@@ -390,6 +400,7 @@ def stop(**kwargs):
     """
 
     from pakk.actions.manager import stop
+
     catched_execution(stop, **kwargs)
 
 
@@ -402,6 +413,7 @@ def disable(**kwargs):
     """
 
     from pakk.actions.manager import disable
+
     catched_execution(disable, **kwargs)
 
 
@@ -416,6 +428,7 @@ def restart(**kwargs):
     """
 
     from pakk.actions.manager import restart
+
     catched_execution(restart, **kwargs)
 
 
@@ -431,6 +444,7 @@ def log(**kwargs):
     """
 
     from pakk.actions.manager import follow_log
+
     catched_execution(follow_log, **kwargs)
 
 
@@ -443,6 +457,7 @@ def status(**kwargs):
     """
 
     from pakk.actions.status import status
+
     catched_execution(status, **kwargs)
 
 
@@ -458,6 +473,7 @@ def init(**kwargs):
     Initialize a pakkage in the given path.
     """
     from pakk.actions.init import init
+
     catched_execution(init, **kwargs)
 
 
@@ -473,6 +489,7 @@ def dev(**kwargs):
     Switches a pakkage to development mode.
     """
     from pakk.actions.dev import dev
+
     catched_execution(dev, **kwargs)
 
 
@@ -497,6 +514,7 @@ def update(**kwargs):
     """
 
     from pakk.actions.update import update
+
     catched_execution(update, **kwargs)
 
 
@@ -512,4 +530,5 @@ def clean(**kwargs):
     """
 
     from pakk.actions.clean import clean
+
     catched_execution(clean, **kwargs)

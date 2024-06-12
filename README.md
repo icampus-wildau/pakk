@@ -12,7 +12,7 @@ Pakk not only supports the installation of pakkages of different types, but also
 **TL;DR:**
 ```bash
 
-# Install 
+# Install
 pip install pakk-package-manager
 # Setup & reboot to ensure proper operation
 pakk setup && sudo reboot now
@@ -55,8 +55,8 @@ pakk start <PAKKAGE_NAME>
 ```bash
 
 # Installation with pip
-# Optionally create and activate a virtual environment 
-# (e.g. in case you get the "This environment is externally managed" error) 
+# Optionally create and activate a virtual environment
+# (e.g. in case you get the "This environment is externally managed" error)
 python3 -m venv .venv && source .venv/bin/activate
 pip install pakk-package-manager
 # or from source
@@ -211,11 +211,11 @@ pip install -e .
 ## When using pakk in a virtual environment to install ROS2 pakkages, I get `ModuleNotFoundError: No module named 'catkin_pkg'` error
 
 In newer python versions, a virtual environment is required to install packages with "pip".
-However, ROS 2 
+However, ROS 2
 
 ```bash
-# As of June 2024, the ROS 2 Jazzy version is not compatible with the newest empy version 
-pip install catkin_pkg lark empy==3.3.4 
+# As of June 2024, the ROS 2 Jazzy version is not compatible with the newest empy version
+pip install catkin_pkg lark empy==3.3.4
 ```
 
 ## You know, that "package" is spelled with "ck" and not with "kk"?!?
