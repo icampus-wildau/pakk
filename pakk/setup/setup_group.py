@@ -42,6 +42,7 @@ class PakkGroupSetup(SetupBase):
         # Assign pakk package and data directory to pakk group
         for dir in dirs:
             logger.info(f"Assigning '{dir}' to group '{self.group_name}' and grant write access")
+            self.system(f"sudo mkdir -p {dir}")
             self.system(f"sudo chgrp -R {self.group_name} {dir}")
             self.system(f"sudo chmod -R g+w {dir}")
 
