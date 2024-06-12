@@ -6,6 +6,7 @@ import os
 from extended_configparser.configuration.entries.section import ConfigSection
 
 from pakk.config.base import TypeConfiguration
+from pakk.config.process import Process
 from pakk.helper.file_util import remove_dir
 from pakk.modules.environments.base import EnvironmentBase
 from pakk.modules.environments.linux import LinuxEnvironment
@@ -81,15 +82,17 @@ class RosStartInstructionParser(RunInstructionParser):
 
         self.script = None
 
-        self.local = True
+        self.local = Ros2TypeConfiguration.get_config().local_by_default.value
 
     def has_cmd(self):
         return self.script is not None
 
     def get_cmd(self):
         local_env = f"export ROS_LOCALHOST_ONLY={1 if self.local else 0}"
+        update_pythonpath = Process.get_cmd_update_pythonpath()
         cmds = [
             self.config.get_cmd_setup_ws(),
+            update_pythonpath,
             local_env,
             self.env.get_cmd_in_environment(f"ros2 launch {self.script}"),
         ]
