@@ -4,9 +4,9 @@ import nodesemver
 
 from pakk.dependency_tree.tree import DependencyTree
 from pakk.module import Module
+from pakk.pakkage.core import Pakkage
 from pakk.resolver.base import Resolver
 from pakk.resolver.base import ResolverException
-from pakk.pakkage.core import Pakkage
 
 
 class ResolverNewest(Resolver):

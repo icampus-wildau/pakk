@@ -7,14 +7,14 @@ import networkx as nx
 
 from pakk.args.install_args import InstallArgs
 from pakk.config.main_cfg import MainConfig
-from pakk.logger import Logger
 from pakk.connector.base import PakkageCollection
 from pakk.dependency_tree.tree import DependencyTree
+from pakk.logger import Logger
 from pakk.module import Module
-from pakk.types.base import TypeBase
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 

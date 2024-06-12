@@ -6,12 +6,12 @@ import re
 
 from rich.table import Table
 
-from pakk.helper.loader import PakkLoader
-from pakk.helper.lockfile import PakkLock
-from pakk.logger import Logger
 from pakk.connector.base import Connector
 from pakk.connector.base import PakkageCollection
 from pakk.connector.local import LocalConnector
+from pakk.helper.loader import PakkLoader
+from pakk.helper.lockfile import PakkLock
+from pakk.logger import Logger
 from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)

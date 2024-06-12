@@ -6,7 +6,7 @@ import tempfile
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class PakkSudoersSetup(SetupBase):
     VERSION = "1.0.0"
     PRIORITY = 55
 
-    def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
+    def __init__(self, parser: ExtendedConfigParser, environment: Environment):
         super().__init__(parser, environment)
 
     def run_setup(self) -> bool:

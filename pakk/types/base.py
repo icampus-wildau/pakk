@@ -11,14 +11,14 @@ from typing import TypeVar
 from pakk.config.base import TypeConfiguration
 from pakk.config.main_cfg import MainConfig
 from pakk.config.process import Process
-from pakk.environments.base import GenericEnvironment
+from pakk.environments.base import Environment
 from pakk.module import Module
 from pakk.types.base_instruction_parser import InstallInstructionParser
 from pakk.types.base_instruction_parser import InstructionParser
 from pakk.types.base_instruction_parser import RunInstructionParser
 
 if TYPE_CHECKING:
-    from pakk.environments.base import EnvironmentBase
+    from pakk.environments.base import Environment
     from pakk.pakkage.core import PakkageConfig
 
 
@@ -85,7 +85,7 @@ class TypeBase(Module, Generic[TB]):
     Set this to a subclass of TypeConfiguration to enable configuration for this type when using `pakk configure`.
     """
 
-    def __init__(self, pakkage_version: PakkageConfig, environment: EnvironmentBase):
+    def __init__(self, pakkage_version: PakkageConfig, environment: Environment):
         super().__init__()
 
         if self.PAKKAGE_TYPE is None:
@@ -93,7 +93,7 @@ class TypeBase(Module, Generic[TB]):
 
         self.pakkage_version = pakkage_version
         """The pakkage version this type belongs to."""
-        self.env = environment  # or GenericEnvironment()
+        self.env = environment  # or Environment()
         """The environment used to install this pakkage type."""
 
         self.install_type = InstallType()
@@ -263,7 +263,7 @@ class TypeBase(Module, Generic[TB]):
         return False
 
     @classmethod
-    def supports_environment(cls, environment: EnvironmentBase) -> bool:
+    def supports_environment(cls, environment: Environment) -> bool:
         """Return if the type supports the given environment."""
         # raise NotImplementedError()
         return True

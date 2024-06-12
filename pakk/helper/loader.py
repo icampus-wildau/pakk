@@ -14,8 +14,8 @@ from pakk.connector.base import Connector
 from pakk.connector.base import PakkageCollection
 from pakk.environments.loader import get_current_environment
 from pakk.environments.loader import get_current_environment_cls
-from pakk.types.base import TypeBase
 from pakk.setup.base import SetupBase
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 

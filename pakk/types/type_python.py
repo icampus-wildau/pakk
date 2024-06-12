@@ -5,11 +5,11 @@ import logging
 from extended_configparser.configuration.entries.section import ConfigSection
 
 from pakk.config.base import TypeConfiguration
-from pakk.environments.base import EnvironmentBase
-from pakk.types.base import TypeBase
+from pakk.environments.base import Environment
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class TypePython(TypeBase):
     PAKKAGE_TYPE: str = "Python"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
+    def __init__(self, pakkage_version: PakkageConfig, env: Environment):
         super().__init__(pakkage_version, env)
         self.config = PythonTypeConfiguration.get_config()
 

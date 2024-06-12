@@ -6,14 +6,14 @@ import nodesemver
 
 from pakk.args.install_args import InstallArgs
 from pakk.args.install_args import UpdateStrategy
-from pakk.logger import Logger
 from pakk.connector.base import PakkageCollection
 from pakk.dependency_tree.tree import DependencyTree
 from pakk.dependency_tree.tree_printer import TreePrinter
+from pakk.logger import Logger
 from pakk.module import Module
+from pakk.pakkage.core import Pakkage
 from pakk.resolver.base import Resolver
 from pakk.resolver.base import ResolverException
-from pakk.pakkage.core import Pakkage
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pakk.environments.base import EnvironmentBase
+    from pakk.environments.base import Environment
 
 
 class InstructionParser:
@@ -27,7 +27,7 @@ class InstructionParser:
     INSTRUCTION_NAME: str | list[str] | None = None
     DEFAULT_SUBINSTRUCTION: str | None = None
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         self.env = environment
 
     def has_cmd(self):

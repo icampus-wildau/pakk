@@ -13,14 +13,14 @@ from prompt_toolkit.document import Document
 
 import pakk.config.pakk_config as pakk_config
 from pakk.args.base_args import BaseArgs
-from pakk.logger import Logger
 from pakk.discoverer.base import DiscoveredPakkagesMerger
 from pakk.discoverer.discoverer_local import DiscovererLocal
 from pakk.environments.parts.ros2 import EnvPartROS2
+from pakk.logger import Logger
 from pakk.module import Module
+from pakk.pakkage.core import PakkageConfig
 from pakk.types.base import TypeBase
 from pakk.types.type_ros2 import TypeRos2
-from pakk.pakkage.core import PakkageConfig
 
 logger = logging.getLogger(__name__)
 

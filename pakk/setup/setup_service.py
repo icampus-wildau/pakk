@@ -6,7 +6,7 @@ import tempfile
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.manager.systemd.unit_generator import PakkAutoUpdateService
 from pakk.manager.systemd.unit_generator import PakkParentService
 from pakk.manager.systemd.unit_generator import PakkServiceFileBase
@@ -21,7 +21,7 @@ class ServiceSetup(SetupBase):
     VERSION = "1.0.0"
     PRIORITY = 60
 
-    def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
+    def __init__(self, parser: ExtendedConfigParser, environment: Environment):
         super().__init__(parser, environment)
 
     def run_setup(self) -> bool:

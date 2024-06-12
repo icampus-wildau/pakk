@@ -7,20 +7,20 @@ import nodesemver
 
 from pakk.args.install_args import InstallArgs
 from pakk.config.process import Process
+from pakk.connector.base import PakkageCollection
 from pakk.helper.cli_util import split_name_version
 from pakk.helper.loader import PakkLoader
 from pakk.helper.lockfile import PakkLock
-from pakk.logger import Logger
-from pakk.connector.base import PakkageCollection
 
 # from pakk.fetcher.fetcher_gitlab import FetcherGitlab
 from pakk.installer.combining_installer import InstallerCombining
+from pakk.logger import Logger
 from pakk.module import Module
+from pakk.pakkage.core import Pakkage
+from pakk.pakkage.core import PakkageInstallState
 from pakk.resolver.base import ResolverException
 from pakk.resolver.resolver_fitting import ResolverFitting
 from pakk.types.base import TypeBase
-from pakk.pakkage.core import Pakkage
-from pakk.pakkage.core import PakkageInstallState
 
 logger = logging.getLogger(__name__)
 

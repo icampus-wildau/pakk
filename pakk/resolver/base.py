@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import nodesemver
 
-from pakk.logger import Logger
 from pakk.connector.base import PakkageCollection
 from pakk.dependency_tree.tree import DependencyTree
 from pakk.dependency_tree.tree_printer import TreePrinter
+from pakk.logger import Logger
 from pakk.module import Module
 from pakk.pakkage.core import Pakkage
 

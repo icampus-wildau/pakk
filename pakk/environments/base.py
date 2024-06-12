@@ -6,7 +6,7 @@ from abc import abstractmethod
 from pakk.module import Module
 
 
-class EnvironmentBase(Module, ABC):
+class Environment(Module):
 
     def __init__(self):
         super().__init__()
@@ -53,10 +53,12 @@ class EnvironmentBase(Module, ABC):
         """
         return path
 
+    @staticmethod
+    def get_python_executable():
+        import sys
 
-class GenericEnvironment(EnvironmentBase):
-    def __init__(self):
-        super().__init__()
+        return sys.executable
 
-    def setup(self):
-        pass
+    @staticmethod
+    def get_pip():
+        return f"{Environment.get_python_executable()} -m pip"

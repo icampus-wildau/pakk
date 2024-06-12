@@ -7,18 +7,18 @@ from extended_configparser.configuration.entries.section import ConfigSection
 
 from pakk.config.base import TypeConfiguration
 from pakk.config.process import Process
-from pakk.helper.file_util import remove_dir
-from pakk.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.environments.linux import LinuxEnvironment
+from pakk.helper.file_util import remove_dir
+from pakk.pakkage.core import PakkageConfig
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 
 # from pakk.environments.parts.ros2 import EnvPartROS2
 from pakk.types.base import InstallationFailedException
 from pakk.types.base import TypeBase
 from pakk.types.base_instruction_parser import RunInstructionParser
-from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption
-from pakk.pakkage.init_helper import InitConfigSection
-from pakk.pakkage.init_helper import InitHelperBase
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class RosStartInstructionParser(RunInstructionParser):
     INSTRUCTION_NAME = ["start", "local"]
     # DEFAULT_SUBINSTRUCTION = "launch"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
         # if not isinstance(environment, EnvPartROS2):
         #     raise TypeError(f"Environment must be of type '{EnvPartROS2.__name__}'")
@@ -119,7 +119,7 @@ class TypeRos2(TypeBase):
         RosStartInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
+    def __init__(self, pakkage_version: PakkageConfig, env: Environment):
         super().__init__(pakkage_version, env)
 
         self.install_type.is_combinable_with_children = True

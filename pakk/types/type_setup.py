@@ -8,22 +8,20 @@ import braceexpand
 
 from pakk.args.base_args import BaseArgs
 from pakk.config.process import Process
-from pakk.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.environments.linux import LinuxEnvironment
 from pakk.environments.parts.python import EnvPartPython
 from pakk.module import Module
-from pakk.types.base import TypeBase
-from pakk.types.base_instruction_parser import (
-    CombinableInstallInstructionParser,
-)
-from pakk.types.base_instruction_parser import CombinableInstructionParser
-from pakk.types.base_instruction_parser import InstallInstructionParser
-from pakk.types.base_instruction_parser import InstructionParser
-from pakk.types.type_python import PythonTypeConfiguration
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.types.base import TypeBase
+from pakk.types.base_instruction_parser import CombinableInstallInstructionParser
+from pakk.types.base_instruction_parser import CombinableInstructionParser
+from pakk.types.base_instruction_parser import InstallInstructionParser
+from pakk.types.base_instruction_parser import InstructionParser
+from pakk.types.type_python import PythonTypeConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +30,7 @@ class AptInstructionParser(CombinableInstallInstructionParser):
     INSTRUCTION_NAME = "apt"
     DEFAULT_SUBINSTRUCTION = "install"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
 
         self.apt_packages: list[str] = []
@@ -71,7 +69,7 @@ class PipInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "pip"
     DEFAULT_SUBINSTRUCTION = "install"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
         self.requirement_file = None
         self.pip_packages: list[str] = []
@@ -114,7 +112,7 @@ class ScriptInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "script"
     DEFAULT_SUBINSTRUCTION = "run"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
 
         self.scripts: list[str] = []
@@ -148,7 +146,7 @@ class LocalEnvVarParser(InstructionParser):
     INSTRUCTION_NAME = "env"
     DEFAULT_SUBINSTRUCTION = "set"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
 
         self.env_vars: dict[str, str] = {}
@@ -180,7 +178,7 @@ class GitInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "git"
     DEFAULT_SUBINSTRUCTION = "clone"
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
         self.git_urls: list[str] = []
 
@@ -216,7 +214,7 @@ class TypeSetup(TypeBase):
         ScriptInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
+    def __init__(self, pakkage_version: PakkageConfig, env: Environment):
         super().__init__(pakkage_version, env)
 
         self.install_type.is_independent = True

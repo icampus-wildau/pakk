@@ -6,15 +6,15 @@ import re
 import shlex
 
 from pakk.config.process import Process
-from pakk.helper import file_util
-from pakk.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.environments.linux import LinuxEnvironment
-from pakk.types.base import TypeBase
-from pakk.types.base_instruction_parser import InstallInstructionParser
+from pakk.helper import file_util
 from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.types.base import TypeBase
+from pakk.types.base_instruction_parser import InstallInstructionParser
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class LinkInstructionParser(InstallInstructionParser):
             self.target = target
             self.link_name = link_name
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
         self.links: list[LinkInstructionParser.Link] = []
 
@@ -69,7 +69,7 @@ class EnvVarInstructionParser(InstallInstructionParser):
             self.key = key
             self.val = val
 
-    def __init__(self, environment: EnvironmentBase):
+    def __init__(self, environment: Environment):
         super().__init__(environment)
         self.env_vars: list[EnvVarInstructionParser.EnvVar] = []
 
@@ -116,7 +116,7 @@ class TypeAsset(TypeBase):
         EnvVarInstructionParser,
     ]
 
-    def __init__(self, pakkage_version: PakkageConfig, env: EnvironmentBase):
+    def __init__(self, pakkage_version: PakkageConfig, env: Environment):
         super().__init__(pakkage_version, env)
 
     def parse_undefined_instruction(self, instruction_name: str, instruction_content: str):

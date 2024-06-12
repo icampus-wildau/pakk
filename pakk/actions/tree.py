@@ -6,12 +6,12 @@ from rich import print
 from rich.tree import Tree
 
 from pakk.args.install_args import InstallArgs
-from pakk.helper.lockfile import PakkLock
-from pakk.logger import Logger
 from pakk.connector.base import PakkageCollection
 from pakk.connector.local import LocalConnector
 from pakk.dependency_tree.tree import DependencyTree
 from pakk.dependency_tree.tree_printer import TreePrinter
+from pakk.helper.lockfile import PakkLock
+from pakk.logger import Logger
 
 logger = logging.getLogger(__name__)
 

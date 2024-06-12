@@ -10,13 +10,13 @@ from github.Repository import Repository
 
 from pakk.config.base import ConnectorConfiguration
 from pakk.config.main_cfg import MainConfig
-from pakk.helper.progress import ProgressManager
-from pakk.helper.progress import TaskPbar
-from pakk.helper.progress import execute_process_and_display_progress
 from pakk.connector.base import Connector
 from pakk.connector.base import PakkageCollection
 from pakk.connector.cache import CachedRepository
 from pakk.connector.cache import CachedTag
+from pakk.helper.progress import ProgressManager
+from pakk.helper.progress import TaskPbar
+from pakk.helper.progress import execute_process_and_display_progress
 from pakk.pakkage.core import ConnectorAttributes
 from pakk.pakkage.core import Pakkage
 from pakk.pakkage.core import PakkageConfig
