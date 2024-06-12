@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
+import sys
 
 # import pakk.config.pakk_config as cfg
 from pakk import ROOT_DIR
@@ -15,6 +17,77 @@ from pakk.connector.local import LocalConnector
 # from pakk.discoverer.discoverer_local import DiscovererLocal
 
 logger = logging.getLogger(__name__)
+
+
+def get_pip_location():
+    try:
+        # Run pip show to get pip's location
+        result = subprocess.run([sys.executable, '-m', 'pip', 'show', 'pip'], capture_output=True, text=True, check=True)
+        output = result.stdout
+        
+        # Parse the output to find the location
+        for line in output.splitlines():
+            if line.startswith('Location:'):
+                pip_location = line.split(' ', 1)[1]
+                return pip_location
+                
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e}")
+        return None
+
+
+def is_git_repo_clean(dir: str):
+    try:
+        # Run 'git status --porcelain' to get the status of the repo
+        result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True, check=True, cwd=dir)
+        
+        # If the output is empty, the repo is clean
+        if result.stdout.strip() == '':
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError as e:
+        return False
+    
+def _self_update():
+    config = MainConfig.get_config()
+    project_dir = os.path.abspath(os.path.join(ROOT_DIR, ".."))
+    project_url = config.autoupdate.project_url.value
+    update_channel = config.autoupdate.update_channel.value
+    pip = f"{sys.executable} -m pip"
+
+    pakk_is_git_repo = os.path.exists(os.path.join(project_dir, ".git"))
+
+    # Check if project dir is a git repository
+    if pakk_is_git_repo:        
+        if is_git_repo_clean(project_dir):
+            # If so, pull from channel and install
+            cmd = f"cd {project_dir} && git pull origin {update_channel} && pip install -e ."
+            logger.info(f"Executing self update command: {cmd}")
+            os.system(cmd)
+            return
+        else:
+            logger.warning("Skipping pakk selfupdate because it has uncommitted changes.")
+            return
+
+    if update_channel == "pip":
+        cmd = f"{pip} install --upgrade pakk-package-manager"
+        logger.info(f"Executing self update via pip: {cmd}")
+        os.system(cmd)
+        return
+
+    if not project_url.startswith("https"):
+        logger.error("Auto update is enabled but the project url is not a valid https url.")
+        return
+
+    logger.info(f"Executing self update via git ({project_url}) using channel '{update_channel}'...")
+
+    # Otherwise, pip install the project from the given channel
+    cmd = f"{pip} install --upgrade git+{project_url}@{update_channel}"
+    logger.info(f"Executing self update command: {cmd}")
+    os.system(cmd)
+    return
 
 
 def update(pakkage_names: list[str] | str, **kwargs: str):
@@ -37,36 +110,10 @@ def update(pakkage_names: list[str] | str, **kwargs: str):
 
     # Execute a self update by pulling the latest version from gitlab
     if flag_self:
-        project_dir = os.path.abspath(os.path.join(ROOT_DIR, ".."))
-        project_url = config.autoupdate.project_url.value
-        update_channel = config.autoupdate.update_channel.value
-
-        if update_channel == "pip":
-            logger.info("Executing self update via pip...")
-            os.system(f"pip install --upgrade pakk")
-            return
-
-        if not project_url.startswith("https"):
-            logger.error("Auto update is enabled but the project url is not a valid https url.")
-            return
-
-        logger.info(f"Executing self update via git ({project_url}) using channel '{update_channel}'...")
-
-        # Check if project dir is a git repository
-        if os.path.exists(os.path.join(project_dir, ".git")):
-            # If so, pull from channel and install
-            cmd = f"cd {project_dir} && git pull origin {update_channel} && pip install -e ."
-            logger.info(f"Executing command: {cmd}")
-            os.system(cmd)
-            return
-
-        # Otherwise, pip install the project from the given channel
-        cmd = f"pip install --upgrade git+{project_url}@{update_channel}"
-        logger.info(f"Executing command: {cmd}")
-        os.system(cmd)
-        return
+        _self_update()
 
     from pakk.actions.install import install
+    from pakk.cli import catched_execution
 
     install_kwargs = {
         "upgrade": True,
@@ -79,11 +126,11 @@ def update(pakkage_names: list[str] | str, **kwargs: str):
         pakkages = PakkageCollection()
         pakkages.discover([LocalConnector()])
         lock.unlock()
-        install(list(pakkages.keys()), **install_kwargs)
+        catched_execution(install, list(pakkages.keys()), **install_kwargs)
         return
 
     if len(pakkage_names) > 0:
         logger.info(f"Updating pakkages: {pakkage_names}")
         lock.unlock()
-        install(pakkage_names, **install_kwargs)
+        catched_execution(install, pakkage_names, **install_kwargs)
         return

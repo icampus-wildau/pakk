@@ -16,7 +16,7 @@ class GitlabConfig(ConnectorConfiguration):
         super().__init__()
 
         gitlab = ConfigSection("GitLab")
-        self.enabled = gitlab.ConfirmationOption("enabled", True, "Enable the connector", inquire=True)
+        self.enabled = gitlab.ConfirmationOption("enabled", False, "Enable the connector", inquire=True)
 
         section_connection = ConfigSection("GitLab.Connection")
 
