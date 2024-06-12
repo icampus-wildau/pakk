@@ -83,14 +83,14 @@ class PakkLoader:
         valid_connectors: list[type[Connector]] = []
         # Check if connectors require configuration
         for connector in connectors:
-            if skip_disabled and not connector.is_enabled():
-                logger.info(f"Skipping disabled connector '{connector.__name__}'.")
+            if skip_disabled and not connector.is_configured():
+                logger.warning(
+                    f"Connector {connector.__name__} is not configured. Please configure it using 'pakk configure {connector.__name__}'."
+                )
                 continue
 
-            if skip_disabled and not connector.is_configured():
-                logger.error(
-                    f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`."
-                )
+            if skip_disabled and not connector.is_enabled():
+                logger.info(f"Skipping disabled connector '{connector.__name__}'.")
                 continue
 
             valid_connectors.append(connector)
