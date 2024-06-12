@@ -9,14 +9,14 @@ from InquirerPy import inquirer
 
 from pakk.args.base_args import BaseArgs
 from pakk.config.process import Process
+
+# from pakk.environments.dockerbase import DockerEnvironment
+from pakk.connector.base import PakkageCollection
+from pakk.connector.local import LocalConnector
 from pakk.helper.cli_util import split_name_version
 from pakk.logger import Logger
-
-# from pakk.modules.environments.dockerbase import DockerEnvironment
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.local import LocalConnector
-from pakk.modules.types.base import TypeBase
 from pakk.pakkage.core import PakkageConfig
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 

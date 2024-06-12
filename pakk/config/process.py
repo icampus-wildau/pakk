@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pakk.modules.connector.base import PakkageCollection
+    from pakk.connector.base import PakkageCollection
     from pakk.pakkage.core import PakkageConfig
 
 
@@ -69,3 +69,13 @@ class Process:
         if use_linebreak:
             return "\n".join(cmd)
         return " && ".join(cmd)
+
+    @staticmethod
+    def get_cmd_update_pythonpath():
+        import sys
+
+        paths = sys.path
+
+        extended_path = ":".join(paths)
+        cmd = r"export PYTHONPATH=${PYTHONPATH}:" + extended_path
+        return cmd

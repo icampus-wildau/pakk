@@ -10,12 +10,12 @@ from typing import TypeVar
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.connector.base import Connector
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.environments.loader import get_current_environment
-from pakk.modules.environments.loader import get_current_environment_cls
-from pakk.modules.types.base import TypeBase
+from pakk.connector.base import Connector
+from pakk.connector.base import PakkageCollection
+from pakk.environments.loader import get_current_environment
+from pakk.environments.loader import get_current_environment_cls
 from pakk.setup.base import SetupBase
+from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
 
@@ -83,14 +83,14 @@ class PakkLoader:
         valid_connectors: list[type[Connector]] = []
         # Check if connectors require configuration
         for connector in connectors:
-            if skip_disabled and not connector.is_enabled():
-                logger.info(f"Skipping disabled connector '{connector.__name__}'.")
+            if skip_disabled and not connector.is_configured():
+                logger.warning(
+                    f"Connector {connector.__name__} is not configured. Please configure it using 'pakk configure {connector.__name__}'."
+                )
                 continue
 
-            if skip_disabled and not connector.is_configured():
-                logger.error(
-                    f"Connector {connector.__name__} is enabled but not configured. Please configure it using `pakk configure {connector.__name__}`."
-                )
+            if skip_disabled and not connector.is_enabled():
+                logger.info(f"Skipping disabled connector '{connector.__name__}'.")
                 continue
 
             valid_connectors.append(connector)

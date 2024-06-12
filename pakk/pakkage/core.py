@@ -20,17 +20,17 @@ from semver.version import Version
 
 from pakk.args.manager_args import ManagerArgs
 from pakk.config.main_cfg import MainConfig
+from pakk.environments.loader import get_current_environment_cls
 from pakk.helper.file_util import remove_dir
-from pakk.modules.environments.loader import get_current_environment_cls
-from pakk.modules.manager.systemd.unit_generator import PakkChildService
-from pakk.modules.types.base import TypeBase
-from pakk.modules.types.base import TypeConfigSection
+from pakk.manager.systemd.unit_generator import PakkChildService
+from pakk.types.base import TypeBase
+from pakk.types.base import TypeConfigSection
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from pakk.modules.connector.base import Connector
-    from pakk.modules.environments.base import EnvironmentBase
+    from pakk.connector.base import Connector
+    from pakk.environments.base import Environment
 
 
 class PakkageInstallState(enum.Enum):
@@ -174,7 +174,7 @@ class PakkageConfig:
         self._types: list[TypeBase] | None = None
         """The types of the pakkage. E.g. ["ros2", "python"]"""
 
-        self._environments: dict[type[EnvironmentBase], EnvironmentBase] = dict()
+        self._environments: dict[type[Environment], Environment] = dict()
         """The stored environments of the pakkage. Used to use the same environment for multiple types."""
 
     def set_attributes(self, connector: Connector, attributes: ConnectorAttributes):
@@ -710,7 +710,7 @@ class PakkageConfig:
 
         return None
 
-    def get_environment(self) -> EnvironmentBase:
+    def get_environment(self) -> Environment:
         """
         Get the environment for this pakkage.
         """

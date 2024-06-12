@@ -7,7 +7,7 @@ from extended_configparser.parser import ExtendedConfigParser
 
 from pakk import ROOT_DIR
 from pakk.config.main_cfg import MainConfig
-from pakk.modules.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 from pakk.setup.base import SetupBase
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class PakkGroupSetup(SetupBase):
     VERSION = "1.0.0"
     PRIORITY = 50
 
-    def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
+    def __init__(self, parser: ExtendedConfigParser, environment: Environment):
         super().__init__(parser, environment)
 
     def run_setup(self) -> bool:
@@ -42,6 +42,7 @@ class PakkGroupSetup(SetupBase):
         # Assign pakk package and data directory to pakk group
         for dir in dirs:
             logger.info(f"Assigning '{dir}' to group '{self.group_name}' and grant write access")
+            self.system(f"sudo mkdir -p {dir}")
             self.system(f"sudo chgrp -R {self.group_name} {dir}")
             self.system(f"sudo chmod -R g+w {dir}")
 

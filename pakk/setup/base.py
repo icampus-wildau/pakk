@@ -5,7 +5,7 @@ import os
 
 from extended_configparser.parser import ExtendedConfigParser
 
-from pakk.modules.environments.base import EnvironmentBase
+from pakk.environments.base import Environment
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class SetupBase:
     NAME = "pakk"
     PRIORITY = 100
 
-    def __init__(self, parser: ExtendedConfigParser, environment: EnvironmentBase):
+    def __init__(self, parser: ExtendedConfigParser, environment: Environment):
         self.parser = parser
         self.group_name = "pakk"
         self.user_name = os.environ.get("USER")

@@ -44,6 +44,107 @@ def init_pakk(**kwargs):
     )
 
 
+def catched_execution(function, *args, **kwargs):
+    from configparser import InterpolationMissingOptionError
+
+    from pakk.actions.install import PakkageNotFoundException
+    from pakk.config.main_cfg import MainConfig
+    from pakk.logger import Logger
+    from pakk.resolver.base import ResolverException
+    from pakk.setup.checker import SetupRequiredException
+
+    try:
+        init_pakk(**kwargs)
+        function(*args, **kwargs)
+    except InterpolationMissingOptionError as e:
+        if kwargs["verbose"]:
+            Logger.get_console().print_exception()
+
+        # p = get_cfg_paths()
+        p = MainConfig.get_configs_dir()
+        Logger.get_console().print("[bold red]" + e.message)
+
+        fix_msg = "To fix this, do one of the following:\n"
+        fix_msg += f"  - check if you are running pakk in the correct environment with the correct env vars\n"
+        fix_msg += (
+            f"  - adapt the option '{e.option}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
+        )
+
+        Logger.get_console().print(fix_msg)
+
+    except PakkageNotFoundException as e:
+        if kwargs["verbose"]:
+            Logger.get_console().print_exception()
+
+        Logger.print_exception_message(e)
+
+        fix_msg = "To fix this, do one of the following:\n"
+        fix_msg += (
+            f"  - choose as argument an existing pakkage (run 'ls --all' to get a list of available remote pakkages)\n"
+        )
+        fix_msg += f"  - check if your sources for discovery are reachable and correctly configured\n"
+
+        Logger.get_console().print(fix_msg)
+    except ResolverException as e:
+        if kwargs["verbose"]:
+            Logger.get_console().print_exception()
+        Logger.print_exception_message(e)
+        x = e.get_msg()
+
+        # Logger.get_console().print_exception()
+    except SetupRequiredException as e:
+        if kwargs["verbose"]:
+            Logger.get_console().print_exception()
+        Logger.print_exception_message(e)
+        fix_msg = "To fix this, do one of the following:\n"
+        fix_msg += f"  - rerun 'pakk setup' and check for occuring errors & fixes.\n"
+
+    except Exception as e:
+        Logger.get_console().print_exception()
+    except KeyboardInterrupt:
+        Logger.get_console().print("Keyboard interrupt at CLI...")
+
+    # except MissingConfigSectionOptionException as e:
+    #     from pakk.logger import Logger
+
+    #     if kwargs["verbose"]:
+    #         Logger.get_console().print_exception()
+
+    #     p = get_cfg_paths()
+    #     Logger.get_console().print(e.message)
+
+    #     fix_msg = "To fix this, do one of the following:\n"
+    #     fix_msg += f"  - adapt the config files at [b]{p}[/b]\n"
+    #     fix_msg += f"  - run [b]pakk setup[/b] to create a new fixed config file\n"
+
+    #     Logger.get_console().print(fix_msg)
+
+    # except PakkModuleNotFoundException as e:
+    #     from pakk.logger import Logger
+
+    #     if kwargs["verbose"]:
+    #         Logger.get_console().print_exception()
+
+    #     Logger.print_exception_message(e)
+    #     p = get_cfg_paths()
+
+    #     fix_msg = "To fix this, do one of the following:\n"
+    #     fix_msg += (
+    #         f"  - adapt the entry '{e.module_name}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
+    #     )
+
+    #     if e.class_name is None:
+    #         fix_msg += f"  - check if '{e.module_name}' is an importable module from an installed python package\n"
+    #     else:
+    #         fix_msg += f"  - check if '{e.class_name}' is a class in the module '{e.module_name}'\n"
+
+    #     Logger.get_console().print(fix_msg)
+
+    #     pass
+    # finally:
+    #     ctx.exit(0)
+
+
 @click.group(cls=ClickAliasedGroup, context_settings=CONTEXT_SETTINGS)
 @click.pass_context
 def cli(ctx: Context, **kwargs):
@@ -104,109 +205,10 @@ def install(ctx: Context, **kwargs):
 
     You can specify a version with PAKKAGE@VERSION.
     If no version is specified, the latest version will be installed."""
-    from configparser import InterpolationMissingOptionError
 
-    from pakk.actions.install import PakkageNotFoundException
     from pakk.actions.install import install
 
-    # from pakk.config.pakk_config import MissingConfigSectionOptionException
-    # from pakk.config.pakk_config import get_cfg_paths
-    from pakk.config.main_cfg import MainConfig
-
-    # from pakk.helper.module_importer import PakkModuleNotFoundException
-    from pakk.modules.resolver.base import ResolverException
-
-    init_pakk(**kwargs)
-
-    try:
-        install(builtins.list(kwargs["pakkage"]), **kwargs)
-    # except MissingConfigSectionOptionException as e:
-    #     from pakk.logger import Logger
-
-    #     if kwargs["verbose"]:
-    #         Logger.get_console().print_exception()
-
-    #     p = get_cfg_paths()
-    #     Logger.get_console().print(e.message)
-
-    #     fix_msg = "To fix this, do one of the following:\n"
-    #     fix_msg += f"  - adapt the config files at [b]{p}[/b]\n"
-    #     fix_msg += f"  - run [b]pakk setup[/b] to create a new fixed config file\n"
-
-    #     Logger.get_console().print(fix_msg)
-    except InterpolationMissingOptionError as e:
-        from pakk.logger import Logger
-
-        if kwargs["verbose"]:
-            Logger.get_console().print_exception()
-
-        # p = get_cfg_paths()
-        p = MainConfig.get_configs_dir()
-        Logger.get_console().print("[bold red]" + e.message)
-
-        fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += f"  - check if you are running pakk in the correct environment with the correct env vars\n"
-        fix_msg += (
-            f"  - adapt the option '{e.option}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
-        )
-
-        Logger.get_console().print(fix_msg)
-
-    # except PakkModuleNotFoundException as e:
-    #     from pakk.logger import Logger
-
-    #     if kwargs["verbose"]:
-    #         Logger.get_console().print_exception()
-
-    #     Logger.print_exception_message(e)
-    #     p = get_cfg_paths()
-
-    #     fix_msg = "To fix this, do one of the following:\n"
-    #     fix_msg += (
-    #         f"  - adapt the entry '{e.module_name}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
-    #     )
-
-    #     if e.class_name is None:
-    #         fix_msg += f"  - check if '{e.module_name}' is an importable module from an installed python package\n"
-    #     else:
-    #         fix_msg += f"  - check if '{e.class_name}' is a class in the module '{e.module_name}'\n"
-
-    #     Logger.get_console().print(fix_msg)
-    except PakkageNotFoundException as e:
-        from pakk.logger import Logger
-
-        if kwargs["verbose"]:
-            Logger.get_console().print_exception()
-
-        Logger.print_exception_message(e)
-
-        fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += (
-            f"  - choose as argument an existing pakkage (run 'ls --all' to get a list of available remote pakkages)\n"
-        )
-        fix_msg += f"  - check if your sources for discovery are reachable and correctly configured\n"
-
-        Logger.get_console().print(fix_msg)
-    except ResolverException as e:
-        from pakk.logger import Logger
-
-        if kwargs["verbose"]:
-            Logger.get_console().print_exception()
-        Logger.print_exception_message(e)
-        x = e.get_msg()
-
-        # Logger.get_console().print_exception()
-    except Exception as e:
-        from pakk.logger import Logger
-
-        Logger.get_console().print_exception()
-    except KeyboardInterrupt:
-        from pakk.logger import Logger
-
-        Logger.get_console().print("Keyboard interrupt at CLI...")
-    #     pass
-    # finally:
-    #     ctx.exit(0)
+    catched_execution(install, builtins.list(kwargs["pakkage"]), **kwargs)
 
 
 # @cli.command()
@@ -241,8 +243,7 @@ def list(ctx: Context, **kwargs):
     """
     from pakk.actions.list import list
 
-    init_pakk(**kwargs)
-    list(**kwargs)
+    catched_execution(list, **kwargs)
 
 
 @cli.command(aliases=["t"])
@@ -258,14 +259,16 @@ def tree(ctx: Context, **kwargs):
 
     from pakk.actions.tree import show_tree
 
-    init_pakk(**kwargs)
-    show_tree(**kwargs)
+    catched_execution(show_tree, **kwargs)
 
 
 @cli.command(aliases=["cfg"])
 @click.argument("configuration", required=False)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 @click.option("-r", "--reset", is_flag=True, default=False, help="Reset the configuration.")
+@click.option(
+    "-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit."
+)
 @click.pass_context
 def configure(ctx: Context, **kwargs):
     """
@@ -273,10 +276,16 @@ def configure(ctx: Context, **kwargs):
     If no configuration is given, everything of pakk is configured.
     You can specify a CONFIGURATION to configure only a specific part / connector of pakk.
     """
+
+    if kwargs["show_dir"]:
+        from pakk.config.base import PakkConfigBase
+
+        print(PakkConfigBase.get_configs_dir())
+        return
+
     from pakk.actions.configure import configure
 
-    init_pakk(**kwargs)
-    configure(**kwargs)
+    catched_execution(configure, **kwargs)
 
 
 @cli.command(aliases=["s"])
@@ -290,8 +299,7 @@ def setup(ctx: Context, **kwargs):
     """
     from pakk.actions.setup import setup
 
-    init_pakk(**kwargs)
-    setup(**kwargs)
+    catched_execution(setup, **kwargs)
 
 
 @cli.command(aliases=["ros_env", "env"])
@@ -305,8 +313,7 @@ def ros_environment(**kwargs):
 
     from pakk.actions.environment import environment
 
-    init_pakk(**kwargs)
-    environment(**kwargs)
+    catched_execution(environment, **kwargs)
 
 
 @cli.command(aliases=["ros"])
@@ -321,8 +328,7 @@ def ros2(run_args, **kwargs):
 
     from pakk.actions.ros2 import ros2
 
-    init_pakk(**kwargs)
-    ros2(run_args, **kwargs)
+    catched_execution(ros2, run_args, **kwargs)
 
 
 @cli.command(aliases=["source"])
@@ -337,8 +343,7 @@ def source(**kwargs):
 
     from pakk.actions.source import source
 
-    init_pakk(**kwargs)
-    source(**kwargs)
+    catched_execution(source, **kwargs)
 
 
 if __name__ == "__main__":
@@ -355,8 +360,7 @@ def run(**kwargs):
 
     from pakk.actions.manager import run as r
 
-    init_pakk(**kwargs)
-    r(**kwargs)
+    catched_execution(r, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -370,8 +374,7 @@ def start(**kwargs):
 
     from pakk.actions.manager import start
 
-    init_pakk(**kwargs)
-    start(**kwargs)
+    catched_execution(start, **kwargs)
     # print("RUN DUMMY")
 
 
@@ -385,8 +388,7 @@ def enable(**kwargs):
 
     from pakk.actions.manager import enable
 
-    init_pakk(**kwargs)
-    enable(**kwargs)
+    catched_execution(enable, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -399,8 +401,7 @@ def stop(**kwargs):
 
     from pakk.actions.manager import stop
 
-    init_pakk(**kwargs)
-    stop(**kwargs)
+    catched_execution(stop, **kwargs)
 
 
 @cli.command(aliases=["d"])
@@ -413,8 +414,7 @@ def disable(**kwargs):
 
     from pakk.actions.manager import disable
 
-    init_pakk(**kwargs)
-    disable(**kwargs)
+    catched_execution(disable, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -429,8 +429,7 @@ def restart(**kwargs):
 
     from pakk.actions.manager import restart
 
-    init_pakk(**kwargs)
-    restart(**kwargs)
+    catched_execution(restart, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -446,8 +445,7 @@ def log(**kwargs):
 
     from pakk.actions.manager import follow_log
 
-    init_pakk(**kwargs)
-    follow_log(**kwargs)
+    catched_execution(follow_log, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -460,8 +458,7 @@ def status(**kwargs):
 
     from pakk.actions.status import status
 
-    init_pakk(**kwargs)
-    status(**kwargs)
+    catched_execution(status, **kwargs)
 
 
 if __name__ == "__main__":
@@ -477,8 +474,7 @@ def init(**kwargs):
     """
     from pakk.actions.init import init
 
-    init_pakk(**kwargs)
-    init(**kwargs)
+    catched_execution(init, **kwargs)
 
 
 if __name__ == "__main__":
@@ -494,8 +490,7 @@ def dev(**kwargs):
     """
     from pakk.actions.dev import dev
 
-    init_pakk(**kwargs)
-    dev(**kwargs)
+    catched_execution(dev, **kwargs)
 
 
 if __name__ == "__main__":
@@ -520,8 +515,7 @@ def update(**kwargs):
 
     from pakk.actions.update import update
 
-    init_pakk(**kwargs)
-    update(**kwargs)
+    catched_execution(update, **kwargs)
 
 
 @cli.command(aliases=[])
@@ -537,5 +531,4 @@ def clean(**kwargs):
 
     from pakk.actions.clean import clean
 
-    init_pakk(**kwargs)
-    clean(**kwargs)
+    catched_execution(clean, **kwargs)

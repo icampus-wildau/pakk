@@ -12,7 +12,7 @@ If you have your repositories / projects stored somewhere else and want to use p
 
 # Develop a custom connector
 
-To create a connector, define a class inheriting from the `pakk.modules.connector.Connector` base class.
+To create a connector, define a class inheriting from the `pakk.connector.Connector` base class.
 
 In your class, you have to:
 - override the discover() method

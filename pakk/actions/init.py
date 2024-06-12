@@ -16,15 +16,15 @@ from prompt_toolkit.completion import Completion
 from prompt_toolkit.validation import ValidationError
 
 from pakk.args.base_args import BaseArgs
+from pakk.connector.base import PakkageCollection
+from pakk.connector.local import LocalConnector
 from pakk.helper.loader import PakkLoader
 from pakk.logger import Logger
-from pakk.modules.connector.base import PakkageCollection
-from pakk.modules.connector.local import LocalConnector
-from pakk.modules.module import Module
-from pakk.modules.types.base import TypeBase
+from pakk.module import Module
 from pakk.pakkage.init_helper import InitConfigOption
 from pakk.pakkage.init_helper import InitConfigSection
 from pakk.pakkage.init_helper import InitHelperBase
+from pakk.types.base import TypeBase
 
 # pyright: reportPrivateImportUsage=false
 
