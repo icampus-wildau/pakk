@@ -174,6 +174,9 @@ class PakkageConfig:
         self._types: list[TypeBase] | None = None
         """The types of the pakkage. E.g. ["ros2", "python"]"""
 
+        self._unknown_types: list[str] | None = None
+        """The types of the pakkage that are not supported. E.g. ["ros2", "python"]"""
+
         self._environments: dict[type[Environment], Environment] = dict()
         """The stored environments of the pakkage. Used to use the same environment for multiple types."""
 
@@ -347,6 +350,13 @@ class PakkageConfig:
         logger.info(f"... {service.service_file.name} restarted")
 
     @property
+    def unknown_types(self) -> list[str]:
+        """Returns the types of the pakkage that are not supported."""
+        if self._unknown_types is None:
+            _ = self.pakk_types
+        return self._unknown_types or list()
+
+    @property
     def pakk_types(self) -> list[TypeBase]:
         """Returns the types of the pakkage. Depending on the types that are defined in the config."""
         if self._types is not None and len(self._types) > 0:
@@ -354,6 +364,7 @@ class PakkageConfig:
 
         type_classes = TypeBase.get_type_classes()
         self._types = list()
+        self._unknown_types = list()
         added_types: set[type] = set()
 
         # Get all type names from the config sections
@@ -368,6 +379,7 @@ class PakkageConfig:
             if type_class is None:
                 if type_name[0].isupper():
                     logger.warning(f"Type {type_name} @ cfg of {self.id} is not supported.")
+                    self._unknown_types.append(type_name)
                 continue
 
             self._types.append(type_class(self, self.get_environment()))

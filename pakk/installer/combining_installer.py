@@ -364,15 +364,21 @@ class InstallerCombining(Module):
                             t.status_callback = callback
                         top_type.supervised_installation(top_types_to_install)
 
+
             # Finish the installation by saving the install state
-            for pakkage in self.pakkages_to_install:
+            for pakkage in self.pakkages_to_install:                
                 if pakkage.versions.target is None:
                     logger.error("This should not happen")
                     continue
-
+                
                 version = pakkage.versions.target
+
+                # If there are unknown types, the installation should also fail
+                for type_name in version.unknown_types:
+                    version.state.failed_types.append(type_name)                
+                
                 if len(version.state.failed_types) > 0:
-                    logger.error(f"Installation of {version.id} failed.")
+                    logger.error(f"Installation of {version.id} failed for types: {version.state.failed_types}")
                     version.state.install_state = PakkageInstallState.FAILED
                     version.save_state()
                     continue
