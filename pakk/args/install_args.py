@@ -22,3 +22,5 @@ class InstallArgs(BaseArgs):
         self.ignore_installed: bool = bool(kwargs.get("ignore_installed", False))
         self.clear_cache: bool = bool(kwargs.get("clear_cache", False))
         self.repair: bool = bool(kwargs.get("repair", False))
+        self.skip_cache_update: bool = bool(kwargs.get("skip_cache_update", False))
+        self.location = str(kwargs.get("location", ""))

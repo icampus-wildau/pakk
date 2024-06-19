@@ -198,6 +198,11 @@ class GitlabConnector(Connector):
 
     def _update_cache(self) -> list[CachedRepository]:
         """Helper method to update the cached projects"""
+
+        if InstallArgs.get().skip_cache_update:
+            logger.info("Skipping cache update")
+            return CachedRepository.from_directory(self.get_cache_dir_path())
+
         cached_projects: list[CachedRepository] = list()
         if not self.connected:
             logger.warning("Failed to connect to gitlab. Skipping discovery")

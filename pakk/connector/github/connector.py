@@ -173,16 +173,19 @@ class GithubConnector(Connector):
                 message=f"Updating github cache for {org_name}",
             )
 
-    def discover(self, pakkage_ids: list[str] | None) -> PakkageCollection:
+    def discover(self, pakkage_ids: list[str] | None = None) -> PakkageCollection:
         discovered_pakkages = PakkageCollection()
         logger.info("Discovering projects from GitHub")
 
-        try:
-            self._update_cache(pakkage_ids)
-        except BadCredentialsException as e:
-            logger.warning("Github Token is invalid. Only taking public repositories into account.")
-            self._github = Github()
-            self._update_cache(pakkage_ids)
+        if InstallArgs.get().skip_cache_update:
+            logger.info("Skipping cache update")
+        else:
+            try:
+                self._update_cache(pakkage_ids)
+            except BadCredentialsException as e:
+                logger.warning("Github Token is invalid. Only taking public repositories into account.")
+                self._github = Github()
+                self._update_cache(pakkage_ids)
 
         repos = CachedRepository.from_directory(self.get_cache_dir_path())
 

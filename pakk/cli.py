@@ -198,6 +198,14 @@ def cli(ctx: Context, **kwargs):
     help="Clear the complete cache before installing. Use if you don't find versions that should be actually available.",
 )
 @click.option("--rebuild-base-images", is_flag=True, default=False, help="Rebuilds the base environment docker images.")
+@click.option(
+    "-s",
+    "--skip-cache-update",
+    is_flag=True,
+    default=False,
+    help="Skips the updating of the cache and thus speed up the process.",
+)
+@click.option("-l", "--location", multiple=True, help="Add local lookup locations for pakkages.")
 @click.pass_context
 def install(ctx: Context, **kwargs):
     """

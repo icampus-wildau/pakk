@@ -135,11 +135,14 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
                 logger.info(f"{p.id} is already installed at {p.versions.installed}.")
                 available_versions = list(p.versions.available.keys())
                 # print(available_versions)
-                compare_result = nodesemver.compare(p.versions.installed.version, available_versions[0], loose=True)
-                if compare_result == 0:
-                    logger.info(f"  No newer version available.")
-                elif compare_result == -1:
-                    logger.info(f"  [bold blue]Newer version available: {available_versions[0]}[/bold blue]")
+                if len(available_versions) == 0:
+                    logger.info(f"  No versions available.")
+                else:
+                    compare_result = nodesemver.compare(p.versions.installed.version, available_versions[0], loose=True)
+                    if compare_result == 0:
+                        logger.info(f"  No newer version available.")
+                    elif compare_result == -1:
+                        logger.info(f"  [bold blue]Newer version available: {available_versions[0]}[/bold blue]")
 
                 # if p.versions.installed < p.versions.available.keys()[-1]
         else:

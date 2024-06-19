@@ -32,6 +32,11 @@ Plugins:
 
 ## [UNRELEASED]
 
+New stuff:
+- install command:
+  - `--skip-cache-update` / `s` option to skip the cache update
+  - `--location` / `l` option to specify a local installation location
+
 ## [0.4.0]
 
 Fixes and changes:
@@ -44,7 +49,7 @@ Fixes and changes:
   - [ROS] Fixed execution of ROS packages by adapting the PYTHONPATH according to the venv
   - [Setup] Fixed installation instruction parsing
   - [Setup] Now checks for failed commands
-- Setup routines: 
+- Setup routines:
   - dir creation in first run of group setup routine
 
 
