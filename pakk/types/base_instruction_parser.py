@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 class InstructionParser:
     """
-    [<PakkageType>:<InstructionType>]
+    [<PakkageType>:<INSTRUCTION_NAME>]
     <subinstruction> = <instruction_content>
 
     Example:
@@ -25,6 +25,16 @@ class InstructionParser:
     """
 
     INSTRUCTION_NAME: str | list[str] | None = None
+    """
+    If INSTRUCTION_NAME is a string, this parser will parse:
+    [Type:<INSTRUCTION_NAME>]
+    subinstruction = instruction_content
+
+    If INSTRUCTION_NAME is a list, this parser will parse:
+    [Type]
+    <INSTRUCTION_NAME[i]> = cmd
+    """
+
     DEFAULT_SUBINSTRUCTION: str | None = None
 
     def __init__(self, environment: Environment):

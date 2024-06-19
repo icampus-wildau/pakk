@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class TypeGeneric(TypeBase):
-    PAKKAGE_TYPE: str = "Generic"
+    PAKKAGE_TYPE: str | None = "Generic"
     VISIBLE_TYPE = False
     CONFIGURABLE_TYPE = False
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = True
