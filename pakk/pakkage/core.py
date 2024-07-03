@@ -799,6 +799,9 @@ class PakkageVersions:
             return Version.parse(self.installed.version).compare(self.target.version) < 0
             # return 1.compare(self.installed.version, self.target.version) < 0
 
+        if self.target.version is not None and self.installed.state.install_state == PakkageInstallState.FAILED:
+            return True
+
         return self.installed.version != self.target.version
 
     def __str__(self):
