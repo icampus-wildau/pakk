@@ -203,11 +203,14 @@ class LocalConnector(Connector):
                         or pakkage_config.state.install_state == PakkageInstallState.FAILED
                     ):
                         versions.installed = pakkage_config
+                        versions.available[pakkage_config.version] = pakkage_config
+                        
                     elif (
                         pakkage_config.state.install_state == PakkageInstallState.FETCHED
                         or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
                     ):
                         versions.target = pakkage_config
+                        versions.available[pakkage_config.version] = pakkage_config
                     else:
                         logger.debug(f"Unknown install state: {pakkage_config.state.install_state}")
 
