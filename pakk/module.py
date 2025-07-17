@@ -24,7 +24,7 @@ class Module:
         """
         Instantiate a module.
         """
-        self.status_callback: Callable[[str, str], None] = Module._default_status_callback
+        self.status_callback: Callable[[str, str], None] | None = Module._default_status_callback
 
         self.all_pakkges_dir_path = MainConfig.get_config().paths.all_pakkages_dir.value
         """The path to the directory where all modules are stored."""

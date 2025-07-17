@@ -40,6 +40,11 @@ classifiers = ["Programming Language :: Python :: 3"]
 [tool.hatch.build.targets.wheel]
 packages = ["pakk"]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
+
 [project.urls]
 Homepage = "https://github.com/icampus-wildau/pakk"
 Issues = "https://github.com/icampus-wildau/pakk/issues"

@@ -78,7 +78,7 @@ class InstallGraph:
             self.install_tree.remove_node(node_id)
             self.install_tree_reverse.remove_node(node_id)
 
-        generations = nx.algorithms.dag.topological_generations(self.install_tree)
+        generations = nx.topological_generations(self.install_tree)
         self.sorted_generations: list[list[str]] = [sorted(generation) for generation in generations]
         """List of sorted generations of pakkages to install."""
         self.topological_sorted = [node for generation in self.sorted_generations for node in generation]
@@ -178,7 +178,7 @@ class InstallerCombining(Module):
         self.fetched_dir: str = self.config.paths.fetch_dir.value
         self.all_pakkges_dir: str = self.config.paths.all_pakkages_dir.value
 
-        self.status_callback: Callable[[str], None] | None = None
+        self.status_callback: Callable[[str, str], None] | None = None
         self.tasks = None
 
         self.install_args = InstallArgs.get()
@@ -222,8 +222,8 @@ class InstallerCombining(Module):
                         f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})"
                     )
 
-        self.pakkages_to_uninstall: list[Pakkage] = pakkages_to_uninstall
-        self.pakkages_to_install: list[Pakkage] = pakkages_to_install
+        self.pakkages_to_uninstall  = pakkages_to_uninstall
+        self.pakkages_to_install = pakkages_to_install
 
     def uninstall(self):
         if len(self.pakkages_to_uninstall) > 0:
@@ -386,8 +386,11 @@ class InstallerCombining(Module):
                 version.save_state()
 
                 # Set group of the pakkage directory to pakk
-                version.set_group("pakk")
-                # v.set_group("pakk")
+                try:
+                    version.set_group("pakk")
+                except Exception as e:
+                    logger.warning(f"Failed to set group ownership for {pakkage.name}: {e}")
+                    logger.info("This is normal if you don't have sudo privileges or the pakk group is not set up")
 
                 if version.is_startable() and version.is_enabled():
                     version.enable()

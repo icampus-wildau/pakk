@@ -534,12 +534,24 @@ class PakkageConfig:
         # TODO: only viable for linux
         if recursive:
             # Set group
-            os.system(f"chgrp -R {group} {self.local_path}")
+            result = os.system(f"chgrp -R {group} {self.local_path}")
+            if result != 0:
+                raise Exception(f"Failed to set group ownership to '{group}' for {self.local_path}. "
+                              f"Exit code: {result}. This usually means you don't have sudo privileges "
+                              f"or the '{group}' group doesn't exist.")
             # Set permission for group
-            os.system(f"chmod -R g+rwx {self.local_path}")
+            result = os.system(f"chmod -R g+rwx {self.local_path}")
+            if result != 0:
+                raise Exception(f"Failed to set group permissions for {self.local_path}. Exit code: {result}")
         else:
-            os.system(f"chgrp {group} {self.local_path}")
-            os.system(f"chmod g+rwx {self.local_path}")
+            result = os.system(f"chgrp {group} {self.local_path}")
+            if result != 0:
+                raise Exception(f"Failed to set group ownership to '{group}' for {self.local_path}. "
+                              f"Exit code: {result}. This usually means you don't have sudo privileges "
+                              f"or the '{group}' group doesn't exist.")
+            result = os.system(f"chmod g+rwx {self.local_path}")
+            if result != 0:
+                raise Exception(f"Failed to set group permissions for {self.local_path}. Exit code: {result}")
 
         # shutil.chown(self.local_path, group=group)
 

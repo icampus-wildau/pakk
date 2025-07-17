@@ -60,6 +60,122 @@ class LocalConnector(Connector):
         # If location is not a file path
         return None
 
+    @staticmethod
+    def is_path(pakkage_id: str) -> bool:
+        """
+        Check if a pakkage_id is actually a file system path.
+        
+        Parameters
+        ----------
+        pakkage_id : str
+            The pakkage_id to check
+            
+        Returns
+        -------
+        bool
+            True if the pakkage_id represents a file system path, False otherwise
+        """
+        # Empty string is not a path
+        if not pakkage_id:
+            return False
+            
+        # Check for absolute paths
+        if pakkage_id.startswith("/"):
+            return True
+            
+        # Check for home directory paths
+        if pakkage_id.startswith("~"):
+            return True
+            
+        # Check for relative paths
+        if pakkage_id.startswith("."):
+            return True
+            
+        # Check if it's a valid path by trying to resolve it
+        try:
+            abs_path = os.path.abspath(pakkage_id)
+            return os.path.exists(abs_path)
+        except (OSError, ValueError):
+            return False
+
+    def discover_path_based_pakkages(self, pakkage_ids: list[str]) -> tuple[PakkageCollection, dict[str, str]]:
+        """
+        Discover pakkages from path-based pakkage_ids and return a mapping of original paths to pakkage ids.
+        
+        Parameters
+        ----------
+        pakkage_ids : list[str]
+            List of pakkage_ids that may contain paths
+            
+        Returns
+        -------
+        tuple[PakkageCollection, dict[str, str]]
+            A tuple containing the discovered pakkages and a mapping of original paths to pakkage ids
+        """
+        discovered_pakkages = PakkageCollection()
+        path_to_pakkage_id_mapping: dict[str, str] = {}
+        
+        for pakkage_id in pakkage_ids:
+            if not self.is_path(pakkage_id):
+                continue
+                
+            abs_path = self.get_absolute_path(pakkage_id)
+            if abs_path is None:
+                logger.warning(f"Could not resolve path: {pakkage_id}")
+                continue
+                
+            if not os.path.exists(abs_path):
+                logger.warning(f"Path does not exist: {abs_path}")
+                continue
+                
+            # Check if the path itself contains a pakkage
+            pakkage_config = PakkageConfig.from_directory(abs_path)
+            if pakkage_config is not None:
+                # Only add pakkages with a non-empty id
+                if not pakkage_config.id:
+                    logger.warning(f"Discovered pakkage at {abs_path} has empty id. Skipping.")
+                    continue
+                # Single pakkage found at the path
+                versions = PakkageVersions()
+                versions.available[pakkage_config.version] = pakkage_config
+                
+                if pakkage_config.state is None:
+                    pakkage_config.state = PakkageState(PakkageInstallState.DISCOVERED)
+                
+                attr = ConnectorAttributes()
+                attr.url = abs_path
+                pakkage_config.set_attributes(self, attr)
+                
+                pakkage = Pakkage(versions)
+                discovered_pakkages[pakkage.id] = pakkage
+                path_to_pakkage_id_mapping[pakkage_id] = pakkage.id
+                logger.info(f"Discovered single pakkage {pakkage.id} at path {abs_path}")
+            else:
+                # Path doesn't contain a pakkage directly, search recursively
+                temp_collection = PakkageCollection()
+                self.discover_in_dir(temp_collection, abs_path, recursive=True)
+                # Remove any pakkages with empty id
+                empty_ids = [k for k in temp_collection.keys() if not k]
+                for k in empty_ids:
+                    logger.warning(f"Discovered pakkage in recursive search at {abs_path} has empty id. Skipping.")
+                    del temp_collection.pakkages[k]
+                
+                if len(temp_collection) == 1:
+                    # Exactly one pakkage found, use it
+                    pakkage_id_found = list(temp_collection.keys())[0]
+                    discovered_pakkages.merge(temp_collection)
+                    path_to_pakkage_id_mapping[pakkage_id] = pakkage_id_found
+                    logger.info(f"Discovered single pakkage {pakkage_id_found} at path {abs_path}")
+                elif len(temp_collection) > 1:
+                    # Multiple pakkages found, don't auto-resolve
+                    logger.warning(f"Multiple pakkages found at path {abs_path}: {list(temp_collection.keys())}")
+                    logger.warning(f"Please specify the exact pakkage name instead of the path")
+                else:
+                    # No pakkages found
+                    logger.warning(f"No pakkages found at path {abs_path}")
+        
+        return discovered_pakkages, path_to_pakkage_id_mapping
+
     def discover_installed(self) -> PakkageCollection:
         """Discover all local installed pakkages."""
 
@@ -162,7 +278,19 @@ class LocalConnector(Connector):
     def discover(self, pakkage_ids: list[str] | None = None):
         installed_pakkages = self.discover_installed()
         available_pakkages = self.discover_available()
-        return installed_pakkages.merge(available_pakkages)
+        
+        # Handle path-based pakkage_ids if provided
+        path_based_pakkages = PakkageCollection()
+        if pakkage_ids is not None:
+            path_based_pakkages, path_mapping = self.discover_path_based_pakkages(pakkage_ids)
+            # Store the mapping for later use in the install process
+            self.path_to_pakkage_id_mapping = path_mapping
+        
+        # Merge all discovered pakkages
+        result = installed_pakkages.merge(available_pakkages)
+        result = result.merge(path_based_pakkages)
+        
+        return result
 
     def fetch(self, pakkages_to_fetch: list[PakkageConfig]) -> None:
 

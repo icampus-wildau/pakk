@@ -88,9 +88,26 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
     connectors = PakkLoader.get_connector_instances()
     pakkages.discover(connectors, pakkage_names)
 
+    # Handle path-to-pakkage-id mapping from LocalConnector
+    path_mapping = {}
+    for connector in connectors:
+        if hasattr(connector, 'path_to_pakkage_id_mapping'):
+            path_mapping.update(connector.path_to_pakkage_id_mapping)
+    
+    # Replace paths with their corresponding pakkage ids
+    processed_pakkage_names = []
+    for pakkage_name in pakkage_names:
+        if pakkage_name in path_mapping:
+            # Replace the path with the actual pakkage id
+            pakkage_id = path_mapping[pakkage_name]
+            logger.info(f"Replacing path '{pakkage_name}' with pakkage id '{pakkage_id}'")
+            processed_pakkage_names.append(pakkage_id)
+        else:
+            processed_pakkage_names.append(pakkage_name)
+
     # TODO: Handle undiscovered pakkages
 
-    for n in pakkage_names:
+    for n in processed_pakkage_names:
         name, version = split_name_version(n)
 
         p = pakkages[name]
