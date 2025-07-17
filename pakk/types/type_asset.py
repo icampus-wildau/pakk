@@ -108,7 +108,7 @@ class TypeAsset(TypeBase):
     Install and setup for asset pakkages.
     """
 
-    PAKKAGE_TYPE: str = "Asset"
+    PAKKAGE_TYPE = "Asset"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = True
 
     INSTRUCTION_PARSER = [
@@ -251,3 +251,38 @@ class InitHelper(InitHelperBase):
                 ],
             )
         ]
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains asset files."""
+        asset_indicators = [
+            "assets",           # Assets directory
+            "data",             # Data directory
+            "models",           # 3D models
+            "textures",         # Texture files
+            "sounds",           # Audio files
+            "images",           # Image files
+            "videos",           # Video files
+            "fonts",            # Font files
+            "config",           # Configuration files
+            "resources",        # Resources directory
+        ]
+        
+        # Check for asset directories
+        if InitHelperBase._search_indicators(directory_path, asset_indicators, max_depth=2):
+            return True
+                
+        # Check for common asset file extensions
+        asset_extensions = [
+            '.obj', '.fbx', '.dae', '.3ds', '.blend',  # 3D models
+            '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg',  # Images
+            '.mp3', '.wav', '.ogg', '.flac', '.aac',  # Audio
+            '.mp4', '.avi', '.mov', '.mkv', '.webm',  # Video
+            '.ttf', '.otf', '.woff', '.woff2',  # Fonts
+            # '.json', '.xml', '.yaml', '.yml', '.ini', '.cfg',  # Config files
+        ]
+        
+        if InitHelperBase._search_file_suffixes(directory_path, asset_extensions, max_depth=2):
+            return True
+            
+        return False

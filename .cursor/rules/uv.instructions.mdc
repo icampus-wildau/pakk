@@ -1,0 +1,14 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+# Uv.Instructions
+
+**Applies to**: `**.py`
+
+Use uv as python package manager:
+- Install dependencies with "uv add <package>" or when manipulating pyproject.toml init them with "uv sync"
+- Run python scripts with "uv run <script>"
+- For testing, use "uv run pytest ..."
+- If there are debug print statements in pytests, run them with the "-s" flag to be printed

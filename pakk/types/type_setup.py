@@ -306,3 +306,34 @@ class InitHelper(InitHelperBase):
                 ],
             )
         ]
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains setup files."""
+        # Setup-specific indicators that are unique to setup/installation
+        setup_indicators = [
+            "setup.sh",         # Setup script
+            "install.sh",       # Install script
+            "bootstrap.sh",     # Bootstrap script
+            "init.sh",          # Init script
+            "Dockerfile",       # Docker setup
+            "docker-compose.yml", # Docker compose
+            "docker-compose.yaml", # Docker compose
+            "configure",        # Configure script
+            "autogen.sh",       # Autotools
+            "bootstrap",        # Bootstrap script
+        ]
+        
+        # Check for setup-specific indicators first
+        if InitHelperBase._search_indicators(directory_path, setup_indicators, max_depth=2):
+            return True
+                
+        # Check for .sh files that might be setup scripts
+        try:
+            for file in os.listdir(directory_path):
+                if file.endswith('.sh') and any(keyword in file.lower() for keyword in ['setup', 'install', 'init', 'bootstrap', 'configure']):
+                    return True
+        except (OSError, PermissionError):
+            pass
+            
+        return False

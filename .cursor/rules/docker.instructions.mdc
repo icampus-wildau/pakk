@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Docker.Instructions
+
+**Applies to**: `**`
+
+Assume docker is installed and running.
+Prefer docker compose over docker commands.

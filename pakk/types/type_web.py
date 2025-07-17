@@ -136,7 +136,7 @@ class TypeWeb(TypeBase):
     Type for web apps, static and reverse proxy.
     """
 
-    PAKKAGE_TYPE: str = "Web"
+    PAKKAGE_TYPE = "Web"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
 
     SECTION_NAME = "Type.Web"
@@ -172,8 +172,9 @@ class TypeWeb(TypeBase):
 
         # TODO: Handle if no build_dir is set
         self.dist_dir_parser = self.get_instruction_parser_by_cls(StaticRootParser)
+        build_dir = self.build_parser.build_dir or "dist"
         self.dist_dir = self.dist_dir_parser.static_root or self.dist_dir_parser.get_default_for_build_dir(
-            self.build_parser.build_dir
+            build_dir
         )
 
         if v.local_path is None:
@@ -379,19 +380,43 @@ class NginxSetup(SetupBase):
 class InitHelper(InitHelperBase):
     @staticmethod
     def help() -> list[InitConfigSection]:
-        from InquirerPy import inquirer
-
-        sections: list[InitConfigSection] = []
-        ros_options: list[InitConfigOption] = []
-
-        launchable = inquirer.confirm("Is the ROS2 pakkage startable?", default=False).execute()
-
-        if launchable:
-            package_name = inquirer.text("Name of the launchable ROS2 pakkage:").execute()
-            launch_script = inquirer.text("Which launch script:").execute()
-
-            ros_options.append(InitConfigOption("start", f"{package_name} {launch_script}"))
-
-        sections.append(InitConfigSection("ROS2", ros_options))
-
-        return sections
+        return [InitConfigSection("Web", [])]
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains a web project."""
+        web_indicators = [
+            "package.json",      # Node.js
+            "yarn.lock",         # Yarn
+            "package-lock.json", # npm
+            "index.html",        # Static HTML
+            "index.js",          # Node.js
+            "app.js",            # Node.js
+            "main.js",           # Node.js
+            "vite.config.js",    # Vite
+            "vite.config.ts",    # Vite
+            "webpack.config.js", # Webpack
+            "angular.json",      # Angular
+            "vue.config.js",     # Vue
+            "next.config.js",    # Next.js
+            "nuxt.config.js",    # Nuxt.js
+            "tailwind.config.js", # Tailwind
+            "tailwind.config.ts", # Tailwind
+            "postcss.config.js", # PostCSS
+            "tsconfig.json",     # TypeScript
+        ]
+        
+        # Check for web-specific indicators
+        if InitHelperBase._search_indicators(directory_path, web_indicators, max_depth=2):
+            return True
+                
+        # Check for web file extensions in the root directory
+        try:
+            web_files = [f for f in os.listdir(directory_path) 
+                        if f.endswith(('.html', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.sass'))]
+            if len(web_files) >= 2:  # Need at least 2 web files to be considered a web project
+                return True
+        except (OSError, PermissionError):
+            pass
+            
+        return False

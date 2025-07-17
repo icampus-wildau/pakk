@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from pakk.environments.base import Environment
+from pakk.pakkage.init_helper import InitConfigOption
+from pakk.pakkage.init_helper import InitConfigSection
+from pakk.pakkage.init_helper import InitHelperBase
 from pakk.types.base import TypeBase
 from pakk.types.base_instruction_parser import RunInstructionParser
 
@@ -64,3 +68,36 @@ class TypeRunnable(TypeBase):
 
     def uninstall(self) -> None:
         pass
+
+
+class InitHelper(InitHelperBase):
+    @staticmethod
+    def help() -> list[InitConfigSection]:
+        return [InitConfigSection("Runnable", [])]
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains runnable files."""
+        runnable_indicators = [
+            "main",              # Main executable
+            "run",               # Run script
+            "start",             # Start script
+            "app",               # App executable
+            "server",            # Server executable
+            "client",            # Client executable
+            "daemon",            # Daemon executable
+            "service",           # Service executable
+        ]
+        
+        # Check for executable files without extension (binaries)
+        if InitHelperBase._search_executable_files(directory_path, max_depth=2):
+            return True
+            
+        # Check for files with runnable names
+        for indicator in runnable_indicators:
+            for ext in ['', '.sh', '.bash', '.exe']:
+                indicator_path = os.path.join(directory_path, indicator + ext)
+                if os.path.exists(indicator_path):
+                    return True
+                    
+        return False

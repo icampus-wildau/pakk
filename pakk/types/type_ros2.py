@@ -110,7 +110,7 @@ class TypeRos2(TypeBase):
     General setup instructions.
     """
 
-    PAKKAGE_TYPE: str = "ROS2"
+    PAKKAGE_TYPE = "ROS2"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
 
     CONFIG_CLS = Ros2TypeConfiguration
@@ -250,3 +250,25 @@ class InitHelper(InitHelperBase):
         sections.append(InitConfigSection("ROS2", ros_options))
 
         return sections
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains a ROS2 project."""
+        # ROS2-specific indicators that are unique to ROS2
+        ros2_indicators = [
+            "package.xml",  # ROS package manifest
+            "launch",       # launch directory
+            "msg",          # message directory
+            "srv",          # service directory
+            "action",       # action directory
+        ]
+        
+        # Check for ROS2-specific indicators first
+        if InitHelperBase._search_indicators(directory_path, ros2_indicators, max_depth=2):
+            return True
+                
+        # Check for .launch.py files
+        if InitHelperBase._search_file_suffixes(directory_path, ['.launch.py'], max_depth=3):
+            return True
+            
+        return False

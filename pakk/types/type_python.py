@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from extended_configparser.configuration.entries.section import ConfigSection
 
@@ -66,7 +67,7 @@ class TypePython(TypeBase):
     Install and setup for python pakkages.
     """
 
-    PAKKAGE_TYPE: str = "Python"
+    PAKKAGE_TYPE = "Python"
     ALLOWS_MULTIPLE_SIMULTANEOUS_INSTALLATIONS = False
 
     def __init__(self, pakkage_version: PakkageConfig, env: Environment):
@@ -105,3 +106,33 @@ class InitHelper(InitHelperBase):
     @staticmethod
     def help() -> list[InitConfigSection]:
         return [InitConfigSection("Python", [])]
+    
+    @staticmethod
+    def is_suitable_for_directory(directory_path: str) -> bool:
+        """Check if this directory contains a Python project."""
+        python_indicators = [
+            "setup.py",
+            "pyproject.toml", 
+            "requirements.txt",
+            "Pipfile",
+            "poetry.lock",
+            ".python-version",
+            "__init__.py",
+            "manage.py",  # Django
+            "wsgi.py",    # Django
+            "asgi.py",    # Django
+        ]
+        
+        # Check for Python-specific indicators first
+        if InitHelperBase._search_indicators(directory_path, python_indicators, max_depth=2):
+            return True
+                
+        # Check for .py files in the root directory, but be more specific
+        try:
+            py_files = [f for f in os.listdir(directory_path) if f.endswith('.py')]
+            if len(py_files) >= 2:  # Need at least 2 Python files to be considered a Python project
+                return True
+        except (OSError, PermissionError):
+            pass
+            
+        return False

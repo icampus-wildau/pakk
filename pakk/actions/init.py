@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import semver
 from InquirerPy import inquirer
+from InquirerPy.base import Choice
 from InquirerPy.validator import Validator
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.completion import Completer
@@ -57,13 +58,11 @@ class IdValidator(Validator):
             raise ValidationError(pos, "ID must not contain spaces")
 
         # Check if value contains special characters
-        if any(c in "!@#$%^&*()[]{};:,./<>?\|`~=+" for c in val):
+        if any(c in r"!@#$%^&\*()[]{};:,\./<>\?|`~=\+" for c in val):
             raise ValidationError(pos, "ID must not contain special characters")
 
         if any(c == "_" for c in val):
             raise ValidationError(pos, "ID should use `-` instead of underscores")
-
-        return True
 
 
 class VersionValidator(Validator):
@@ -74,8 +73,6 @@ class VersionValidator(Validator):
             semver.VersionInfo.parse(val)
         except ValueError:
             raise ValidationError(pos, "Invalid version")
-
-        return True
 
 
 class DependencyCompleter(Completer):
@@ -164,7 +161,10 @@ def init(path: str, **kwargs: str):
         long_instruction="The unique id to identify your pakkage",
         default=basename,
     ).execute()
-    ptitle = inquirer.text("Title:", default=pid, long_instruction="The verbose title of your pakkage").execute()
+    
+    # Convert ID to title: replace "-" with " " and capitalize words
+    default_title = " ".join(word.capitalize() for word in pid.split("-"))
+    ptitle = inquirer.text("Title:", default=default_title, long_instruction="The verbose title of your pakkage").execute()
     pver = inquirer.text(
         "Current version:",
         validate=VersionValidator(),
@@ -220,10 +220,35 @@ def init(path: str, **kwargs: str):
     types = TypeBase.get_type_classes()
     type_map = {t.PAKKAGE_TYPE: t for t in types}
     available_type_choices = [t.PAKKAGE_TYPE for t in types if t.CONFIGURABLE_TYPE]
+    
+    # Detect suitable types based on directory content
+    preselected_types = []
+    for type_name in available_type_choices:
+        type_class = type_map[type_name]
+        module_name = type_class.__module__
+        helper_cls = PakkLoader.get_module_subclasses(module_name, InitHelperBase)
+        helper_cls = helper_cls[0] if len(helper_cls) > 0 else None
+        
+        if helper_cls is not None and issubclass(helper_cls, InitHelperBase):
+            try:
+                if helper_cls.is_suitable_for_directory(path):
+                    preselected_types.append(type_name)
+                    logger.info(f"Auto-detected suitable type: {type_name}")
+                else:
+                    logger.info(f"Type {type_name} is not suitable for this directory")
+            except Exception as e:
+                logger.debug(f"Error detecting suitability for {type_name}: {e}")
+    
     while True:
+        # Create Choice objects with enabled parameter for preselection
+        choice_objects = []
+        for type_name in available_type_choices:
+            enabled = type_name in preselected_types
+            choice_objects.append(Choice(type_name, enabled=enabled))
+        
         type_choices = inquirer.checkbox(
             message="Select pakkage types (select with TAB, proceed with ENTER)",
-            choices=available_type_choices,
+            choices=choice_objects,
             cycle=True,
         ).execute()
         if len(type_choices) > 0:
