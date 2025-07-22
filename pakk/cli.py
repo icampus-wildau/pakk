@@ -22,8 +22,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], max_content_width=80
 def init_pakk(**kwargs):
     import logging
 
-    from pakk.args.base_args import BaseArgs
-    from pakk.args.base_args import PakkArgs
+    from pakk.args.base_args import BaseArgs, PakkArgs
     from pakk.logger import Logger
     from pakk.setup.checker import PakkSetupChecker
     from pakk.setup.setup_group import PakkGroupSetup
@@ -65,10 +64,8 @@ def catched_execution(function, *args, **kwargs):
         Logger.get_console().print("[bold red]" + e.message)
 
         fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += f"  - check if you are running pakk in the correct environment with the correct env vars\n"
-        fix_msg += (
-            f"  - adapt the option '{e.option}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
-        )
+        fix_msg += "  - check if you are running pakk in the correct environment with the correct env vars\n"
+        fix_msg += f"  - adapt the option '{e.option}' under section '[{e.section}]' in the config files at [b]{p}[/b]\n"
 
         Logger.get_console().print(fix_msg)
 
@@ -79,10 +76,8 @@ def catched_execution(function, *args, **kwargs):
         Logger.print_exception_message(e)
 
         fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += (
-            f"  - choose as argument an existing pakkage (run 'ls --all' to get a list of available remote pakkages)\n"
-        )
-        fix_msg += f"  - check if your sources for discovery are reachable and correctly configured\n"
+        fix_msg += "  - choose as argument an existing pakkage (run 'ls --all' to get a list of available remote pakkages)\n"
+        fix_msg += "  - check if your sources for discovery are reachable and correctly configured\n"
 
         Logger.get_console().print(fix_msg)
     except ResolverException as e:
@@ -97,9 +92,9 @@ def catched_execution(function, *args, **kwargs):
             Logger.get_console().print_exception()
         Logger.print_exception_message(e)
         fix_msg = "To fix this, do one of the following:\n"
-        fix_msg += f"  - rerun 'pakk setup' and check for occuring errors & fixes.\n"
+        fix_msg += "  - rerun 'pakk setup' and check for occuring errors & fixes.\n"
 
-    except Exception as e:
+    except Exception:
         Logger.get_console().print_exception()
     except KeyboardInterrupt:
         Logger.get_console().print("Keyboard interrupt at CLI...")
@@ -274,9 +269,7 @@ def tree(ctx: Context, **kwargs):
 @click.argument("configuration", required=False)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 @click.option("-r", "--reset", is_flag=True, default=False, help="Reset the configuration.")
-@click.option(
-    "-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit."
-)
+@click.option("-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit.")
 @click.pass_context
 def configure(ctx: Context, **kwargs):
     """
@@ -443,9 +436,7 @@ def restart(**kwargs):
 @cli.command(aliases=[])
 @click.argument("pakkage_names", nargs=-1)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
-@click.option(
-    "-f", "--follow_logs", is_flag=True, default=False, help="Follow the logs of the given executable pakkage."
-)
+@click.option("-f", "--follow_logs", is_flag=True, default=False, help="Follow the logs of the given executable pakkage.")
 def log(**kwargs):
     """
     Follows the log of the given executable pakkage.

@@ -92,10 +92,10 @@ class ModuleImporter:
         global imported_classes
         global imported_modules
 
-        if not module_name in imported_classes:
+        if module_name not in imported_classes:
             try:
                 module = importlib.import_module(module_name)
-            except ModuleNotFoundError as e:
+            except ModuleNotFoundError:
                 return None
 
         m = imported_modules.get(module_name, None)
