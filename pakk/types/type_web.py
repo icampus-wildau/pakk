@@ -38,8 +38,8 @@ class StaticRootParser(InstructionParser):
     INSTRUCTION_NAME = "static_root"
     DEFAULT_SUBINSTRUCTION = "set"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.static_root: str | None = None
 
@@ -57,8 +57,8 @@ class PublicPathParser(InstructionParser):
     INSTRUCTION_NAME = "public_path"
     DEFAULT_SUBINSTRUCTION = "set"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.public_path: str | None = None
 
@@ -72,8 +72,8 @@ class PublicPathParser(InstructionParser):
 class BuildParser(InstructionParser):
     INSTRUCTION_NAME = ["build", "build_dir", "public_path_env_var", "public_path_build_option"]
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.build_system: str | None = None
         self.install_cmd: str | None = None

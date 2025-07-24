@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pakk.environments.base import Environment
+    from pakk.pakkage.core import PakkageConfig
+    from pakk.types.base import TypeBase
 
 
 class InstructionParser:
@@ -37,8 +39,10 @@ class InstructionParser:
 
     DEFAULT_SUBINSTRUCTION: str | None = None
 
-    def __init__(self, environment: Environment):
-        self.env = environment
+    def __init__(self, type_instance: TypeBase):
+        self.type = type_instance
+        self.pakkage_version = type_instance.pakkage_version
+        self.env = type_instance.env
 
     def has_cmd(self):
         raise NotImplementedError()

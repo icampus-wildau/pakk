@@ -79,3 +79,28 @@ class Process:
         extended_path = ":".join(paths)
         cmd = r"export PYTHONPATH=${PYTHONPATH}:" + extended_path
         return cmd
+
+    @staticmethod
+    def get_cmd_source_python_venv(pakkage_path: str | None) -> str | None:
+        import os
+        
+        if pakkage_path is None or not os.path.exists(pakkage_path):
+            return None
+        
+        venv_path = os.path.join(pakkage_path, ".venv")
+        if not os.path.exists(venv_path):
+            return None
+        
+        cmd = None
+        
+        # Search for the site-packages directory in the venv, independent of the python version
+        for root, dirs, files in os.walk(venv_path):
+            if "site-packages" in dirs:
+                site_packages_path = os.path.join(root, "site-packages")
+                # cmd = r"export PYTHONPATH=${PYTHONPATH}:" + site_packages_path
+                cmd = f"source {venv_path}/bin/activate"
+                break
+        
+        return cmd
+        
+    

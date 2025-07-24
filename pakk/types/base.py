@@ -79,7 +79,7 @@ class TypeBase(Module, Generic[TB]):
     The classes in this list are used to create the instruction parser objects automatically.
     """
 
-    CONFIG_CLS: type[TypeConfiguration] = None
+    CONFIG_CLS: type[TypeConfiguration] = None # type: ignore
     """
     The configuration class for this type.
     Set this to a subclass of TypeConfiguration to enable configuration for this type when using `pakk configure`.
@@ -106,7 +106,7 @@ class TypeBase(Module, Generic[TB]):
             if p.INSTRUCTION_NAME is None:
                 continue
 
-            parser = p(self.env)
+            parser = p(self)
             if isinstance(p.INSTRUCTION_NAME, list):
                 for instruction_name in p.INSTRUCTION_NAME:
                     self.instruction_parser[instruction_name] = parser
@@ -128,11 +128,11 @@ class TypeBase(Module, Generic[TB]):
         ]
 
         """List of instruction parsers that are used for installation."""
-        self.instruction_parser_run = [
+        self.instruction_parser_run: list[RunInstructionParser] = [ # type: ignore
             p
             for p in self.instruction_parser.values()
             if (isinstance(p, RunInstructionParser) or issubclass(p.__class__, RunInstructionParser))
-        ]
+        ] 
         """List of instruction parsers that are used for running commands."""
 
         self.config_sections = TypeConfigSection.get_sections(self.pakkage_version, self.PAKKAGE_TYPE)
@@ -145,7 +145,7 @@ class TypeBase(Module, Generic[TB]):
     def __repr__(self):
         return str(self)
 
-    def get_instruction_parser_by_cls(self, instruction_cls: Type[InstructionParserType]) -> InstructionParserType:
+    def get_instruction_parser_by_cls(self, instruction_cls: Type[InstructionParserType]) -> InstructionParser:
         """Get the instruction parser for the given instruction class."""
         return self._instruction_parser_by_cls[instruction_cls]
 
@@ -176,14 +176,15 @@ class TypeBase(Module, Generic[TB]):
                     if section.instruction in self.instruction_parser:
                         for sub_instruction, instruction_content in section.section_content.items():
                             self.instruction_parser[section.instruction].parse_instruction(
-                                instruction_content, instruction_name, sub_instruction
+                                instruction_content, section.instruction, sub_instruction
                             )
                     else:
                         logger.warning(
                             f"TODO: Unknown instruction '{section.instruction}' in pakk.cfg of {self.pakkage_version.id}."
                         )
                         # TODO: is this parameter correct?
-                        self.parse_undefined_instruction(section.instruction, section.section_content)
+                        for sub_instruction, instruction_content in section.section_content.items():
+                            self.parse_undefined_instruction(sub_instruction, instruction_content)
 
     @staticmethod
     def get_type_classes() -> list[type[TypeBase]]:
@@ -304,7 +305,6 @@ class TypeBase(Module, Generic[TB]):
                     cmds.append(instruction.get_cmd())
 
         cmd = " && ".join(cmds)
-        envs = Process.get_env_vars()
         logger.info(f"Running pakkage with command '{cmd}'")
 
         # Expand the environment variables

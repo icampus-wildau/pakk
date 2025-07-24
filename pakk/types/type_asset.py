@@ -28,8 +28,8 @@ class LinkInstructionParser(InstallInstructionParser):
             self.target = target
             self.link_name = link_name
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         self.links: list[LinkInstructionParser.Link] = []
 
     def has_cmd(self):
@@ -69,8 +69,8 @@ class EnvVarInstructionParser(InstallInstructionParser):
             self.key = key
             self.val = val
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         self.env_vars: list[EnvVarInstructionParser.EnvVar] = []
 
     def has_cmd(self):

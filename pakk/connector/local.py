@@ -149,7 +149,7 @@ class LocalConnector(Connector):
                 pakkage = Pakkage(versions)
                 discovered_pakkages[pakkage.id] = pakkage
                 path_to_pakkage_id_mapping[pakkage_id] = pakkage.id
-                logger.info(f"Discovered single pakkage {pakkage.id} at path {abs_path}")
+                logger.info(f"Discovered pakkage {pakkage.id} at path {abs_path}")
             else:
                 # Path doesn't contain a pakkage directly, search recursively
                 temp_collection = PakkageCollection()
@@ -290,8 +290,8 @@ class LocalConnector(Connector):
             self.path_to_pakkage_id_mapping = path_mapping
         
         # Merge all discovered pakkages
-        result = installed_pakkages.merge(available_pakkages)
-        result = result.merge(path_based_pakkages)
+        # result = installed_pakkages.merge(available_pakkages)
+        result = path_based_pakkages.merge(available_pakkages).merge(installed_pakkages)
         
         return result
 

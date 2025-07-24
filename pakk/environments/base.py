@@ -62,3 +62,7 @@ class Environment(Module):
     @staticmethod
     def get_pip():
         return f"{Environment.get_python_executable()} -m pip"
+
+    @staticmethod
+    def get_uv():
+        return "uv"

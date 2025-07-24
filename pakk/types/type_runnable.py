@@ -19,9 +19,8 @@ class RunnableInstructionParser(RunInstructionParser):
     INSTRUCTION_NAME = ["start", "run"]
     # DEFAULT_SUBINSTRUCTION = "launch"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
-        self.env = environment
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         self.command: str | None = None
 
     def has_cmd(self):

@@ -73,11 +73,10 @@ class RosStartInstructionParser(RunInstructionParser):
     INSTRUCTION_NAME = ["start", "local"]
     # DEFAULT_SUBINSTRUCTION = "launch"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         # if not isinstance(environment, EnvPartROS2):
         #     raise TypeError(f"Environment must be of type '{EnvPartROS2.__name__}'")
-        self.env = environment
         self.config = Ros2TypeConfiguration.get_config()
 
         self.script = None
@@ -90,12 +89,16 @@ class RosStartInstructionParser(RunInstructionParser):
     def get_cmd(self):
         local_env = f"export ROS_LOCALHOST_ONLY={1 if self.local else 0}"
         update_pythonpath = Process.get_cmd_update_pythonpath()
-        cmds = [
+        update_python_venv = Process.get_cmd_source_python_venv(self.pakkage_version.local_path)
+        
+        cmds = [c for c in [
             self.config.get_cmd_setup_ws(),
             update_pythonpath,
+            update_python_venv,
             local_env,
             self.env.get_cmd_in_environment(f"ros2 launch {self.script}"),
-        ]
+        ] if c is not None]
+        
         return " && ".join(cmds)
 
     def parse_start(self, instruction_content: str):

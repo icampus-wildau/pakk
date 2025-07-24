@@ -31,8 +31,8 @@ class AptInstructionParser(CombinableInstallInstructionParser):
     INSTRUCTION_NAME = "apt"
     DEFAULT_SUBINSTRUCTION = "install"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.apt_packages: list[str] = []
 
@@ -57,7 +57,7 @@ class AptInstructionParser(CombinableInstallInstructionParser):
         for i in parser:
             apt_packages.extend(i.apt_packages)
 
-        combined_parser = AptInstructionParser(parser[0].env)
+        combined_parser = AptInstructionParser(parser[0].type)
         combined_parser.apt_packages = apt_packages
 
         if combined_parser.has_cmd():
@@ -70,8 +70,8 @@ class PipInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "pip"
     DEFAULT_SUBINSTRUCTION = "install"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         self.requirement_file = None
         self.pip_packages: list[str] = []
         self.python_config = PythonTypeConfiguration.get_config()
@@ -113,8 +113,8 @@ class ScriptInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "script"
     DEFAULT_SUBINSTRUCTION = "run"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.scripts: list[str] = []
 
@@ -147,8 +147,8 @@ class LocalEnvVarParser(InstructionParser):
     INSTRUCTION_NAME = "env"
     DEFAULT_SUBINSTRUCTION = "set"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
 
         self.env_vars: dict[str, str] = {}
 
@@ -179,8 +179,8 @@ class GitInstructionParser(InstallInstructionParser):
     INSTRUCTION_NAME = "git"
     DEFAULT_SUBINSTRUCTION = "clone"
 
-    def __init__(self, environment: Environment):
-        super().__init__(environment)
+    def __init__(self, type_instance: TypeBase):
+        super().__init__(type_instance)
         self.git_urls: list[str] = []
 
     def has_cmd(self):
