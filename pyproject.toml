@@ -50,4 +50,4 @@ Homepage = "https://github.com/icampus-wildau/pakk"
 Issues = "https://github.com/icampus-wildau/pakk/issues"
 
 [project.scripts]
-pakk = "pakk.cli:cli"
+pakk = "pakk.cli.main:cli"

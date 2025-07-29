@@ -117,8 +117,9 @@ class PakkAutoUpdateService(PakkServiceFileBase):
 
 
 class PakkChildService(PakkServiceFileBase):
-    def __init__(self, pakkage_version: PakkageConfig):
+    def __init__(self, pakkage_version: PakkageConfig, run_args: list[str] | None = None):
         self.pakkage_version: PakkageConfig = pakkage_version
+        self.run_args: list[str] = run_args if run_args is not None else []
         super().__init__(self.pakkage_version.id)
 
         unit_section = self.service_file.add_section(UnitFileDefinition.Unit.NAME)
@@ -128,12 +129,13 @@ class PakkChildService(PakkServiceFileBase):
 
         service_section: UnitFileSection = self.service_file.add_section(UnitFileDefinition.Service.NAME)
         service_section.add_line("User", getpass.getuser())
-        service_section.add_line(
-            # UnitFileDefinition.Service.ExecStart, f"{PAKK_CMD_PATH} run {self.pakkage_version.basename}"
-            UnitFileDefinition.Service.ExecStart,
-            f"{PAKK_CMD_PATH} run {self.pakkage_version.id}",
-        )
-        # service_section.add_line(UnitFileDefinition.Service.ExecStart, f"pakk run {self.pakkage_version.basename}")
+        
+        # Build the ExecStart command with run arguments
+        exec_start_cmd = f"{PAKK_CMD_PATH} run {self.pakkage_version.id}"
+        if self.run_args:
+            exec_start_cmd += " " + " ".join(self.run_args)
+            
+        service_section.add_line(UnitFileDefinition.Service.ExecStart, exec_start_cmd)
         service_section.add_line(UnitFileDefinition.Service.Restart, "on-failure")
         service_section.add_line(UnitFileDefinition.Service.TimeoutSec, "15s")
         service_section.add_line(UnitFileDefinition.Service.KillSignal, "SIGINT")

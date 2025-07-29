@@ -17,6 +17,9 @@ def show_figlet(message: str):
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], max_content_width=800)
+# CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS =  CONTEXT_SETTINGS | dict(ignore_unknown_options=True, allow_extra_args=True)
+CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS =  CONTEXT_SETTINGS | dict(ignore_unknown_options=True)
+
 
 
 def init_pakk(**kwargs):
@@ -144,6 +147,13 @@ def catched_execution(function, *args, **kwargs):
 @click.pass_context
 def cli(ctx: Context, **kwargs):
     pass
+
+
+# @click.group(cls=ClickAliasedGroup, context_settings=CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS)
+# @click.pass_context
+# def cli_ignore_unknown_options(ctx: Context, **kwargs):
+#     pass
+
 
 
 @cli.command(aliases=["i"])
@@ -351,44 +361,65 @@ if __name__ == "__main__":
     cli(["cfg"])
 
 
-@cli.command(aliases=["r"])
+@cli.command(aliases=["r"], context_settings=CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS)
 @click.argument("pakkage_names", nargs=-1)
+# @click.argument("run_args", nargs=-1)  # Add this to capture additional arguments
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 def run(**kwargs):
     """
     Runs the given pakkage interactively.
+    
+    You can pass additional arguments that will be converted to environment variables:
+    
+    Simple assignment (if defined in pakk.cfg):
+        pakk run respeaker -d=mydevice
+    
+    Arbitrary environment variables:
+        pakk run respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
-
     from pakk.actions.manager import run as r
-
     catched_execution(r, **kwargs)
 
 
 @cli.command(aliases=[])
 @click.argument("pakkage_names", nargs=-1)
+@click.argument("run_args", nargs=-1)  # Add this to capture additional arguments
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 @click.option("-R", "--reload_service_files", is_flag=True, default=False, help="Reloads the service files.")
 def start(**kwargs):
     """
     Starts the given executable pakkage as services.
+    
+    You can pass additional arguments that will be converted to environment variables:
+    
+    Simple assignment (if defined in pakk.cfg):
+        pakk start respeaker -d=mydevice
+    
+    Arbitrary environment variables:
+        pakk start respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
-
     from pakk.actions.manager import start
-
     catched_execution(start, **kwargs)
     # print("RUN DUMMY")
 
 
 @cli.command(aliases=["e"])
 @click.argument("pakkage_names", nargs=-1)
+@click.argument("run_args", nargs=-1)  # Add this to capture additional arguments
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 def enable(**kwargs):
     """
     Enables the given executable pakkage.
+    
+    You can pass additional arguments that will be converted to environment variables:
+    
+    Simple assignment (if defined in pakk.cfg):
+        pakk enable respeaker -d=mydevice
+    
+    Arbitrary environment variables:
+        pakk enable respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
-
     from pakk.actions.manager import enable
-
     catched_execution(enable, **kwargs)
 
 
@@ -460,9 +491,6 @@ def status(**kwargs):
     catched_execution(status, **kwargs)
 
 
-if __name__ == "__main__":
-    cli(["cfg"])
-
 
 @cli.command(aliases=[])
 @click.argument("path", nargs=-1)
@@ -476,8 +504,6 @@ def init(**kwargs):
     catched_execution(init, **kwargs)
 
 
-if __name__ == "__main__":
-    cli(["cfg"])
 
 
 @cli.command(aliases=[])
@@ -492,8 +518,6 @@ def dev(**kwargs):
     catched_execution(dev, **kwargs)
 
 
-if __name__ == "__main__":
-    cli(["cfg"])
 
 
 @cli.command(aliases=["u"])
@@ -531,3 +555,7 @@ def clean(**kwargs):
     from pakk.actions.clean import clean
 
     catched_execution(clean, **kwargs)
+
+
+if __name__ == "__main__":
+    cli(["cfg"])

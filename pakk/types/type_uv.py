@@ -59,12 +59,6 @@ class TypeUV(TypeBase):
     
     This type is similar to the Python type but uses UV (uv sync) instead of pip for package management.
     UV provides faster dependency resolution and installation compared to pip.
-    
-    Key differences from Python type:
-    - Uses 'uv sync' instead of 'pip install'
-    - Supports '--no-dev' flag to exclude development dependencies
-    - Uses '--project' flag to specify the project directory
-    - Automatically detects pyproject.toml and uv.lock files
     """
 
     PAKKAGE_TYPE = "UV"

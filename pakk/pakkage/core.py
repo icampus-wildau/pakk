@@ -247,12 +247,12 @@ class PakkageConfig:
         startable_types = [t for t in self.pakk_types if t.is_runnable()]
         startable_types[0].run()
 
-    def start(self):
+    def start(self, run_args: list[str] | None = None):
         """Starts the pakkage as service."""
         if not self.is_startable():
             raise Exception("Pakkage is not startable.")
 
-        service = PakkChildService(self)
+        service = PakkChildService(self, run_args or [])
         reload_service_files = ManagerArgs.get().reload_service_files
         if reload_service_files or not os.path.exists(f"/etc/systemd/system/{service.service_file.filename}"):
             logger.info(f"Writing service file to {service.service_file.filepath}")
@@ -314,12 +314,12 @@ class PakkageConfig:
         )
         return code == 0
 
-    def enable(self):
+    def enable(self, run_args: list[str] | None = None):
         """Enables the autostart of the pakkage as service."""
         if not self.is_startable():
             raise Exception(f"Pakkage {self.id} is not startable.")
 
-        service = PakkChildService(self)
+        service = PakkChildService(self, run_args or [])
         logger.info(f"Writing service file to {service.service_file.filepath}")
         service.service_file.write()
 
@@ -402,9 +402,8 @@ class PakkageConfig:
 
     @property
     def env_vars(self) -> dict[str, str | None]:
-        """Returns the env vars of the pakkage."""
-
         """Load the env vars of the pakkage from the pakk.env file in the .pakk directory of the module."""
+
         if self.local_path is None:
             raise Exception("No path to load the env vars from.")
         path = self.local_path

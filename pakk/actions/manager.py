@@ -8,6 +8,7 @@ import threading
 from InquirerPy import inquirer
 
 from pakk.args.base_args import BaseArgs
+from pakk.cli.parser import PakkCliOptionsParser
 from pakk.config.process import Process
 
 # from pakk.environments.dockerbase import DockerEnvironment
@@ -50,6 +51,75 @@ class ErrorHandling:
         except NotSupportedError as e:
             logger.error(str(e))
 
+
+class RunCall:
+    def __init__(self, pakkage_names: list[str], select_message: str = "Select pakkage to run:"):
+        self.pakkage_names = []
+        self.pakkages_discovered = []
+        self.option_list: list[str] = []
+        
+        get_all = kwargs.get("all", False)
+
+        flag_verbose = kwargs.get("verbose", False)
+
+        TypeBase.initialize()
+
+        pakkages = PakkageCollection()
+        local_discoverer = LocalConnector()
+        pakkages.discover([local_discoverer], quiet=not flag_verbose)
+
+        viable_pakkages_names: list[str] = []
+        rest_string: list[str] = []
+        for i, p in enumerate(pakkage_names):
+            if p.startswith("-"):
+                rest_string = pakkage_names[i:]
+                break
+            viable_pakkages_names.append(p)
+            
+        if len(rest_string) > 0:
+            self.option_list = rest_string
+        
+        viable_pakkages_names = [split_name_version(n)[0] for n in viable_pakkages_names]
+
+        startable_pakkages: dict[str, PakkageConfig] = dict()
+
+        for p in pakkages.values():
+            v = p.versions.installed
+            if v is None:
+                continue
+
+            if not viable_pakkages_names or (len(viable_pakkages_names) > 0 and v.id in viable_pakkages_names):
+                if v.is_startable():
+                    startable_pakkages[v.id] = v
+
+        if len(startable_pakkages) == 0:
+            # if pakkage_names:
+            #     logger.error(f"No startable pakkages found with name '{pakkage_names}'")
+            # else:
+            #     logger.error("No startable pakkages found")
+            return [], pakkages
+
+        pakkages_to_start: list[PakkageConfig] = []
+        if not viable_pakkages_names and not get_all:
+            action = inquirer.fuzzy(  # type: ignore
+                message=select_message,
+                choices=list([p for p in startable_pakkages.keys()]),
+                default="",
+            ).execute()
+
+            pakkages_to_start.append(startable_pakkages[action])
+        else:
+            if not get_all:
+                for p in viable_pakkages_names:
+                    pakkages_to_start.append(startable_pakkages[p])
+            else:
+                pakkages_to_start = list(startable_pakkages.values())
+
+        # return pakkages_to_start, pakkages
+        self.pakkages_to_start = pakkages_to_start
+        self.pakkages_discovered = pakkages
+
+        
 
 def _get_startable_pakkages(
     pakkage_names, select_message="Select pakkage to start:", **kwargs: str
@@ -105,12 +175,25 @@ def _get_startable_pakkages(
 
 @ErrorHandling
 def run(pakkage_names, **kwargs: str):
-    pakkages_to_start, pakkages_discovered = _get_startable_pakkages(pakkage_names, "Select pakkage to run:", **kwargs)
+    print("--------------------------------")
+    print("KWARGS")
+    print(pakkage_names)
+    print(kwargs)
+    
+    # pakkages_to_start, pakkages_discovered = _get_startable_pakkages(pakkage_names, "Select pakkage to run:", **kwargs)
+    run_call = RunCall(pakkage_names, "Select pakkage to run:", **kwargs)
 
-    if len(pakkages_to_start) == 0:
+    if len(run_call.pakkages_to_start) == 0:
         raise PakkageNotFoundException("No pakkages to run")
-    if len(pakkages_to_start) > 1:
+    if len(run_call.pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to run is not supported yet")
+
+    pakkage = run_call.pakkages_to_start[0]
+    parser = PakkCliOptionsParser(pakkage)
+    parser.parse_cli_options(run_call.option_list)
+    
+        
+    return
 
     logger.info(f"Loading environment vars")
     Process.set_from_pakkages(pakkages_discovered)
