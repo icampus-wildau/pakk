@@ -53,7 +53,7 @@ class ErrorHandling:
 
 
 class RunCall:
-    def __init__(self, pakkage_names: list[str], select_message: str = "Select pakkage to run:"):
+    def __init__(self, pakkage_names: list[str], select_message: str = "Select pakkage to run:", **kwargs: str):
         self.pakkage_names = []
         self.pakkages_discovered = []
         self.option_list: list[str] = []
@@ -97,7 +97,9 @@ class RunCall:
             #     logger.error(f"No startable pakkages found with name '{pakkage_names}'")
             # else:
             #     logger.error("No startable pakkages found")
-            return [], pakkages
+            self.pakkages_to_start = []
+            self.pakkages_discovered = pakkages
+            return
 
         pakkages_to_start: list[PakkageConfig] = []
         if not viable_pakkages_names and not get_all:

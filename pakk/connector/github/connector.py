@@ -118,6 +118,9 @@ class GithubConnector(Connector):
             for id in pakkage_ids:
                 splits = id.split("/")
                 if len(splits) == 2:
+                    if splits[0] == ".":
+                        continue
+                    
                     org_name, repo_name = splits
                     if org_name not in org_names:
                         logger.info(f"Adding organization '{org_name}' to cache")
@@ -135,7 +138,13 @@ class GithubConnector(Connector):
         for org_name in org_names:
             # Find the organization
             logger.debug(f"Updating cache for organization '{org_name}':")
-            org = self._github.get_organization(org_name)
+            
+            try:
+                org = self._github.get_organization(org_name)
+            except Exception as e:
+                logger.warning(f"Error getting organization '{org_name}': {str(e)}")
+                org = None
+                continue
 
             # # List all repos in the organization
             # for repo in org.get_repos():

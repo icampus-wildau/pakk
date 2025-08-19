@@ -29,12 +29,15 @@ class UVTypeConfiguration(TypeConfiguration):
         #     value_getter=lambda x: x.lower() == "true",
         # )
 
-    def get_cmd_uv_sync_package(
+    def get_cmd_uv_venv_package(
         self,
+        use_system_site_packages: bool = True,
         path: str | None = None,
     ):
         uv = Environment.get_uv()
-        parts = [f"{uv} sync"]
+        parts = [f"{uv} venv"]
+        if use_system_site_packages:
+            parts.append("--system-site-packages")
         
         # if dev_dependencies is None:
         #     dev_dependencies = self.dev_dependencies.value
@@ -70,7 +73,7 @@ class TypeUV(TypeBase):
 
     def install_package(self, path: str):
         path = self.env.get_path_in_environment(path)
-        cmd = self.config.get_cmd_uv_sync_package(path)
+        cmd = self.config.get_cmd_uv_venv_package()
         cmd = self.env.get_cmd_in_environment(cmd)
         self.run_commands_with_output(cmd)
 

@@ -79,30 +79,44 @@ class RosStartInstructionParser(RunInstructionParser):
         #     raise TypeError(f"Environment must be of type '{EnvPartROS2.__name__}'")
         self.config = Ros2TypeConfiguration.get_config()
 
-        self.script = None
+        self.start_ros = None
 
         self.local = Ros2TypeConfiguration.get_config().local_by_default.value
 
     def has_cmd(self):
-        return self.script is not None
+        return self.start_ros is not None
 
     def get_cmd(self):
         local_env = f"export ROS_LOCALHOST_ONLY={1 if self.local else 0}"
         update_pythonpath = Process.get_cmd_update_pythonpath()
         update_python_venv = Process.get_cmd_source_python_venv(self.pakkage_version.local_path)
         
+        ros_commands = self.start_ros.split(" ")
+        ros_command = None
+        
+        if len(ros_commands) != 2:
+            raise ValueError(f"Invalid ROS2 start command: {self.start_ros}")
+        
+        # Launch command
+        if "launch" in ros_commands[1].split("."):
+            ros_command = f"ros2 launch {ros_commands[0]} {ros_commands[1]}"
+        else:
+            ros_command = f"ros2 run {ros_commands[0]} {ros_commands[1]}"
+            
+        ros_command = self.env.get_cmd_in_environment(ros_command)
+        
         cmds = [c for c in [
             self.config.get_cmd_setup_ws(),
             update_pythonpath,
             update_python_venv,
             local_env,
-            self.env.get_cmd_in_environment(f"ros2 launch {self.script}"),
+            ros_command,
         ] if c is not None]
         
         return " && ".join(cmds)
 
     def parse_start(self, instruction_content: str):
-        self.script = instruction_content.strip(' "')
+        self.start_ros = instruction_content.strip(' "')
 
     def parse_local(self, instruction_content: str):
         self.local = instruction_content.strip(' "').lower() in ["true", "yes", "1"]
