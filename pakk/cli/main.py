@@ -4,6 +4,7 @@ from __future__ import annotations
 import builtins
 
 import click
+# import rich_click as click
 from click import Context
 from click_aliases import ClickAliasedGroup
 
@@ -210,6 +211,7 @@ def cli(ctx: Context, **kwargs):
     default=False,
     help="Skips the updating of the cache and thus speed up the process.",
 )
+@click.option("-e", "--editable", is_flag=True, default=False, help="Install from local directories in editable mode (symlink instead of copy).")
 @click.option("-l", "--location", multiple=True, help="Add local lookup locations for pakkages.")
 @click.pass_context
 def install(ctx: Context, **kwargs):

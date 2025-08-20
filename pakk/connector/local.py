@@ -16,6 +16,8 @@ from pakk.pakkage.core import PakkageConfig
 from pakk.pakkage.core import PakkageInstallState
 from pakk.pakkage.core import PakkageState
 from pakk.pakkage.core import PakkageVersions
+from pakk.args.install_args import InstallArgs
+from pakk.helper.file_util import create_dir_symlink
 
 logger = logging.getLogger(__name__)
 
@@ -311,18 +313,34 @@ class LocalConnector(Connector):
                 logger.error(f"No path found for {pakkage.id} to fetch from local path.")
                 continue
 
-            # Copy the directory to the fetch directory
+            # Copy the directory to the fetch directory unless editable mode is enabled
             fetch_dir = os.path.join(fetched_dir, pakkage.id)
             name = pakkage.basename
             fetch_path = os.path.join(fetch_dir, name)
 
+            editable = InstallArgs.get().editable
+
             if os.path.exists(fetch_path):
                 logger.debug(f"Path already exists: {fetch_path}")
-                continue
+                # If already exists and editable requested, ensure it's a symlink to source
+                if editable and (not os.path.islink(fetch_path) or os.readlink(fetch_path) != path):
+                    try:
+                        os.unlink(fetch_path)
+                    except Exception:
+                        shutil.rmtree(fetch_path, ignore_errors=True)
+                else:
+                    pakkage.state.install_state = PakkageInstallState.FETCHED
+                    pakkage.local_path = fetch_path
+                    continue
 
-            logger.info(f"Fetching {pakkage.id} by copying {path} to {fetch_path}")
             os.makedirs(fetch_dir, exist_ok=True)
-            shutil.copytree(path, fetch_path)
+
+            if editable:
+                logger.info(f"Fetching {pakkage.id} in editable mode by symlinking {path} -> {fetch_path}")
+                create_dir_symlink(path, fetch_path)
+            else:
+                logger.info(f"Fetching {pakkage.id} by copying {path} to {fetch_path}")
+                shutil.copytree(path, fetch_path)
 
             pakkage.state.install_state = PakkageInstallState.FETCHED
             pakkage.local_path = fetch_path

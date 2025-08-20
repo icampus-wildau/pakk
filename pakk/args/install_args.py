@@ -24,3 +24,4 @@ class InstallArgs(BaseArgs):
         self.repair: bool = bool(kwargs.get("repair", False))
         self.skip_cache_update: bool = bool(kwargs.get("skip_cache_update", False))
         self.location = str(kwargs.get("location", ""))
+        self.editable: bool = bool(kwargs.get("editable", False))
