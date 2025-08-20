@@ -11,9 +11,7 @@ from pakk.connector.base import PakkageCollection
 from pakk.dependency_tree.tree import DependencyTree
 from pakk.logger import Logger
 from pakk.module import Module
-from pakk.pakkage.core import Pakkage
-from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import Pakkage, PakkageConfig, PakkageInstallState
 from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
@@ -206,9 +204,7 @@ class InstallerCombining(Module):
                     if pakkage.versions.reinstall:
                         logger.info(f"Will reinstall {pakkage.id} ({pakkage.versions.installed.version})")
                     else:
-                        logger.info(
-                            f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})"
-                        )
+                        logger.info(f"Will update {pakkage.name} ({pakkage.versions.installed.version} -> {pakkage.versions.target.version})")
                     pakkages_to_uninstall.append(pakkage)
             elif pakkage.versions.target is not None:
                 if pakkage.versions.reinstall and pakkage.versions.installed is not None:
@@ -218,16 +214,14 @@ class InstallerCombining(Module):
                 else:
                     if pakkage.versions.installed is None:
                         raise ValueError(f"Installed version of {pakkage.name} is None")
-                    logger.debug(
-                        f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})"
-                    )
+                    logger.debug(f"Skipping {pakkage.name} as it is already up to date ({pakkage.versions.installed.version})")
 
-        self.pakkages_to_uninstall  = pakkages_to_uninstall
+        self.pakkages_to_uninstall = pakkages_to_uninstall
         self.pakkages_to_install = pakkages_to_install
 
     def uninstall(self):
         if len(self.pakkages_to_uninstall) > 0:
-            Module.print_rule(f"Uninstalling pakkages")
+            Module.print_rule("Uninstalling pakkages")
             logger.info(f"Uninstalling {len(self.pakkages_to_uninstall)} packages...")
 
             for pakkage in self.pakkages_to_uninstall:
@@ -254,7 +248,7 @@ class InstallerCombining(Module):
         """Install all the packages with the configured setup and installation modules."""
 
         if len(self.pakkages_to_install) > 0:
-            Module.print_rule(f"Installing pakkages")
+            Module.print_rule("Installing pakkages")
             logger.info(f"Installing {len(self.pakkages_to_install)} packages...")
 
             def callback(pakkage_name, info):
@@ -295,9 +289,7 @@ class InstallerCombining(Module):
             # After that: while there are still unfinished nodes:
             while len(unfinished_nodes := list(install_graph.unfinished_nodes)) > 0:
                 # Select all leaf nodes
-                leaf_nodes = [
-                    n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0
-                ]
+                leaf_nodes = [n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0]
                 # Get the top bubble of each leaf node
                 top_types = [(node, node.types_to_install[0]) for node in leaf_nodes]
                 # Sort the top_type installations by priority
@@ -346,15 +338,10 @@ class InstallerCombining(Module):
 
                             # if len(node.types_to_install) == 1 and node.types_to_install[0].__class__ == TypeGeneric or len(node.types_to_install) == 0:
 
-                            if len(node.types_to_install) == 0 or all(
-                                [not t.install_type.has_impact_on_children for t in node.types_to_install]
-                            ):
+                            if len(node.types_to_install) == 0 or all([not t.install_type.has_impact_on_children for t in node.types_to_install]):
                                 parents = list(install_graph.parents_of_node(node))
                                 for parent in parents:
-                                    if (
-                                        len(parent.types_to_install) > 0
-                                        and parent.types_to_install[0].__class__ == top_type.__class__
-                                    ):
+                                    if len(parent.types_to_install) > 0 and parent.types_to_install[0].__class__ == top_type.__class__:
                                         # TODO: It should work without checking if the parent node is already in the list, but maybe add this check later
                                         selected_nodes.append(parent)
 
@@ -400,6 +387,6 @@ class InstallerCombining(Module):
             Logger.get_console().print("")
 
         elif len(self.pakkages_to_install) == 0:
-            logger.info(f"Everything up to date, no packages to install :)")
+            logger.info("Everything up to date, no packages to install :)")
 
         return self.pakkages

@@ -180,7 +180,7 @@ class TypeRos2(TypeBase):
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
 
         if isinstance(self.env, LinuxEnvironment):
-            cmds = [self.config.get_cmd_colcon_build(package_names, symlink_install=False)]
+            cmds = [self.config.get_cmd_colcon_build(package_names, symlink_install=True)]
 
             code, _, _ = self.run_commands_with_returncode(cmds, cwd=self.config.path_ros_ws.value, print_output=True)
 

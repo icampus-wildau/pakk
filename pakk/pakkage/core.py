@@ -19,7 +19,7 @@ from semver.version import Version
 from pakk.args.manager_args import ManagerArgs
 from pakk.config.main_cfg import MainConfig
 from pakk.environments.loader import get_current_environment_cls
-from pakk.helper.file_util import remove_dir
+from pakk.helper.file_util import create_dir_symlink, remove_dir
 from pakk.manager.systemd.unit_generator import PakkChildService
 from pakk.types.base import TypeBase, TypeConfigSection
 
@@ -504,13 +504,79 @@ class PakkageConfig:
         if not os.path.exists(current_path):
             raise Exception(f"Path to move from does not exist: {current_path}")
 
-        if os.path.exists(directory):
+        logger.debug(f"Moving pakkage from {current_path} to {directory}")
+
+        # Ensure destination parent directory exists
+        os.makedirs(os.path.dirname(directory), exist_ok=True)
+
+        if os.path.exists(directory) or os.path.islink(directory):
             remove_dir(directory)
 
-        # Copy the pakkage to the new path
-        shutil.move(current_path, directory)
+        # If current path is a symlink, create a new symlink at the destination
+        # that points to the same (resolved) target, instead of moving the target directory.
+        if os.path.islink(current_path):
+            # Resolve to absolute target to avoid broken relative links at the new location
+            resolved_target = os.path.realpath(current_path)
 
-        # self.local_path = os.path.join(directory)
+            # Guard: dangling symlink detection
+            link_target: str
+            if not os.path.exists(resolved_target):
+                try:
+                    # Preserve original link string for dangling links
+                    link_target = os.readlink(current_path)
+                    logger.warning(f"Source is a dangling symlink. Preserving original link target '{link_target}' at destination.")
+                except OSError as e:
+                    logger.error(f"Failed to read link target from {current_path}: {e}. Aborting move to avoid data loss.")
+                    raise
+            else:
+                link_target = resolved_target
+                logger.debug(f"Source is a symlink. Using resolved target '{link_target}' for destination symlink.")
+
+            # Create destination symlink atomically via a temporary path, then replace
+            dest_dirname = os.path.dirname(directory)
+            temp_link = os.path.join(dest_dirname, f".{self.basename}.tmp-link-{os.getpid()}")
+
+            replaced: bool = False
+            try:
+                # Ensure no leftover temp link exists
+                if os.path.lexists(temp_link):
+                    os.unlink(temp_link)
+
+                create_dir_symlink(link_target, temp_link)
+                os.replace(temp_link, directory)
+                replaced = True
+
+                # Remove the original symlink to complete the move
+                os.unlink(current_path)
+                logger.debug(f"Recreated symlink at '{directory}' and removed original symlink '{current_path}'.")
+            except Exception as e:
+                # Rollback: remove temp link if present, keep original untouched
+                try:
+                    if os.path.lexists(temp_link):
+                        os.unlink(temp_link)
+                    if replaced and os.path.lexists(directory):
+                        os.unlink(directory)
+                except Exception:
+                    pass
+                logger.error(f"Failed to move symlink from '{current_path}' to '{directory}': {e}. Original remains unchanged.")
+                raise
+        else:
+            # Move the pakkage directory to the new path
+            shutil.move(current_path, directory)
+            logger.debug(f"Moved directory from '{current_path}' to '{directory}'.")
+
+        # Best-effort cleanup: remove empty parent directory of the original location
+        # This prevents leaving behind empty fetch subdirectories like <fetch_dir>/<pakkage.id>/
+        try:
+            parent_dir = os.path.dirname(current_path)
+            if os.path.isdir(parent_dir):
+                with os.scandir(parent_dir) as it:
+                    if not any(it):
+                        os.rmdir(parent_dir)
+                        logger.debug(f"Removed empty parent directory '{parent_dir}'.")
+        except Exception as e:
+            logger.warning(f"Could not remove parent directory '{parent_dir}': {e}")
+
         self.local_path = directory
 
     def set_group(self, group: str, recursive: bool = True):

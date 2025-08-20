@@ -19,7 +19,7 @@
             // "program": "${workspaceFolder}/pakk/actions/install.py",
             "program": "${workspaceFolder}/pakk/cli/main.py",
             "console": "integratedTerminal",
-            "args": ["i", "~/proto/ros2-audio-messages", "-U"],
+            "args": ["i", "~/proto/ros2-microphone", "-Fev"],
             "justMyCode": false
         },
         {

@@ -6,24 +6,17 @@ import shutil
 from typing import Type
 
 from pakk.args.base_args import PakkArgs
+from pakk.args.install_args import InstallArgs
 from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
-from pakk.connector.base import Connector
-from pakk.connector.base import PakkageCollection
-from pakk.pakkage.core import ConnectorAttributes
-from pakk.pakkage.core import Pakkage
-from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.core import PakkageInstallState
-from pakk.pakkage.core import PakkageState
-from pakk.pakkage.core import PakkageVersions
-from pakk.args.install_args import InstallArgs
+from pakk.connector.base import Connector, PakkageCollection
 from pakk.helper.file_util import create_dir_symlink
+from pakk.pakkage.core import ConnectorAttributes, Pakkage, PakkageConfig, PakkageInstallState, PakkageState, PakkageVersions
 
 logger = logging.getLogger(__name__)
 
 
 class LocalConnector(Connector):
-
     PRIORITY = 20
     CONFIG_CLS = None
 
@@ -66,12 +59,12 @@ class LocalConnector(Connector):
     def is_path(pakkage_id: str) -> bool:
         """
         Check if a pakkage_id is actually a file system path.
-        
+
         Parameters
         ----------
         pakkage_id : str
             The pakkage_id to check
-            
+
         Returns
         -------
         bool
@@ -80,19 +73,19 @@ class LocalConnector(Connector):
         # Empty string is not a path
         if not pakkage_id:
             return False
-            
+
         # Check for absolute paths
         if pakkage_id.startswith("/"):
             return True
-            
+
         # Check for home directory paths
         if pakkage_id.startswith("~"):
             return True
-            
+
         # Check for relative paths
         if pakkage_id.startswith("."):
             return True
-            
+
         # Check if it's a valid path by trying to resolve it
         try:
             abs_path = os.path.abspath(pakkage_id)
@@ -103,12 +96,12 @@ class LocalConnector(Connector):
     def discover_path_based_pakkages(self, pakkage_ids: list[str]) -> tuple[PakkageCollection, dict[str, str]]:
         """
         Discover pakkages from path-based pakkage_ids and return a mapping of original paths to pakkage ids.
-        
+
         Parameters
         ----------
         pakkage_ids : list[str]
             List of pakkage_ids that may contain paths
-            
+
         Returns
         -------
         tuple[PakkageCollection, dict[str, str]]
@@ -116,20 +109,20 @@ class LocalConnector(Connector):
         """
         discovered_pakkages = PakkageCollection()
         path_to_pakkage_id_mapping: dict[str, str] = {}
-        
+
         for pakkage_id in pakkage_ids:
             if not self.is_path(pakkage_id):
                 continue
-                
+
             abs_path = self.get_absolute_path(pakkage_id)
             if abs_path is None:
                 logger.warning(f"Could not resolve path: {pakkage_id}")
                 continue
-                
+
             if not os.path.exists(abs_path):
                 logger.warning(f"Path does not exist: {abs_path}")
                 continue
-                
+
             # Check if the path itself contains a pakkage
             pakkage_config = PakkageConfig.from_directory(abs_path)
             if pakkage_config is not None:
@@ -140,14 +133,14 @@ class LocalConnector(Connector):
                 # Single pakkage found at the path
                 versions = PakkageVersions()
                 versions.available[pakkage_config.version] = pakkage_config
-                
+
                 if pakkage_config.state is None:
                     pakkage_config.state = PakkageState(PakkageInstallState.DISCOVERED)
-                
+
                 attr = ConnectorAttributes()
                 attr.url = abs_path
                 pakkage_config.set_attributes(self, attr)
-                
+
                 pakkage = Pakkage(versions)
                 discovered_pakkages[pakkage.id] = pakkage
                 path_to_pakkage_id_mapping[pakkage_id] = pakkage.id
@@ -161,7 +154,7 @@ class LocalConnector(Connector):
                 for k in empty_ids:
                     logger.warning(f"Discovered pakkage in recursive search at {abs_path} has empty id. Skipping.")
                     del temp_collection.pakkages[k]
-                
+
                 if len(temp_collection) == 1:
                     # Exactly one pakkage found, use it
                     pakkage_id_found = list(temp_collection.keys())[0]
@@ -171,11 +164,11 @@ class LocalConnector(Connector):
                 elif len(temp_collection) > 1:
                     # Multiple pakkages found, don't auto-resolve
                     logger.warning(f"Multiple pakkages found at path {abs_path}: {list(temp_collection.keys())}")
-                    logger.warning(f"Please specify the exact pakkage name instead of the path")
+                    logger.warning("Please specify the exact pakkage name instead of the path")
                 else:
                     # No pakkages found
                     logger.warning(f"No pakkages found at path {abs_path}")
-        
+
         return discovered_pakkages, path_to_pakkage_id_mapping
 
     def discover_installed(self) -> PakkageCollection:
@@ -200,17 +193,11 @@ class LocalConnector(Connector):
                         logger.warning(f"Pakkage state is None for {pakkage_config.id}")
                         pakkage_config.state = PakkageState(PakkageInstallState.FETCHED)
 
-                    if (
-                        pakkage_config.state.install_state == PakkageInstallState.INSTALLED
-                        or pakkage_config.state.install_state == PakkageInstallState.FAILED
-                    ):
+                    if pakkage_config.state.install_state == PakkageInstallState.INSTALLED or pakkage_config.state.install_state == PakkageInstallState.FAILED:
                         versions.installed = pakkage_config
                         versions.available[pakkage_config.version] = pakkage_config
-                        
-                    elif (
-                        pakkage_config.state.install_state == PakkageInstallState.FETCHED
-                        or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
-                    ):
+
+                    elif pakkage_config.state.install_state == PakkageInstallState.FETCHED or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED:
                         versions.target = pakkage_config
                         versions.available[pakkage_config.version] = pakkage_config
                     else:
@@ -225,7 +212,6 @@ class LocalConnector(Connector):
         return pakkages
 
     def discover_in_dir(self, pakkages: PakkageCollection, path: str, recursive: bool = True):
-
         logger.debug("Discovering available local pakkages @ %s", path)
 
         # Check if the directory contains a pakkage file
@@ -241,8 +227,7 @@ class LocalConnector(Connector):
             if pakkage_config.state.install_state == PakkageInstallState.INSTALLED:
                 versions.installed = pakkage_config
             elif (
-                pakkage_config.state.install_state
-                == PakkageInstallState.FETCHED
+                pakkage_config.state.install_state == PakkageInstallState.FETCHED
                 # or pakkage_config.state.install_state == PakkageInstallState.DISCOVERED
             ):
                 versions.target = pakkage_config
@@ -260,7 +245,6 @@ class LocalConnector(Connector):
             if recursive:
                 for subdir, dirs, _ in os.walk(path):
                     for d in dirs:
-
                         # Ignore paths starting with a dot
                         if d.startswith("."):
                             continue
@@ -283,26 +267,24 @@ class LocalConnector(Connector):
     def discover(self, pakkage_ids: list[str] | None = None):
         installed_pakkages = self.discover_installed()
         available_pakkages = self.discover_available()
-        
+
         # Handle path-based pakkage_ids if provided
         path_based_pakkages = PakkageCollection()
         if pakkage_ids is not None:
             path_based_pakkages, path_mapping = self.discover_path_based_pakkages(pakkage_ids)
             # Store the mapping for later use in the install process
             self.path_to_pakkage_id_mapping = path_mapping
-        
+
         # Merge all discovered pakkages
         # result = installed_pakkages.merge(available_pakkages)
         result = path_based_pakkages.merge(available_pakkages).merge(installed_pakkages)
-        
+
         return result
 
     def fetch(self, pakkages_to_fetch: list[PakkageConfig]) -> None:
-
         fetched_dir = MainConfig.get_config().paths.fetch_dir.value
         # Fetching of local pakkages means copying the repository
         for pakkage in pakkages_to_fetch:
-
             attr = pakkage.get_attributes(self)
             if attr is None:
                 logger.error(f"No attributes found for {pakkage.id} to fetch from local path.")
@@ -314,7 +296,7 @@ class LocalConnector(Connector):
                 continue
 
             # Copy the directory to the fetch directory unless editable mode is enabled
-            fetch_dir = os.path.join(fetched_dir, pakkage.id)
+            fetch_dir = os.path.join(fetched_dir)
             name = pakkage.basename
             fetch_path = os.path.join(fetch_dir, name)
 
@@ -340,6 +322,7 @@ class LocalConnector(Connector):
                 create_dir_symlink(path, fetch_path)
             else:
                 logger.info(f"Fetching {pakkage.id} by copying {path} to {fetch_path}")
+                # TODO: ignore directories like .git or .venv
                 shutil.copytree(path, fetch_path)
 
             pakkage.state.install_state = PakkageInstallState.FETCHED
