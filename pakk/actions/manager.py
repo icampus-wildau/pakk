@@ -5,10 +5,11 @@ import logging
 import subprocess
 import threading
 
+import click
 from InquirerPy import inquirer
 
 from pakk.args.base_args import BaseArgs
-from pakk.cli.parser import PakkCliOptionsParser
+from pakk.cli.parser import PakkCliOptions
 from pakk.config.process import Process
 
 # from pakk.environments.dockerbase import DockerEnvironment
@@ -44,8 +45,8 @@ class ErrorHandling:
             logger.error(str(e))
 
             fix_msg = "To fix this, do one of the following:\n"
-            fix_msg += f"  - run the command without arguments to get a selection of available, startable pakkages\n"
-            fix_msg += f"  - define as argument an existing and startable pakkage (run 'ls' command to see startable pakkages)\n"
+            fix_msg += "  - run the command without arguments to get a selection of available, startable pakkages\n"
+            fix_msg += "  - define as argument an existing and startable pakkage (run 'ls' command to see startable pakkages)\n"
 
             Logger.get_console().print(fix_msg)
         except NotSupportedError as e:
@@ -53,11 +54,16 @@ class ErrorHandling:
 
 
 class RunCall:
-    def __init__(self, pakkage_names: list[str], select_message: str = "Select pakkage to run:", **kwargs: str):
+    def __init__(self, pakkage_names: list[str] | None, select_message: str = "Select pakkage to run:", **kwargs: str):
+        pakkage_names = pakkage_names or []
+
+        if isinstance(pakkage_names, str):
+            pakkage_names = [pakkage_names]
+
         self.pakkage_names = []
         self.pakkages_discovered = []
         self.option_list: list[str] = []
-        
+
         get_all = kwargs.get("all", False)
 
         flag_verbose = kwargs.get("verbose", False)
@@ -75,10 +81,10 @@ class RunCall:
                 rest_string = pakkage_names[i:]
                 break
             viable_pakkages_names.append(p)
-            
+
         if len(rest_string) > 0:
             self.option_list = rest_string
-        
+
         viable_pakkages_names = [split_name_version(n)[0] for n in viable_pakkages_names]
 
         startable_pakkages: dict[str, PakkageConfig] = dict()
@@ -121,11 +127,8 @@ class RunCall:
         self.pakkages_to_start = pakkages_to_start
         self.pakkages_discovered = pakkages
 
-        
 
-def _get_startable_pakkages(
-    pakkage_names, select_message="Select pakkage to start:", **kwargs: str
-) -> tuple[list[PakkageConfig], PakkageCollection]:
+def _get_startable_pakkages(pakkage_names, select_message="Select pakkage to start:", **kwargs: str) -> tuple[list[PakkageConfig], PakkageCollection]:
     get_all = kwargs.get("all", False)
 
     flag_verbose = kwargs.get("verbose", False)
@@ -177,11 +180,13 @@ def _get_startable_pakkages(
 
 @ErrorHandling
 def run(pakkage_names, **kwargs: str):
+    ctx: click.Context = kwargs.get("ctx")
+
     print("--------------------------------")
     print("KWARGS")
     print(pakkage_names)
     print(kwargs)
-    
+
     # pakkages_to_start, pakkages_discovered = _get_startable_pakkages(pakkage_names, "Select pakkage to run:", **kwargs)
     run_call = RunCall(pakkage_names, "Select pakkage to run:", **kwargs)
 
@@ -191,20 +196,49 @@ def run(pakkage_names, **kwargs: str):
         raise NotSupportedError("Multiple pakkages to run is not supported yet")
 
     pakkage = run_call.pakkages_to_start[0]
-    parser = PakkCliOptionsParser(pakkage)
-    parser.parse_cli_options(run_call.option_list)
-    
-        
+    options = PakkCliOptions(pakkage)
+
+    # Build the dynamic command with the start of the pakkage as callback
+    def cb(**args):
+        options.run(**args)
+
+    cmd = options.build_command(cb, "run", **kwargs)
+
+    # If help is requested, show the help for the command
+    info_name = f"pakk run {pakkage.id}"
+    if kwargs.get("help", False):
+        # Build a standalone context so the parent argument [PAKKAGE_NAMES] is not shown in usage
+        with click.Context(cmd, info_name=info_name) as help_ctx:
+            click.echo(cmd.get_help(help_ctx))
+
+        return
+
+    # Otherwise execute the command with the same args and inherited options
+    # Build a default_map from parent's parsed options that also exist on the child command
+    default_map: dict[str, object] = {}
+    for param in cmd.params:
+        if isinstance(param, click.Option):
+            name = param.name
+            if name in kwargs and kwargs[name] is not None:
+                default_map[name] = kwargs[name]
+
+    child_ctx = cmd.make_context(
+        info_name,
+        ctx.args,
+        parent=ctx,
+        default_map=default_map,
+    )
+    cmd.invoke(child_ctx)
+
     return
 
-    logger.info(f"Loading environment vars")
+    logger.info("Loading environment vars")
     Process.set_from_pakkages(pakkages_discovered)
     pakkages_to_start[0].run()
 
 
 @ErrorHandling
 def start(pakkage_names, **kwargs: str):
-
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to start as service:", **kwargs)
 
     if len(pakkages_to_start) == 0:
@@ -219,7 +253,6 @@ def start(pakkage_names, **kwargs: str):
 
 @ErrorHandling
 def stop(pakkage_names, **kwargs: str):
-
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to stop:", **kwargs)
 
     if len(pakkages_to_start) == 0:
@@ -234,7 +267,6 @@ def stop(pakkage_names, **kwargs: str):
 
 @ErrorHandling
 def enable(pakkage_names, **kwargs: str):
-
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to enable for autostart:", **kwargs)
 
     if len(pakkages_to_start) == 0:
@@ -249,7 +281,6 @@ def enable(pakkage_names, **kwargs: str):
 
 @ErrorHandling
 def disable(pakkage_names, **kwargs: str):
-
     pakkages_to_start, _ = _get_startable_pakkages(pakkage_names, "Select pakkage to disable from autostart:", **kwargs)
 
     if len(pakkages_to_start) == 0:
@@ -306,14 +337,14 @@ def follow_log(pakkage_names, **kwargs: str | bool):
         pakkage_names = []
 
     pakkages_to_start, _ = _get_startable_pakkages(
-        pakkage_names, "Select pakkage to follow the log messages:", **kwargs  # type: ignore
+        pakkage_names,
+        "Select pakkage to follow the log messages:",
+        **kwargs,  # type: ignore
     )
 
     if len(pakkages_to_start) == 0:
         if len(pakkage_names) >= 1:
-            raise PakkageNotFoundException(
-                f"No pakkages to follow log found with name '{', '.join(list(pakkage_names))}'"
-            )
+            raise PakkageNotFoundException(f"No pakkages to follow log found with name '{', '.join(list(pakkage_names))}'")
         raise PakkageNotFoundException("Found no pakkages to follow log")
     if len(pakkages_to_start) > 1:
         raise NotSupportedError("Multiple pakkages to follow log is not supported yet")

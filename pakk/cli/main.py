@@ -4,8 +4,10 @@ from __future__ import annotations
 import builtins
 
 import click
+
 # import rich_click as click
 from click import Context
+from click.exceptions import MissingParameter
 from click_aliases import ClickAliasedGroup
 
 
@@ -19,8 +21,7 @@ def show_figlet(message: str):
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], max_content_width=800)
 # CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS =  CONTEXT_SETTINGS | dict(ignore_unknown_options=True, allow_extra_args=True)
-CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS =  CONTEXT_SETTINGS | dict(ignore_unknown_options=True)
-
+CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS = CONTEXT_SETTINGS | dict(ignore_unknown_options=True)
 
 
 def init_pakk(**kwargs):
@@ -98,6 +99,11 @@ def catched_execution(function, *args, **kwargs):
         fix_msg = "To fix this, do one of the following:\n"
         fix_msg += "  - rerun 'pakk setup' and check for occuring errors & fixes.\n"
 
+    except MissingParameter as e:
+        if kwargs["verbose"]:
+            Logger.get_console().print_exception()
+        Logger.print_exception_message(e)
+
     except Exception:
         Logger.get_console().print_exception()
     except KeyboardInterrupt:
@@ -154,7 +160,6 @@ def cli(ctx: Context, **kwargs):
 # @click.pass_context
 # def cli_ignore_unknown_options(ctx: Context, **kwargs):
 #     pass
-
 
 
 @cli.command(aliases=["i"])
@@ -359,27 +364,28 @@ def source(**kwargs):
     catched_execution(source, **kwargs)
 
 
-if __name__ == "__main__":
-    cli(["cfg"])
-
-
-@cli.command(aliases=["r"], context_settings=CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS)
-@click.argument("pakkage_names", nargs=-1)
+@cli.command(aliases=["r"], context_settings=CONTEXT_SETTINGS_IGNORE_UNKNOWN_OPTIONS | dict(ignore_unknown_options=True, allow_extra_args=True))
+@click.argument("pakkage_names", required=False)
 # @click.argument("run_args", nargs=-1)  # Add this to capture additional arguments
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
-def run(**kwargs):
+@click.option("-h", "--help", is_flag=True, default=False, help="Show this message and exit.")
+@click.pass_context
+def run(ctx: Context, **kwargs):
     """
     Runs the given pakkage interactively.
-    
+
     You can pass additional arguments that will be converted to environment variables:
-    
+
     Simple assignment (if defined in pakk.cfg):
         pakk run respeaker -d=mydevice
-    
+
     Arbitrary environment variables:
         pakk run respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
     from pakk.actions.manager import run as r
+
+    kwargs["ctx"] = ctx
+
     catched_execution(r, **kwargs)
 
 
@@ -391,16 +397,17 @@ def run(**kwargs):
 def start(**kwargs):
     """
     Starts the given executable pakkage as services.
-    
+
     You can pass additional arguments that will be converted to environment variables:
-    
+
     Simple assignment (if defined in pakk.cfg):
         pakk start respeaker -d=mydevice
-    
+
     Arbitrary environment variables:
         pakk start respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
     from pakk.actions.manager import start
+
     catched_execution(start, **kwargs)
     # print("RUN DUMMY")
 
@@ -412,16 +419,17 @@ def start(**kwargs):
 def enable(**kwargs):
     """
     Enables the given executable pakkage.
-    
+
     You can pass additional arguments that will be converted to environment variables:
-    
+
     Simple assignment (if defined in pakk.cfg):
         pakk enable respeaker -d=mydevice
-    
+
     Arbitrary environment variables:
         pakk enable respeaker --env-MICROPHONE_DEVICE_NAME=mydevice
     """
     from pakk.actions.manager import enable
+
     catched_execution(enable, **kwargs)
 
 
@@ -493,7 +501,6 @@ def status(**kwargs):
     catched_execution(status, **kwargs)
 
 
-
 @cli.command(aliases=[])
 @click.argument("path", nargs=-1)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
@@ -506,8 +513,6 @@ def init(**kwargs):
     catched_execution(init, **kwargs)
 
 
-
-
 @cli.command(aliases=[])
 @click.argument("path", nargs=-1)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
@@ -518,8 +523,6 @@ def dev(**kwargs):
     from pakk.actions.dev import dev
 
     catched_execution(dev, **kwargs)
-
-
 
 
 @cli.command(aliases=["u"])
@@ -560,4 +563,7 @@ def clean(**kwargs):
 
 
 if __name__ == "__main__":
-    cli(["cfg"])
+    import sys
+
+    # Run cli with args
+    cli(sys.argv[1:])

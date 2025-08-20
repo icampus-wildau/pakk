@@ -8,8 +8,7 @@ from extended_configparser.configuration.entries.section import ConfigSection
 from pakk.config.base import TypeConfiguration
 from pakk.environments.base import Environment
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigSection
-from pakk.pakkage.init_helper import InitHelperBase
+from pakk.pakkage.init_helper import InitConfigSection, InitHelperBase
 from pakk.types.base import TypeBase
 
 logger = logging.getLogger(__name__)
@@ -38,13 +37,13 @@ class UVTypeConfiguration(TypeConfiguration):
         parts = [f"{uv} venv"]
         if use_system_site_packages:
             parts.append("--system-site-packages")
-        
+
         # if dev_dependencies is None:
         #     dev_dependencies = self.dev_dependencies.value
-            
+
         # if not dev_dependencies:
         #     parts.append("--no-dev")
-            
+
         if path is not None:
             parts.append("--project")
             parts.append(path)
@@ -53,13 +52,16 @@ class UVTypeConfiguration(TypeConfiguration):
         #     parts.append(f"--target {self.package_install_location.value}")
 
         s = " ".join(parts)
+
+        s += " && uv sync"
+
         return s
 
 
 class TypeUV(TypeBase):
     """
     Install and setup for python pakkages using UV.
-    
+
     This type is similar to the Python type but uses UV (uv sync) instead of pip for package management.
     UV provides faster dependency resolution and installation compared to pip.
     """
@@ -103,25 +105,25 @@ class InitHelper(InitHelperBase):
     @staticmethod
     def help() -> list[InitConfigSection]:
         return [InitConfigSection("UV", [])]
-    
+
     @staticmethod
     def is_suitable_for_directory(directory_path: str) -> bool:
         """Check if this directory contains a Python project suitable for UV."""
         uv_indicators = [
             "pyproject.toml",  # Primary UV indicator
-            "uv.lock",         # UV lock file
+            "uv.lock",  # UV lock file
         ]
-        
+
         # Check for UV-specific indicators first
         if InitHelperBase._search_indicators(directory_path, uv_indicators, max_depth=2):
             return True
-                
+
         # Check for .py files in the root directory, but be more specific
         try:
-            py_files = [f for f in os.listdir(directory_path) if f.endswith('.py')]
+            py_files = [f for f in os.listdir(directory_path) if f.endswith(".py")]
             if len(py_files) >= 2:  # Need at least 2 Python files to be considered a Python project
                 return True
         except (OSError, PermissionError):
             pass
-            
-        return False 
+
+        return False

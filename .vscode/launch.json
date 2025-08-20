@@ -16,7 +16,18 @@
             "name": "install",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/pakk/actions/install.py",
+            // "program": "${workspaceFolder}/pakk/actions/install.py",
+            "program": "${workspaceFolder}/pakk/cli/main.py",
+            "console": "integratedTerminal",
+            "args": ["i", "~/proto/ros2-audio-messages", "-U"],
+            "justMyCode": false
+        },
+        {
+            "name": "cli_run",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/pakk/cli/main.py",
+            "args": ["run", "ros2-microphone", "-d", "ReSpeaker", "-v"],
             "console": "integratedTerminal",
             "justMyCode": false
         }

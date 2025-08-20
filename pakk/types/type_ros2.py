@@ -11,13 +11,10 @@ from pakk.environments.base import Environment
 from pakk.environments.linux import LinuxEnvironment
 from pakk.helper.file_util import remove_dir
 from pakk.pakkage.core import PakkageConfig
-from pakk.pakkage.init_helper import InitConfigOption
-from pakk.pakkage.init_helper import InitConfigSection
-from pakk.pakkage.init_helper import InitHelperBase
+from pakk.pakkage.init_helper import InitConfigOption, InitConfigSection, InitHelperBase
 
 # from pakk.environments.parts.ros2 import EnvPartROS2
-from pakk.types.base import InstallationFailedException
-from pakk.types.base import TypeBase
+from pakk.types.base import InstallationFailedException, TypeBase
 from pakk.types.base_instruction_parser import RunInstructionParser
 
 logger = logging.getLogger(__name__)
@@ -64,9 +61,7 @@ class Ros2TypeConfiguration(TypeConfiguration):
     @staticmethod
     def get_cmd_colcon_build(package_names: list[str], symlink_install: bool = False):
         """Get the colcon command to build the given packages."""
-        return (
-            f'colcon build {"--symlink-install " if symlink_install else ""}--packages-select {" ".join(package_names)}'
-        )
+        return f"colcon build {'--symlink-install ' if symlink_install else ''}--packages-select {' '.join(package_names)}"
 
 
 class RosStartInstructionParser(RunInstructionParser):
@@ -89,30 +84,35 @@ class RosStartInstructionParser(RunInstructionParser):
     def get_cmd(self):
         local_env = f"export ROS_LOCALHOST_ONLY={1 if self.local else 0}"
         update_pythonpath = Process.get_cmd_update_pythonpath()
-        update_python_venv = Process.get_cmd_source_python_venv(self.pakkage_version.local_path)
-        
+        # update_python_venv = Process.get_cmd_source_python_venv(self.pakkage_version.local_path)
+        update_python_venv = Process.get_cmd_update_python_venv(self.pakkage_version.local_path)
+
         ros_commands = self.start_ros.split(" ")
         ros_command = None
-        
+
         if len(ros_commands) != 2:
             raise ValueError(f"Invalid ROS2 start command: {self.start_ros}")
-        
+
         # Launch command
         if "launch" in ros_commands[1].split("."):
             ros_command = f"ros2 launch {ros_commands[0]} {ros_commands[1]}"
         else:
             ros_command = f"ros2 run {ros_commands[0]} {ros_commands[1]}"
-            
+
         ros_command = self.env.get_cmd_in_environment(ros_command)
-        
-        cmds = [c for c in [
-            self.config.get_cmd_setup_ws(),
-            update_pythonpath,
-            update_python_venv,
-            local_env,
-            ros_command,
-        ] if c is not None]
-        
+
+        cmds = [
+            c
+            for c in [
+                self.config.get_cmd_setup_ws(),
+                update_pythonpath,
+                update_python_venv,
+                local_env,
+                ros_command,
+            ]
+            if c is not None
+        ]
+
         return " && ".join(cmds)
 
     def parse_start(self, instruction_content: str):
@@ -194,14 +194,10 @@ class TypeRos2(TypeBase):
                             remove_dir(path)
 
                 logger.warning("Trying to build again...")
-                code, _, _ = self.run_commands_with_returncode(
-                    cmds, cwd=self.config.path_ros_ws.value, print_output=True
-                )
+                code, _, _ = self.run_commands_with_returncode(cmds, cwd=self.config.path_ros_ws.value, print_output=True)
 
                 if code > 0:
-                    raise InstallationFailedException(
-                        f"Building ROS packages ({package_names}) failed with code {code}"
-                    )
+                    raise InstallationFailedException(f"Building ROS packages ({package_names}) failed with code {code}")
 
     def install(self) -> None:
         """Install a ROS pakkage."""
@@ -267,25 +263,25 @@ class InitHelper(InitHelperBase):
         sections.append(InitConfigSection("ROS2", ros_options))
 
         return sections
-    
+
     @staticmethod
     def is_suitable_for_directory(directory_path: str) -> bool:
         """Check if this directory contains a ROS2 project."""
         # ROS2-specific indicators that are unique to ROS2
         ros2_indicators = [
             "package.xml",  # ROS package manifest
-            "launch",       # launch directory
-            "msg",          # message directory
-            "srv",          # service directory
-            "action",       # action directory
+            "launch",  # launch directory
+            "msg",  # message directory
+            "srv",  # service directory
+            "action",  # action directory
         ]
-        
+
         # Check for ROS2-specific indicators first
         if InitHelperBase._search_indicators(directory_path, ros2_indicators, max_depth=2):
             return True
-                
+
         # Check for .launch.py files
-        if InitHelperBase._search_file_suffixes(directory_path, ['.launch.py'], max_depth=3):
+        if InitHelperBase._search_file_suffixes(directory_path, [".launch.py"], max_depth=3):
             return True
-            
+
         return False

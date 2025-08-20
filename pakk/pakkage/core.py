@@ -9,9 +9,7 @@ import os
 import re
 import shutil
 import subprocess
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Type
+from typing import TYPE_CHECKING, Any, Type
 
 import dotenv
 import jsons
@@ -23,8 +21,7 @@ from pakk.config.main_cfg import MainConfig
 from pakk.environments.loader import get_current_environment_cls
 from pakk.helper.file_util import remove_dir
 from pakk.manager.systemd.unit_generator import PakkChildService
-from pakk.types.base import TypeBase
-from pakk.types.base import TypeConfigSection
+from pakk.types.base import TypeBase, TypeConfigSection
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +242,10 @@ class PakkageConfig:
             raise Exception("Pakkage is not runnable.")
 
         startable_types = [t for t in self.pakk_types if t.is_runnable()]
+
+        if len(startable_types) > 1:
+            raise Exception("Multiple runnable types are not supported yet.")
+
         startable_types[0].run()
 
     def start(self, run_args: list[str] | None = None):
@@ -258,11 +259,9 @@ class PakkageConfig:
             logger.info(f"Writing service file to {service.service_file.filepath}")
             service.service_file.write()
             logger.info(f"Linking service file to /etc/systemd/system/{service.service_file.filename}")
-            os.system(
-                f"sudo ln -sf {service.service_file.filepath} {os.path.join('/etc/systemd/system', service.service_file.filename)}"
-            )
-            logger.info(f"Reloading systemd daemon")
-            os.system(f"sudo systemctl daemon-reload")
+            os.system(f"sudo ln -sf {service.service_file.filepath} {os.path.join('/etc/systemd/system', service.service_file.filename)}")
+            logger.info("Reloading systemd daemon")
+            os.system("sudo systemctl daemon-reload")
 
         logger.info(f"Starting {service.service_file.name}")
         # os.system(f"sudo systemctl enable {service.service_file.filepath}")
@@ -298,9 +297,7 @@ class PakkageConfig:
             raise Exception(f"Pakkage {self.id} is not startable.")
 
         service = PakkChildService(self)
-        code, output = self._run_command_with_return_code_and_output(
-            f"sudo systemctl is-active {service.service_file.name}"
-        )
+        code, output = self._run_command_with_return_code_and_output(f"sudo systemctl is-active {service.service_file.name}")
         return code == 0
 
     def is_enabled(self) -> bool:
@@ -309,9 +306,7 @@ class PakkageConfig:
             raise Exception(f"Pakkage {self.id} is not startable.")
 
         service = PakkChildService(self)
-        code, output = self._run_command_with_return_code_and_output(
-            f"sudo systemctl is-enabled {service.service_file.name}"
-        )
+        code, output = self._run_command_with_return_code_and_output(f"sudo systemctl is-enabled {service.service_file.name}")
         return code == 0
 
     def enable(self, run_args: list[str] | None = None):
@@ -442,9 +437,7 @@ class PakkageConfig:
 
         if path is None:
             if self.local_path is None:
-                raise Exception(
-                    "No path to load the state from. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes."
-                )
+                raise Exception("No path to load the state from. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes.")
             path = self.local_path
 
         pakk_dir = PakkageState.DIRECTORY_NAME
@@ -470,9 +463,7 @@ class PakkageConfig:
 
         if path is None:
             if self.local_path is None:
-                raise Exception(
-                    "No path to save the state to. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes."
-                )
+                raise Exception("No path to save the state to. Provide explicitly or use fetcher that stores ATTR_LOCAL_PATH in the attributes.")
             path = self.local_path
 
         pakk_dir = PakkageState.DIRECTORY_NAME
@@ -535,9 +526,11 @@ class PakkageConfig:
             # Set group
             result = os.system(f"chgrp -R {group} {self.local_path}")
             if result != 0:
-                raise Exception(f"Failed to set group ownership to '{group}' for {self.local_path}. "
-                              f"Exit code: {result}. This usually means you don't have sudo privileges "
-                              f"or the '{group}' group doesn't exist.")
+                raise Exception(
+                    f"Failed to set group ownership to '{group}' for {self.local_path}. "
+                    f"Exit code: {result}. This usually means you don't have sudo privileges "
+                    f"or the '{group}' group doesn't exist."
+                )
             # Set permission for group
             result = os.system(f"chmod -R g+rwx {self.local_path}")
             if result != 0:
@@ -545,9 +538,11 @@ class PakkageConfig:
         else:
             result = os.system(f"chgrp {group} {self.local_path}")
             if result != 0:
-                raise Exception(f"Failed to set group ownership to '{group}' for {self.local_path}. "
-                              f"Exit code: {result}. This usually means you don't have sudo privileges "
-                              f"or the '{group}' group doesn't exist.")
+                raise Exception(
+                    f"Failed to set group ownership to '{group}' for {self.local_path}. "
+                    f"Exit code: {result}. This usually means you don't have sudo privileges "
+                    f"or the '{group}' group doesn't exist."
+                )
             result = os.system(f"chmod g+rwx {self.local_path}")
             if result != 0:
                 raise Exception(f"Failed to set group permissions for {self.local_path}. Exit code: {result}")
@@ -645,9 +640,7 @@ class PakkageConfig:
 
         pc.id = pc.cfg["info"]["id"]
         pc.version = pc.cfg["info"]["version"]
-        pc.dependencies = (
-            {k: v for k, v in pc.cfg.items("dependencies")} if pc.cfg.has_section("dependencies") else dict()
-        )
+        pc.dependencies = {k: v for k, v in pc.cfg.items("dependencies")} if pc.cfg.has_section("dependencies") else dict()
 
         if "name" in pc.cfg["info"]:
             pc.name = pc.cfg["info"]["name"]
@@ -657,11 +650,7 @@ class PakkageConfig:
             pc.name = pc.id
 
         pc.description = pc.cfg["info"]["description"] if "description" in pc.cfg["info"] else ""
-        pc.keywords = (
-            [kw.strip() for kw in pc.cfg["info"]["keywords"].split(",") if kw.strip() != ""]
-            if "keywords" in pc.cfg["info"]
-            else []
-        )
+        pc.keywords = [kw.strip() for kw in pc.cfg["info"]["keywords"].split(",") if kw.strip() != ""] if "keywords" in pc.cfg["info"] else []
         pc.author = pc.cfg["info"]["author"] if "author" in pc.cfg["info"] else ""
         pc.license = pc.cfg["info"]["license"] if "license" in pc.cfg["info"] else ""
 
@@ -821,7 +810,6 @@ class PakkageVersions:
 
 class ConnectorAttributes:
     def __init__(self):
-
         self.url: str | None = None
         self.branch: str | None = None
         self.commit: str | None = None
@@ -859,10 +847,7 @@ class Pakkage:
 
     def __str__(self):
         s = f"{self.id} @ {self.versions.installed.version if self.versions.installed else 'None'}"
-        if (
-            self.versions.installed is not None
-            and self.versions.installed.state.install_state == PakkageInstallState.FAILED
-        ):
+        if self.versions.installed is not None and self.versions.installed.state.install_state == PakkageInstallState.FAILED:
             s += " ([red]failed[/red])"
         if self.versions.target and self.versions.target != self.versions.installed:
             s += f" -> {self.versions.target.version}"
