@@ -89,7 +89,7 @@ def catched_execution(function, *args, **kwargs):
         if kwargs["verbose"]:
             Logger.get_console().print_exception()
         Logger.print_exception_message(e)
-        x = e.get_msg()
+        # e.get_msg()  # message already logged above
 
         # Logger.get_console().print_exception()
     except SetupRequiredException as e:
@@ -287,6 +287,7 @@ def tree(ctx: Context, **kwargs):
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
 @click.option("-r", "--reset", is_flag=True, default=False, help="Reset the configuration.")
 @click.option("-d", "--show-dir", is_flag=True, default=False, help="Show the directory for pakk configurations and exit.")
+@click.option("-l", "--list-configs", is_flag=True, default=False, help="List valid CONFIGURATION names and exit.")
 @click.pass_context
 def configure(ctx: Context, **kwargs):
     """
@@ -299,6 +300,12 @@ def configure(ctx: Context, **kwargs):
         from pakk.config.base import PakkConfigBase
 
         print(PakkConfigBase.get_configs_dir())
+        return
+
+    if kwargs["list_configs"]:
+        from pakk.actions.configure import list_configs
+
+        catched_execution(list_configs, **kwargs)
         return
 
     from pakk.actions.configure import configure

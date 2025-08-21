@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Type
 
 from pakk.config.base import PakkConfigBase
 from pakk.config.main_cfg import MainConfig
@@ -12,9 +11,39 @@ from pakk.module import Module
 logger = logging.getLogger(__name__)
 
 
+def get_available_config_names() -> list[str]:
+    """Return the list of valid CONFIGURATION names for the cfg command."""
+    configs_cls: dict[str, type[PakkConfigBase]] = dict()
+    configs_cls["main"] = MainConfig
+
+    connectors = PakkLoader.get_connector_classes(False)
+    types = PakkLoader.get_type_classes()
+    for type in types:
+        if type.CONFIG_CLS is not None:
+            configs_cls[type.__name__] = type.CONFIG_CLS
+
+    for connector in connectors:
+        if connector.CONFIG_CLS is not None:
+            configs_cls[connector.__name__] = connector.CONFIG_CLS
+
+    return sorted(configs_cls.keys())
+
+
+def list_configs(**kwargs):
+    """Print all available CONFIGURATION options and exit."""
+    console = Logger.get_console()
+    Module.print_rule("Available configurations")
+    names = get_available_config_names()
+    if len(names) == 0:
+        console.print("No files to configure found.")
+        return
+    for name in names:
+        console.print(name)
+
+
 def configure(**kwargs):
     # f = Figlet(font='cyberlarge')
-    verbose = kwargs.get("verbose", False)
+    kwargs.get("verbose", False)
     reset = kwargs.get("reset", False)
 
     console = Logger.get_console()
@@ -23,7 +52,7 @@ def configure(**kwargs):
     configs_specified = kwargs.get("configuration", None)
     configs_are_specified = len(configs_specified) > 0 if configs_specified is not None else False
 
-    configs_cls: dict[str, Type[PakkConfigBase]] = dict()
+    configs_cls: dict[str, type[PakkConfigBase]] = dict()
     configs_cls["main"] = MainConfig
 
     connectors = PakkLoader.get_connector_classes(False)
@@ -53,6 +82,4 @@ def configure(**kwargs):
             config.write()
             console.print(f"Finished configuration of {config_name} at {config.config_path}!")
         else:
-            console.print(
-                f"Configuration file {config.config_path} already exists. Use 'pakk configure {config_name}' to explicitly configure  it."
-            )
+            console.print(f"Configuration file {config.config_path} already exists. Use 'pakk configure {config_name}' to explicitly configure  it.")
