@@ -15,17 +15,36 @@ os_platform = platform.system()
 
 
 def remove_dir(path: str, adapt_permissions: bool = True):
-    if os.path.exists(path):
-        if adapt_permissions:
-            os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-            for root, dirs, files in os.walk(path):
-                for p in dirs + files:
-                    os.chmod(os.path.join(root, p), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+    # Use lexists so broken symlinks are detected as existing
+    if not os.path.lexists(path):
+        return
 
-        if os.path.islink(path):
+    if os.path.islink(path):
+        try:
             os.unlink(path)
-        else:
-            shutil.rmtree(path, ignore_errors=False)
+        except FileNotFoundError:
+            # Already gone due to a race; nothing to do
+            return
+        return
+
+    def _on_rm_error(func, p, exc_info):
+        exc = exc_info[1]
+        # If the path disappeared between walk and removal, ignore
+        if isinstance(exc, FileNotFoundError):
+            return
+        # If we hit a permission error and permission adaptation is enabled, chmod then retry once
+        if adapt_permissions and isinstance(exc, PermissionError):
+            try:
+                os.chmod(p, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+                func(p)
+                return
+            except Exception:
+                # Fall through to re-raise original error below
+                pass
+        # Re-raise the original exception for visibility
+        raise exc
+
+    shutil.rmtree(path, ignore_errors=False, onexc=_on_rm_error)
 
     # https://stackoverflow.com/questions/1854/how-to-identify-which-os-python-is-running-on
     # os_platform = platform.system()

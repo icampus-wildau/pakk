@@ -16,8 +16,7 @@ from pakk.helper.lockfile import PakkLock
 from pakk.installer.combining_installer import InstallerCombining
 from pakk.logger import Logger
 from pakk.module import Module
-from pakk.pakkage.core import Pakkage
-from pakk.pakkage.core import PakkageInstallState
+from pakk.pakkage.core import Pakkage, PakkageInstallState
 from pakk.resolver.base import ResolverException
 from pakk.resolver.resolver_fitting import ResolverFitting
 from pakk.types.base import TypeBase
@@ -26,15 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 class PakkageNotFoundException(Exception):
-
     # Adapted from https://stackoverflow.com/questions/54172831/hamming-distance-between-two-strings-in-python
     @staticmethod
     def get_most_similar(name: str, available_names: list[str], n=3):
         # jaro_winkler = [(jellyfish.jaro_winkler_similarity(name, x), x) for x in available_names]
         # sorted_jaro_winkler_tuples = sorted(jaro_wikler, key=lambda x: x[0])
-        sorted_jaro_winkler = sorted(
-            available_names, key=lambda x: (jellyfish.jaro_winkler_similarity(name, x), x), reverse=True
-        )
+        sorted_jaro_winkler = sorted(available_names, key=lambda x: (jellyfish.jaro_winkler_similarity(name, x), x), reverse=True)
         return sorted_jaro_winkler[:n]
 
     def __init__(self, package_name: str, available_packages: list[str]):
@@ -60,7 +56,6 @@ class VersionNotFoundException(Exception):
 
 
 def install(pakkage_names: list[str] | str, **kwargs: str | bool):
-
     install_args = InstallArgs.get()
     lock = PakkLock("install")
     if not lock.access:
@@ -91,9 +86,9 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
     # Handle path-to-pakkage-id mapping from LocalConnector
     path_mapping = {}
     for connector in connectors:
-        if hasattr(connector, 'path_to_pakkage_id_mapping'):
+        if hasattr(connector, "path_to_pakkage_id_mapping"):
             path_mapping.update(connector.path_to_pakkage_id_mapping)
-    
+
     # Replace paths with their corresponding pakkage ids
     processed_pakkage_names = []
     for pakkage_name in pakkage_names:
@@ -135,10 +130,7 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
             elif install_args.force_reinstall and p.versions.installed is not None:
                 p.versions.target = p.versions.installed
                 p.versions.reinstall = True
-            elif (
-                p.versions.installed is not None
-                and p.versions.installed.state.install_state == PakkageInstallState.FAILED
-            ):
+            elif p.versions.installed is not None and p.versions.installed.state.install_state == PakkageInstallState.FAILED:
                 p.versions.target = p.versions.installed
                 p.versions.reinstall = True
             elif p.versions.installed is None:
@@ -153,11 +145,11 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
                 available_versions = list(p.versions.available.keys())
                 # print(available_versions)
                 if len(available_versions) == 0:
-                    logger.info(f"  No versions available.")
+                    logger.info("  No versions available.")
                 else:
                     compare_result = nodesemver.compare(p.versions.installed.version, available_versions[0], loose=True)
                     if compare_result == 0:
-                        logger.info(f"  No newer version available.")
+                        logger.info("  No newer version available.")
                     elif compare_result == -1:
                         logger.info(f"  [bold blue]Newer version available: {available_versions[0]}[/bold blue]")
 
@@ -209,6 +201,79 @@ def install(pakkage_names: list[str] | str, **kwargs: str | bool):
     pakkages_installed = installer.install()
 
     return pakkages_installed
+
+
+def uninstall(pakkage_names: list[str] | str, **kwargs: str | bool):
+    install_args = InstallArgs.get()
+    lock = PakkLock("install")
+    if not lock.access:
+        logger.error("Wait for the other pakk process to finish to continue.")
+        return
+
+    if isinstance(pakkage_names, str):
+        pakkage_names = [pakkage_names]
+
+    Module.print_rule(f"Start uninstall of: {pakkage_names}")
+
+    # Setup
+    TypeBase.initialize()
+
+    pakkages = PakkageCollection()
+    connectors = PakkLoader.get_connector_instances()
+    pakkages.discover(connectors, pakkage_names)
+
+    # Handle path-to-pakkage-id mapping from LocalConnector (for symmetry with install)
+    path_mapping = {}
+    for connector in connectors:
+        if hasattr(connector, "path_to_pakkage_id_mapping"):
+            path_mapping.update(connector.path_to_pakkage_id_mapping)
+
+    processed_pakkage_names: list[str] = []
+    for pakkage_name in pakkage_names:
+        processed_pakkage_names.append(path_mapping.get(pakkage_name, pakkage_name))
+
+    # Resolve names to packages
+    for n in processed_pakkage_names:
+        name, _ = split_name_version(n)
+
+        p = pakkages[name]
+        if p is None:
+            if name not in pakkages.id_abbreviations:
+                raise PakkageNotFoundException(name, list(pakkages.keys()))
+            elif len(pakkages.id_abbreviations[name]) > 1:
+                raise AmbivalentIdsException(name, pakkages.id_abbreviations[name])
+
+            p = pakkages[pakkages.id_abbreviations[name][0]]
+
+            if p is None:
+                raise PakkageNotFoundException(name, list(pakkages.keys()))
+
+        if p.versions.installed is None and p.versions.target is None:
+            logger.info(f"{p.id} is not installed. Skipping.")
+            continue
+
+        v = p.versions.installed or p.versions.target
+        logger.info(f"Uninstalling {v.name} ({v.version})")
+
+        # Run type-specific uninstall steps
+        for pakk_type in v.pakk_types:
+            try:
+                pakk_type.uninstall()
+            except Exception as e:
+                logger.warning(f"Uninstall step failed for type {pakk_type.__class__.__name__} of {v.id}: {e}")
+
+        # Mark as uninstalled and remove on disk entirely
+        v.state.install_state = PakkageInstallState.UNINSTALLED
+        v.save_state()
+
+        try:
+            v.delete_directory()
+        finally:
+            p.versions.installed = None
+
+        logger.info(f"Uninstalled {v.name} ({v.version}) from {v.local_path}")
+
+    return
 
 
 if __name__ == "__main__":

@@ -569,6 +569,19 @@ def clean(**kwargs):
     catched_execution(clean, **kwargs)
 
 
+@cli.command(aliases=["uninstall", "remove", "rm"])
+@click.argument("pakkage", nargs=-1, required=True)
+@click.option("-v", "--verbose", is_flag=True, default=False, help="Give more output.")
+def uninstall(**kwargs):
+    """
+    Completely uninstall one or multiple pakkages.
+    """
+
+    from pakk.actions.install import uninstall
+
+    catched_execution(uninstall, builtins.list(kwargs["pakkage"]), **kwargs)
+
+
 if __name__ == "__main__":
     import sys
 

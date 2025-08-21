@@ -251,140 +251,165 @@ class InstallerCombining(Module):
             Module.print_rule("Installing pakkages")
             logger.info(f"Installing {len(self.pakkages_to_install)} packages...")
 
+            def _finalize_pending_states():
+                """Ensure no target version remains in an undefined/pending state."""
+                for pakkage in self.pakkages_to_install:
+                    version = pakkage.versions.target
+                    if version is None:
+                        continue
+                    # Include unknown types in failed types for completeness
+                    for type_name in version.unknown_types:
+                        if type_name not in version.state.failed_types:
+                            version.state.failed_types.append(type_name)
+                    # If not explicitly finalized, mark as failed and persist state
+                    if version.state.install_state not in (PakkageInstallState.INSTALLED, PakkageInstallState.FAILED):
+                        version.state.install_state = PakkageInstallState.FAILED
+                    try:
+                        version.save_state()
+                    except Exception as e:
+                        logger.error(f"Failed to save state for {version.id}: {e}")
+
             def callback(pakkage_name, info):
                 logger.info(f"[cyan]{pakkage_name}[/cyan]: {info}")
 
-            # Move to installed dir and reset failed types
-            for pakkage in self.pakkages_to_install:
-                v = pakkage.versions.target
-                if v is None:
-                    raise ValueError(f"Target version of {pakkage.name} is None")
+            try:
+                # Move to installed dir and reset failed types
+                for pakkage in self.pakkages_to_install:
+                    v = pakkage.versions.target
+                    if v is None:
+                        raise ValueError(f"Target version of {pakkage.name} is None")
 
-                new_dir = self.all_pakkges_dir
-                logger.debug(f"Moving {v.name} to {new_dir}")
-                v.move_to(new_dir)
+                    new_dir = self.all_pakkges_dir
+                    logger.debug(f"Moving {v.name} to {new_dir}")
+                    v.move_to(new_dir)
 
-                # Reset failed types
-                v.state.failed_types.clear()
+                    # Reset failed types
+                    v.state.failed_types.clear()
 
-            install_graph = InstallGraph(self.pakkages_to_install, self.deptree)
+                install_graph = InstallGraph(self.pakkages_to_install, self.deptree)
 
-            independent_types: dict[type[TypeBase], list[TypeBase]] = {}
-            # Iter all nodes and select types that can be installed independently from dependencies
-            for node in install_graph.unfinished_nodes:
-                while len(node.types_to_install) > 0:
-                    t = node.types_to_install[0]
-                    if t.install_type.is_independent:
-                        if t.__class__ not in independent_types:
-                            independent_types[t.__class__] = []
-                        independent_types[t.__class__].append(t)
-                        node.types_to_install.remove(t)
-                    else:
-                        break
+                independent_types: dict[type[TypeBase], list[TypeBase]] = {}
+                # Iter all nodes and select types that can be installed independently from dependencies
+                for node in install_graph.unfinished_nodes:
+                    while len(node.types_to_install) > 0:
+                        t = node.types_to_install[0]
+                        if t.install_type.is_independent:
+                            if t.__class__ not in independent_types:
+                                independent_types[t.__class__] = []
+                            independent_types[t.__class__].append(t)
+                            node.types_to_install.remove(t)
+                        else:
+                            break
 
-            # Execute these installations first
-            for type_, type_list in independent_types.items():
-                type_.supervised_installation(type_list)
+                # Execute these installations first
+                for type_, type_list in independent_types.items():
+                    type_.supervised_installation(type_list)
 
-            # After that: while there are still unfinished nodes:
-            while len(unfinished_nodes := list(install_graph.unfinished_nodes)) > 0:
-                # Select all leaf nodes
-                leaf_nodes = [n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0]
-                # Get the top bubble of each leaf node
-                top_types = [(node, node.types_to_install[0]) for node in leaf_nodes]
-                # Sort the top_type installations by priority
-                top_types.sort(key=lambda t: t[1].install_type.install_priority, reverse=True)
+                # After that: while there are still unfinished nodes:
+                while len(unfinished_nodes := list(install_graph.unfinished_nodes)) > 0:
+                    # Select all leaf nodes
+                    leaf_nodes = [n for n in unfinished_nodes if len(list(install_graph.unfinished_children_of_node(n))) == 0]
+                    # Get the top bubble of each leaf node
+                    top_types = [(node, node.types_to_install[0]) for node in leaf_nodes]
+                    # Sort the top_type installations by priority
+                    top_types.sort(key=lambda t: t[1].install_type.install_priority, reverse=True)
 
-                # If the top bubble types differ, select the top bubble with the highest install priority
-                selected_leaf_nodes: list[InstallNode] = []
-                top_type_type = None
-                for node, t in top_types:
-                    if top_type_type is None:
-                        top_type_type = t.__class__
-                    if t.__class__ == top_type_type:
-                        selected_leaf_nodes.append(node)
+                    # If the top bubble types differ, select the top bubble with the highest install priority
+                    selected_leaf_nodes: list[InstallNode] = []
+                    top_type_type = None
+                    for node, t in top_types:
+                        if top_type_type is None:
+                            top_type_type = t.__class__
+                        if t.__class__ == top_type_type:
+                            selected_leaf_nodes.append(node)
 
-                # Install the top types
-                if len(selected_leaf_nodes) > 0:
-                    leaf_node = selected_leaf_nodes[0]
-                    top_type = leaf_node.types_to_install[0]
+                    # Install the top types
+                    if len(selected_leaf_nodes) > 0:
+                        leaf_node = selected_leaf_nodes[0]
+                        top_type = leaf_node.types_to_install[0]
 
-                    top_types_to_install: list[TypeBase] = []
+                        top_types_to_install: list[TypeBase] = []
 
-                    # If selected installation does not allow combination with other installations of the same type on the children:
-                    if not top_type.install_type.is_combinable_with_children:
-                        # Select and remove the top types from the leaf nodes
-                        for node in selected_leaf_nodes:
-                            top_types_to_install.append(node.types_to_install.pop(0))
-
-                        for t in top_types_to_install:
-                            t.status_callback = callback
-                        top_type.supervised_installation(top_types_to_install)
-                    # If selected installation allows combination with other installations of the same type on the children:
-                    else:
-                        i = 0
-                        selected_nodes = selected_leaf_nodes.copy()
-
-                        # For each of the selected nodes:
-                        #   If the installation type is the last in the node (ignoring TypeGeneric) then:
-                        #     -> select all nodes having installations of the same type as next coming installation
-                        #        from all child nodes and add them to selected nodes
-                        while i < len(selected_nodes):
-                            node = selected_nodes[i]
-                            if len(node.types_to_install) == 0:
-                                continue
-                            if node.types_to_install[0].__class__ == top_type.__class__:
+                        # If selected installation does not allow combination with other installations of the same type on the children:
+                        if not top_type.install_type.is_combinable_with_children:
+                            # Select and remove the top types from the leaf nodes
+                            for node in selected_leaf_nodes:
                                 top_types_to_install.append(node.types_to_install.pop(0))
 
-                            # if len(node.types_to_install) == 1 and node.types_to_install[0].__class__ == TypeGeneric or len(node.types_to_install) == 0:
+                            for t in top_types_to_install:
+                                t.status_callback = callback
+                            top_type.supervised_installation(top_types_to_install)
+                        # If selected installation allows combination with other installations of the same type on the children:
+                        else:
+                            i = 0
+                            selected_nodes = selected_leaf_nodes.copy()
 
-                            if len(node.types_to_install) == 0 or all([not t.install_type.has_impact_on_children for t in node.types_to_install]):
-                                parents = list(install_graph.parents_of_node(node))
-                                for parent in parents:
-                                    if len(parent.types_to_install) > 0 and parent.types_to_install[0].__class__ == top_type.__class__:
-                                        # TODO: It should work without checking if the parent node is already in the list, but maybe add this check later
-                                        selected_nodes.append(parent)
+                            # For each of the selected nodes:
+                            #   If the installation type is the last in the node (ignoring TypeGeneric) then:
+                            #     -> select all nodes having installations of the same type as next coming installation
+                            #        from all child nodes and add them to selected nodes
+                            while i < len(selected_nodes):
+                                node = selected_nodes[i]
+                                if len(node.types_to_install) == 0:
+                                    continue
+                                if node.types_to_install[0].__class__ == top_type.__class__:
+                                    top_types_to_install.append(node.types_to_install.pop(0))
 
-                            i += 1
+                                # if len(node.types_to_install) == 1 and node.types_to_install[0].__class__ == TypeGeneric or len(node.types_to_install) == 0:
 
-                        for t in top_types_to_install:
-                            t.status_callback = callback
-                        top_type.supervised_installation(top_types_to_install)
+                                if len(node.types_to_install) == 0 or all([not t.install_type.has_impact_on_children for t in node.types_to_install]):
+                                    parents = list(install_graph.parents_of_node(node))
+                                    for parent in parents:
+                                        if len(parent.types_to_install) > 0 and parent.types_to_install[0].__class__ == top_type.__class__:
+                                            # TODO: It should work without checking if the parent node is already in the list, but maybe add this check later
+                                            selected_nodes.append(parent)
 
-            # Finish the installation by saving the install state
-            for pakkage in self.pakkages_to_install:
-                if pakkage.versions.target is None:
-                    logger.error("This should not happen")
-                    continue
+                                i += 1
 
-                version = pakkage.versions.target
+                            for t in top_types_to_install:
+                                t.status_callback = callback
+                            top_type.supervised_installation(top_types_to_install)
 
-                # If there are unknown types, the installation should also fail
-                for type_name in version.unknown_types:
-                    version.state.failed_types.append(type_name)
+                # Finish the installation by saving the install state
+                for pakkage in self.pakkages_to_install:
+                    if pakkage.versions.target is None:
+                        logger.error("This should not happen")
+                        continue
 
-                if len(version.state.failed_types) > 0:
-                    logger.error(f"Installation of {version.id} failed for types: {version.state.failed_types}")
-                    version.state.install_state = PakkageInstallState.FAILED
+                    version = pakkage.versions.target
+
+                    # If there are unknown types, the installation should also fail
+                    for type_name in version.unknown_types:
+                        version.state.failed_types.append(type_name)
+
+                    if len(version.state.failed_types) > 0:
+                        logger.error(f"Installation of {version.id} failed for types: {version.state.failed_types}")
+                        version.state.install_state = PakkageInstallState.FAILED
+                        version.save_state()
+                        continue
+
+                    pakkage.versions.installed = version
                     version.save_state()
-                    continue
 
-                pakkage.versions.installed = version
-                version.save_state()
+                    # Set group of the pakkage directory to pakk
+                    try:
+                        version.set_group("pakk")
+                    except Exception as e:
+                        logger.warning(f"Failed to set group ownership for {pakkage.name}: {e}")
+                        logger.info("This is normal if you don't have sudo privileges or the pakk group is not set up")
 
-                # Set group of the pakkage directory to pakk
-                try:
-                    version.set_group("pakk")
-                except Exception as e:
-                    logger.warning(f"Failed to set group ownership for {pakkage.name}: {e}")
-                    logger.info("This is normal if you don't have sudo privileges or the pakk group is not set up")
+                    if version.is_startable() and version.is_enabled():
+                        version.enable()
 
-                if version.is_startable() and version.is_enabled():
-                    version.enable()
+                    logger.info(f"Finished installation of {pakkage.name}.")
 
-                logger.info(f"Finished installation of {pakkage.name}.")
-
-            Logger.get_console().print("")
+                Logger.get_console().print("")
+            except Exception:
+                logger.exception("Installation failed with an exception. Marking pending packages as FAILED.")
+                _finalize_pending_states()
+                raise
+            finally:
+                _finalize_pending_states()
 
         elif len(self.pakkages_to_install) == 0:
             logger.info("Everything up to date, no packages to install :)")

@@ -5,6 +5,7 @@ import os
 
 from extended_configparser.configuration.entries.section import ConfigSection
 
+from pakk.args.install_args import InstallArgs
 from pakk.config.base import TypeConfiguration
 from pakk.config.process import Process
 from pakk.environments.base import Environment
@@ -94,7 +95,7 @@ class RosStartInstructionParser(RunInstructionParser):
             raise ValueError(f"Invalid ROS2 start command: {self.start_ros}")
 
         # Launch command
-        if "launch" in ros_commands[1].split("."):
+        if "launch" in ros_commands[1].split(".") or ros_commands[1].endswith(".launch.py") or ros_commands[1].endswith(".xml"):
             ros_command = f"ros2 launch {ros_commands[0]} {ros_commands[1]}"
         else:
             ros_command = f"ros2 run {ros_commands[0]} {ros_commands[1]}"
@@ -180,7 +181,8 @@ class TypeRos2(TypeBase):
         # See https://answers.ros.org/question/364060/colcon-fails-to-build-python-package-error-in-egg_base/
 
         if isinstance(self.env, LinuxEnvironment):
-            cmds = [self.config.get_cmd_colcon_build(package_names, symlink_install=True)]
+            symlink_install = InstallArgs.get().editable
+            cmds = [self.config.get_cmd_colcon_build(package_names, symlink_install=symlink_install)]
 
             code, _, _ = self.run_commands_with_returncode(cmds, cwd=self.config.path_ros_ws.value, print_output=True)
 
